@@ -67,7 +67,7 @@ enum Flags {
 	SECRET = 1 << 3,
 
 	_DYNAMIC_DEFAULT_VALUE = 1 << 30,
-	_FROM_SUBSCHEMA = 1 << 31
+	_FROM_SUBSCHEMA = 1U << 31
 };
 
 /** Represents a validation error. */

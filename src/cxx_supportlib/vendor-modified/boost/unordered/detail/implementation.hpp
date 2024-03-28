@@ -1,7 +1,7 @@
 // Copyright (C) 2003-2004 Jeremy B. Maitin-Shepard.
 // Copyright (C) 2005-2016 Daniel James
-// Copyright (C) 2022 Joaquin M Lopez Munoz.
-// Copyright (C) 2022 Christian Mazakas
+// Copyright (C) 2022-2023 Joaquin M Lopez Munoz.
+// Copyright (C) 2022-2023 Christian Mazakas
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -14,56 +14,36 @@
 #pragma once
 #endif
 
+#include <boost/unordered/detail/fca.hpp>
+#include <boost/unordered/detail/opt_storage.hpp>
+#include <boost/unordered/detail/serialize_tracked_address.hpp>
+#include <boost/unordered/detail/static_assert.hpp>
+#include <boost/unordered/detail/type_traits.hpp>
+
 #include <boost/assert.hpp>
 #include <boost/core/allocator_traits.hpp>
 #include <boost/core/bit.hpp>
+#include <boost/core/invoke_swap.hpp>
 #include <boost/core/no_exceptions_support.hpp>
 #include <boost/core/pointer_traits.hpp>
-#include <boost/limits.hpp>
-#include <boost/move/move.hpp>
-#include <boost/preprocessor/arithmetic/inc.hpp>
-#include <boost/preprocessor/cat.hpp>
-#include <boost/preprocessor/repetition/enum.hpp>
-#include <boost/preprocessor/repetition/enum_binary_params.hpp>
-#include <boost/preprocessor/repetition/enum_params.hpp>
-#include <boost/preprocessor/repetition/repeat_from_to.hpp>
-#include <boost/preprocessor/seq/enum.hpp>
-#include <boost/preprocessor/seq/size.hpp>
-#include <boost/swap.hpp>
+#include <boost/core/serialization.hpp>
+#include <boost/mp11/algorithm.hpp>
+#include <boost/mp11/list.hpp>
 #include <boost/throw_exception.hpp>
-#include <boost/tuple/tuple.hpp>
-#include <boost/type_traits/add_lvalue_reference.hpp>
-#include <boost/type_traits/aligned_storage.hpp>
-#include <boost/type_traits/alignment_of.hpp>
-#include <boost/type_traits/integral_constant.hpp>
-#include <boost/type_traits/is_base_of.hpp>
-#include <boost/type_traits/is_class.hpp>
-#include <boost/type_traits/is_convertible.hpp>
-#include <boost/type_traits/is_empty.hpp>
-#include <boost/type_traits/is_nothrow_move_assignable.hpp>
-#include <boost/type_traits/is_nothrow_move_constructible.hpp>
-#include <boost/type_traits/is_nothrow_swappable.hpp>
-#include <boost/type_traits/is_same.hpp>
-#include <boost/type_traits/make_void.hpp>
-#include <boost/type_traits/remove_const.hpp>
-#include <boost/unordered/detail/fca.hpp>
-#include <boost/unordered/detail/type_traits.hpp>
-#include <boost/unordered/detail/fwd.hpp>
-#include <boost/utility/addressof.hpp>
-#include <boost/utility/enable_if.hpp>
+
+#include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <limits>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
-#if !defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)
-#include <type_traits>
-#endif
-
-#if BOOST_UNORDERED_CXX11_CONSTRUCTION
-#include <boost/mp11/list.hpp>
-#include <boost/mp11/algorithm.hpp>
-#endif
+namespace boost {
+  namespace tuples {
+    struct null_type;
+  }
+} // namespace boost
 
 // BOOST_UNORDERED_SUPPRESS_DEPRECATED
 //
@@ -98,6 +78,10 @@
 
 namespace boost {
   namespace unordered {
+
+    using std::piecewise_construct;
+    using std::piecewise_construct_t;
+
     namespace detail {
 
       template <typename Types> struct table;
@@ -123,33 +107,33 @@ namespace boost {
         template <class T> inline void ignore_unused_variable_warning(T const&)
         {
         }
-      }
+      } // namespace func
 
       //////////////////////////////////////////////////////////////////////////
       // iterator SFINAE
 
       template <typename I>
-      struct is_forward : boost::is_base_of<std::forward_iterator_tag,
+      struct is_forward : std::is_base_of<std::forward_iterator_tag,
                             typename std::iterator_traits<I>::iterator_category>
       {
       };
 
       template <typename I, typename ReturnType>
       struct enable_if_forward
-        : boost::enable_if_c<boost::unordered::detail::is_forward<I>::value,
-            ReturnType>
+          : std::enable_if<boost::unordered::detail::is_forward<I>::value,
+              ReturnType>
       {
       };
 
       template <typename I, typename ReturnType>
       struct disable_if_forward
-        : boost::disable_if_c<boost::unordered::detail::is_forward<I>::value,
-            ReturnType>
+          : std::enable_if<!boost::unordered::detail::is_forward<I>::value,
+              ReturnType>
       {
       };
-    }
-  }
-}
+    } // namespace detail
+  } // namespace unordered
+} // namespace boost
 
 namespace boost {
   namespace unordered {
@@ -167,7 +151,8 @@ namespace boost {
 
       template <class I>
       inline typename boost::unordered::detail::disable_if_forward<I,
-        std::size_t>::type insert_size(I, I)
+        std::size_t>::type
+      insert_size(I, I)
       {
         return 1;
       }
@@ -191,7 +176,7 @@ namespace boost {
         {
         }
         compressed_base(T& x, move_tag)
-            : empty_value<T>(boost::empty_init_t(), boost::move(x))
+            : empty_value<T>(boost::empty_init_t(), std::move(x))
         {
         }
 
@@ -209,8 +194,8 @@ namespace boost {
 
       template <typename T1, typename T2>
       struct compressed
-        : private boost::unordered::detail::generate_base<T1, 1>::type,
-          private boost::unordered::detail::generate_base<T2, 2>::type
+          : private boost::unordered::detail::generate_base<T1, 1>::type,
+            private boost::unordered::detail::generate_base<T2, 2>::type
       {
         typedef typename generate_base<T1, 1>::type base1;
         typedef typename generate_base<T2, 2>::type base2;
@@ -252,14 +237,14 @@ namespace boost {
 
         void move_assign(compressed& x)
         {
-          first() = boost::move(x.first());
-          second() = boost::move(x.second());
+          first() = std::move(x.first());
+          second() = std::move(x.second());
         }
 
         void swap(compressed& x)
         {
-          boost::swap(first(), x.first());
-          boost::swap(second(), x.second());
+          boost::core::invoke_swap(first(), x.first());
+          boost::core::invoke_swap(second(), x.second());
         }
 
       private:
@@ -296,37 +281,8 @@ namespace boost {
       //////////////////////////////////////////////////////////////////////////
       // Bits and pieces for implementing traits
 
-      template <typename T>
-      typename boost::add_lvalue_reference<T>::type make();
-      struct choice9
-      {
-        typedef char (&type)[9];
-      };
-      struct choice8 : choice9
-      {
-        typedef char (&type)[8];
-      };
-      struct choice7 : choice8
-      {
-        typedef char (&type)[7];
-      };
-      struct choice6 : choice7
-      {
-        typedef char (&type)[6];
-      };
-      struct choice5 : choice6
-      {
-        typedef char (&type)[5];
-      };
-      struct choice4 : choice5
-      {
-        typedef char (&type)[4];
-      };
-      struct choice3 : choice4
-      {
-        typedef char (&type)[3];
-      };
-      struct choice2 : choice3
+      template <typename T> typename std::add_lvalue_reference<T>::type make();
+      struct choice2
       {
         typedef char (&type)[2];
       };
@@ -351,139 +307,9 @@ namespace boost {
       {
         template <typename T> convert_from_anything(T const&);
       };
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////
-// emplace_args
-//
-// Either forwarding variadic arguments, or storing the arguments in
-// emplace_args##n
-
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
-
-#define BOOST_UNORDERED_EMPLACE_TEMPLATE typename... Args
-#define BOOST_UNORDERED_EMPLACE_ARGS BOOST_FWD_REF(Args)... args
-#define BOOST_UNORDERED_EMPLACE_FORWARD boost::forward<Args>(args)...
-
-#else
-
-#define BOOST_UNORDERED_EMPLACE_TEMPLATE typename Args
-#define BOOST_UNORDERED_EMPLACE_ARGS Args const& args
-#define BOOST_UNORDERED_EMPLACE_FORWARD args
-
-#if defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
-
-#define BOOST_UNORDERED_EARGS_MEMBER(z, n, _)                                  \
-  typedef BOOST_FWD_REF(BOOST_PP_CAT(A, n)) BOOST_PP_CAT(Arg, n);              \
-  BOOST_PP_CAT(Arg, n) BOOST_PP_CAT(a, n);
-
-#else
-
-#define BOOST_UNORDERED_EARGS_MEMBER(z, n, _)                                  \
-  typedef typename boost::add_lvalue_reference<BOOST_PP_CAT(A, n)>::type       \
-    BOOST_PP_CAT(Arg, n);                                                      \
-  BOOST_PP_CAT(Arg, n) BOOST_PP_CAT(a, n);
-
-#endif
-
-#define BOOST_UNORDERED_FWD_PARAM(z, n, a)                                     \
-  BOOST_FWD_REF(BOOST_PP_CAT(A, n)) BOOST_PP_CAT(a, n)
-
-#define BOOST_UNORDERED_CALL_FORWARD(z, i, a)                                  \
-  boost::forward<BOOST_PP_CAT(A, i)>(BOOST_PP_CAT(a, i))
-
-#define BOOST_UNORDERED_EARGS_INIT(z, n, _)                                    \
-  BOOST_PP_CAT(a, n)(BOOST_PP_CAT(b, n))
-
-#define BOOST_UNORDERED_EARGS(z, n, _)                                         \
-  template <BOOST_PP_ENUM_PARAMS_Z(z, n, typename A)>                          \
-  struct BOOST_PP_CAT(emplace_args, n)                                         \
-  {                                                                            \
-    BOOST_PP_REPEAT_##z(n, BOOST_UNORDERED_EARGS_MEMBER, _) BOOST_PP_CAT(      \
-      emplace_args, n)(BOOST_PP_ENUM_BINARY_PARAMS_Z(z, n, Arg, b))            \
-        : BOOST_PP_ENUM_##z(n, BOOST_UNORDERED_EARGS_INIT, _)                  \
-    {                                                                          \
-    }                                                                          \
-  };                                                                           \
-                                                                               \
-  template <BOOST_PP_ENUM_PARAMS_Z(z, n, typename A)>                          \
-  inline BOOST_PP_CAT(emplace_args, n)<BOOST_PP_ENUM_PARAMS_Z(z, n, A)>        \
-    create_emplace_args(BOOST_PP_ENUM_##z(n, BOOST_UNORDERED_FWD_PARAM, b))    \
-  {                                                                            \
-    BOOST_PP_CAT(emplace_args, n)<BOOST_PP_ENUM_PARAMS_Z(z, n, A)> e(          \
-      BOOST_PP_ENUM_PARAMS_Z(z, n, b));                                        \
-    return e;                                                                  \
-  }
-
-namespace boost {
-  namespace unordered {
-    namespace detail {
-      template <typename A0> struct emplace_args1
-      {
-        BOOST_UNORDERED_EARGS_MEMBER(1, 0, _)
-
-        explicit emplace_args1(Arg0 b0) : a0(b0) {}
-      };
-
-      template <typename A0>
-      inline emplace_args1<A0> create_emplace_args(BOOST_FWD_REF(A0) b0)
-      {
-        emplace_args1<A0> e(b0);
-        return e;
-      }
-
-      template <typename A0, typename A1> struct emplace_args2
-      {
-        BOOST_UNORDERED_EARGS_MEMBER(1, 0, _)
-        BOOST_UNORDERED_EARGS_MEMBER(1, 1, _)
-
-        emplace_args2(Arg0 b0, Arg1 b1) : a0(b0), a1(b1) {}
-      };
-
-      template <typename A0, typename A1>
-      inline emplace_args2<A0, A1> create_emplace_args(
-        BOOST_FWD_REF(A0) b0, BOOST_FWD_REF(A1) b1)
-      {
-        emplace_args2<A0, A1> e(b0, b1);
-        return e;
-      }
-
-      template <typename A0, typename A1, typename A2> struct emplace_args3
-      {
-        BOOST_UNORDERED_EARGS_MEMBER(1, 0, _)
-        BOOST_UNORDERED_EARGS_MEMBER(1, 1, _)
-        BOOST_UNORDERED_EARGS_MEMBER(1, 2, _)
-
-        emplace_args3(Arg0 b0, Arg1 b1, Arg2 b2) : a0(b0), a1(b1), a2(b2) {}
-      };
-
-      template <typename A0, typename A1, typename A2>
-      inline emplace_args3<A0, A1, A2> create_emplace_args(
-        BOOST_FWD_REF(A0) b0, BOOST_FWD_REF(A1) b1, BOOST_FWD_REF(A2) b2)
-      {
-        emplace_args3<A0, A1, A2> e(b0, b1, b2);
-        return e;
-      }
-
-      BOOST_UNORDERED_EARGS(1, 4, _)
-      BOOST_UNORDERED_EARGS(1, 5, _)
-      BOOST_UNORDERED_EARGS(1, 6, _)
-      BOOST_UNORDERED_EARGS(1, 7, _)
-      BOOST_UNORDERED_EARGS(1, 8, _)
-      BOOST_UNORDERED_EARGS(1, 9, _)
-      BOOST_PP_REPEAT_FROM_TO(10, BOOST_PP_INC(BOOST_UNORDERED_EMPLACE_LIMIT),
-        BOOST_UNORDERED_EARGS, _)
-    }
-  }
-}
-
-#undef BOOST_UNORDERED_DEFINE_EMPLACE_ARGS
-#undef BOOST_UNORDERED_EARGS_MEMBER
-#undef BOOST_UNORDERED_EARGS_INIT
-
-#endif
+    } // namespace detail
+  } // namespace unordered
+} // namespace boost
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -494,35 +320,8 @@ namespace boost {
   namespace unordered {
     namespace detail {
 
-////////////////////////////////////////////////////////////////////////////
-// Integral_constrant, true_type, false_type
-//
-// Uses the standard versions if available.
-
-#if !defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)
-
-      using std::integral_constant;
-      using std::true_type;
-      using std::false_type;
-
-#else
-
-      template <typename T, T Value> struct integral_constant
-      {
-        enum
-        {
-          value = Value
-        };
-      };
-
-      typedef boost::unordered::detail::integral_constant<bool, true> true_type;
-      typedef boost::unordered::detail::integral_constant<bool, false>
-        false_type;
-
-#endif
-
-////////////////////////////////////////////////////////////////////////////
-// Explicitly call a destructor
+      ////////////////////////////////////////////////////////////////////////////
+      // Explicitly call a destructor
 
 #if defined(BOOST_MSVC)
 #pragma warning(push)
@@ -531,7 +330,7 @@ namespace boost {
 
       namespace func {
         template <class T> inline void destroy(T* x) { x->~T(); }
-      }
+      } // namespace func
 
 #if defined(BOOST_MSVC)
 #pragma warning(pop)
@@ -546,8 +345,7 @@ namespace boost {
       {
         typedef ValueType value_type;
 
-        typename boost::aligned_storage<sizeof(value_type),
-          boost::alignment_of<value_type>::value>::type data_;
+        opt_storage<value_type> data_;
 
         value_base() : data_() {}
 
@@ -571,8 +369,6 @@ namespace boost {
 
       template <typename T> class optional
       {
-        BOOST_MOVABLE_BUT_NOT_COPYABLE(optional)
-
         boost::unordered::detail::value_base<T> value_;
         bool has_value_;
 
@@ -587,16 +383,19 @@ namespace boost {
         void move(optional<T>& x)
         {
           BOOST_ASSERT(!has_value_ && x.has_value_);
-          new (value_.value_ptr()) T(boost::move(x.value_.value()));
+          new (value_.value_ptr()) T(std::move(x.value_.value()));
           boost::unordered::detail::func::destroy(x.value_.value_ptr());
           has_value_ = true;
           x.has_value_ = false;
         }
 
       public:
-        optional() BOOST_NOEXCEPT : has_value_(false) {}
+        optional() noexcept : has_value_(false) {}
 
-        optional(BOOST_RV_REF(optional<T>) x) : has_value_(false)
+        optional(optional const&) = delete;
+        optional& operator=(optional const&) = delete;
+
+        optional(optional<T>&& x) : has_value_(false)
         {
           if (x.has_value_) {
             move(x);
@@ -608,7 +407,7 @@ namespace boost {
           new (value_.value_ptr()) T(x);
         }
 
-        optional& operator=(BOOST_RV_REF(optional<T>) x)
+        optional& operator=(optional<T>&& x)
         {
           destroy();
           if (x.has_value_) {
@@ -642,15 +441,15 @@ namespace boost {
               move(x);
             }
           } else if (has_value_) {
-            boost::swap(value_.value(), x.value_.value());
+            boost::core::invoke_swap(value_.value(), x.value_.value());
           }
         }
 
         friend void swap(optional<T>& x, optional<T>& y) { x.swap(y); }
       };
-    }
-  }
-}
+    } // namespace detail
+  } // namespace unordered
+} // namespace boost
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -670,209 +469,9 @@ namespace boost {
       struct rebind_wrap : boost::allocator_rebind<Alloc, T>
       {
       };
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////
-// Functions used to construct nodes. Emulates variadic construction,
-// piecewise construction etc.
-
-////////////////////////////////////////////////////////////////////////////
-// construct_value
-//
-// Only use allocator_traits::construct, allocator_traits::destroy when full
-// C++11 support is available.
-
-#if BOOST_UNORDERED_CXX11_CONSTRUCTION
-
-#elif !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
-
-namespace boost {
-  namespace unordered {
-    namespace detail {
-      namespace func {
-        template <typename T, typename... Args>
-        inline void construct_value(T* address, BOOST_FWD_REF(Args)... args)
-        {
-          new ((void*)address) T(boost::forward<Args>(args)...);
-        }
-      }
-    }
-  }
-}
-
-#else
-
-namespace boost {
-  namespace unordered {
-    namespace detail {
-      namespace func {
-        template <typename T> inline void construct_value(T* address)
-        {
-          new ((void*)address) T();
-        }
-
-        template <typename T, typename A0>
-        inline void construct_value(T* address, BOOST_FWD_REF(A0) a0)
-        {
-          new ((void*)address) T(boost::forward<A0>(a0));
-        }
-      }
-    }
-  }
-}
-
-#endif
-
-////////////////////////////////////////////////////////////////////////////
-// Construct from tuple
-//
-// Used to emulate piecewise construction.
-
-#define BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(z, n, namespace_)                 \
-  template <typename Alloc, typename T,                                        \
-    BOOST_PP_ENUM_PARAMS_Z(z, n, typename A)>                                  \
-  void construct_from_tuple(Alloc&, T* ptr,                                    \
-    namespace_::tuple<BOOST_PP_ENUM_PARAMS_Z(z, n, A)> const& x)               \
-  {                                                                            \
-    new ((void*)ptr)                                                           \
-      T(BOOST_PP_ENUM_##z(n, BOOST_UNORDERED_GET_TUPLE_ARG, namespace_));      \
-  }
-
-#define BOOST_UNORDERED_GET_TUPLE_ARG(z, n, namespace_) namespace_::get<n>(x)
-
-// construct_from_tuple for boost::tuple
-// The workaround for old Sun compilers comes later in the file.
-
-#if !BOOST_UNORDERED_SUN_WORKAROUNDS1
-
-namespace boost {
-  namespace unordered {
-    namespace detail {
-      namespace func {
-        template <typename Alloc, typename T>
-        void construct_from_tuple(Alloc&, T* ptr, boost::tuple<>)
-        {
-          new ((void*)ptr) T();
-        }
-
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 1, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 2, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 3, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 4, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 5, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 6, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 7, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 8, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 9, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 10, boost)
-      }
-    }
-  }
-}
-
-#endif
-
-// construct_from_tuple for std::tuple
-
-#if !BOOST_UNORDERED_CXX11_CONSTRUCTION && BOOST_UNORDERED_TUPLE_ARGS
-
-namespace boost {
-  namespace unordered {
-    namespace detail {
-      namespace func {
-        template <typename Alloc, typename T>
-        void construct_from_tuple(Alloc&, T* ptr, std::tuple<>)
-        {
-          new ((void*)ptr) T();
-        }
-
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 1, std)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 2, std)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 3, std)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 4, std)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 5, std)
-
-#if BOOST_UNORDERED_TUPLE_ARGS >= 6
-        BOOST_PP_REPEAT_FROM_TO(6, BOOST_PP_INC(BOOST_UNORDERED_TUPLE_ARGS),
-          BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE, std)
-#endif
-      }
-    }
-  }
-}
-
-#endif
-
-#undef BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE
-#undef BOOST_UNORDERED_GET_TUPLE_ARG
-
-// construct_from_tuple for boost::tuple on old versions of sunpro.
-//
-// Old versions of Sun C++ had problems with template overloads of
-// boost::tuple, so to fix it I added a distinct type for each length to
-// the overloads. That means there's no possible ambiguity between the
-// different overloads, so that the compiler doesn't get confused
-
-#if BOOST_UNORDERED_SUN_WORKAROUNDS1
-
-#define BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(z, n, namespace_)                 \
-  template <typename Alloc, typename T,                                        \
-    BOOST_PP_ENUM_PARAMS_Z(z, n, typename A)>                                  \
-  void construct_from_tuple_impl(boost::unordered::detail::func::length<n>,    \
-    Alloc&, T* ptr,                                                            \
-    namespace_::tuple<BOOST_PP_ENUM_PARAMS_Z(z, n, A)> const& x)               \
-  {                                                                            \
-    new ((void*)ptr)                                                           \
-      T(BOOST_PP_ENUM_##z(n, BOOST_UNORDERED_GET_TUPLE_ARG, namespace_));      \
-  }
-
-#define BOOST_UNORDERED_GET_TUPLE_ARG(z, n, namespace_) namespace_::get<n>(x)
-
-namespace boost {
-  namespace unordered {
-    namespace detail {
-      namespace func {
-        template <int N> struct length
-        {
-        };
-
-        template <typename Alloc, typename T>
-        void construct_from_tuple_impl(
-          boost::unordered::detail::func::length<0>, Alloc&, T* ptr,
-          boost::tuple<>)
-        {
-          new ((void*)ptr) T();
-        }
-
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 1, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 2, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 3, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 4, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 5, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 6, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 7, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 8, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 9, boost)
-        BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE(1, 10, boost)
-
-        template <typename Alloc, typename T, typename Tuple>
-        void construct_from_tuple(Alloc& alloc, T* ptr, Tuple const& x)
-        {
-          construct_from_tuple_impl(boost::unordered::detail::func::length<
-                                      boost::tuples::length<Tuple>::value>(),
-            alloc, ptr, x);
-        }
-      }
-    }
-  }
-}
-
-#undef BOOST_UNORDERED_CONSTRUCT_FROM_TUPLE
-#undef BOOST_UNORDERED_GET_TUPLE_ARG
-
-#endif
+    } // namespace detail
+  } // namespace unordered
+} // namespace boost
 
 namespace boost {
   namespace unordered {
@@ -883,8 +482,7 @@ namespace boost {
 
         template <typename A0> struct use_piecewise
         {
-          static choice1::type test(
-            choice1, boost::unordered::piecewise_construct_t);
+          static choice1::type test(choice1, std::piecewise_construct_t);
 
           static choice2::type test(choice2, ...);
 
@@ -895,29 +493,24 @@ namespace boost {
           };
         };
 
-#if BOOST_UNORDERED_CXX11_CONSTRUCTION
-
         ////////////////////////////////////////////////////////////////////////
         // Construct from variadic parameters
 
         template <typename Alloc, typename T, typename... Args>
         inline void construct_from_args(
-          Alloc& alloc, T* address, BOOST_FWD_REF(Args)... args)
+          Alloc& alloc, T* address, Args&&... args)
         {
           boost::allocator_construct(
-            alloc, address, boost::forward<Args>(args)...);
+            alloc, address, std::forward<Args>(args)...);
         }
 
         // For backwards compatibility, implement a special case for
         // piecewise_construct with boost::tuple
 
-        template <typename A0> struct detect_boost_tuple
+        template <typename A0> struct detect_std_tuple
         {
-          template <typename T0, typename T1, typename T2, typename T3,
-            typename T4, typename T5, typename T6, typename T7, typename T8,
-            typename T9>
-          static choice1::type test(choice1,
-            boost::tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> const&);
+          template <class... Args>
+          static choice1::type test(choice1, std::tuple<Args...> const&);
 
           static choice2::type test(choice2, ...);
 
@@ -930,25 +523,27 @@ namespace boost {
 
         // Special case for piecewise_construct
 
-        template <class... Args, std::size_t... Is, class... TupleArgs>
+        template <template <class...> class Tuple, class... Args,
+          std::size_t... Is, class... TupleArgs>
         std::tuple<typename std::add_lvalue_reference<Args>::type...>
         to_std_tuple_impl(boost::mp11::mp_list<Args...>,
-          boost::tuple<TupleArgs...>& tuple, boost::mp11::index_sequence<Is...>)
+          Tuple<TupleArgs...>& tuple, boost::mp11::index_sequence<Is...>)
         {
-          (void) tuple;
+          (void)tuple;
+          using std::get;
           return std::tuple<typename std::add_lvalue_reference<Args>::type...>(
-            boost::get<Is>(tuple)...);
+            get<Is>(tuple)...);
         }
 
         template <class T>
         using add_lvalue_reference_t =
           typename std::add_lvalue_reference<T>::type;
 
-        template <class... Args>
+        template <template <class...> class Tuple, class... Args>
         boost::mp11::mp_transform<add_lvalue_reference_t,
           boost::mp11::mp_remove<std::tuple<Args...>,
             boost::tuples::null_type> >
-        to_std_tuple(boost::tuple<Args...>& tuple)
+        to_std_tuple(Tuple<Args...>& tuple)
         {
           using list = boost::mp11::mp_remove<boost::mp11::mp_list<Args...>,
             boost::tuples::null_type>;
@@ -960,138 +555,20 @@ namespace boost {
 
         template <typename Alloc, typename A, typename B, typename A0,
           typename A1, typename A2>
-        inline typename boost::enable_if_c<use_piecewise<A0>::value &&
-                                             detect_boost_tuple<A1>::value &&
-                                             detect_boost_tuple<A2>::value,
+        inline typename std::enable_if<use_piecewise<A0>::value &&
+                                         !detect_std_tuple<A1>::value &&
+                                         !detect_std_tuple<A2>::value,
           void>::type
-        construct_from_args(Alloc& alloc, std::pair<A, B>* address,
-          BOOST_FWD_REF(A0), BOOST_FWD_REF(A1) a1, BOOST_FWD_REF(A2) a2)
+        construct_from_args(
+          Alloc& alloc, std::pair<A, B>* address, A0&&, A1&& a1, A2&& a2)
         {
           boost::allocator_construct(alloc, address, std::piecewise_construct,
             to_std_tuple(a1), to_std_tuple(a2));
         }
-
-#elif !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
-
-        ////////////////////////////////////////////////////////////////////////
-        // Construct from variadic parameters
-
-        template <typename Alloc, typename T, typename... Args>
-        inline void construct_from_args(
-          Alloc&, T* address, BOOST_FWD_REF(Args)... args)
-        {
-          new ((void*)address) T(boost::forward<Args>(args)...);
-        }
-
-        // Special case for piecewise_construct
-
-        template <typename Alloc, typename A, typename B, typename A0,
-          typename A1, typename A2>
-        inline typename enable_if<use_piecewise<A0>, void>::type
-        construct_from_args(Alloc& alloc, std::pair<A, B>* address,
-          BOOST_FWD_REF(A0), BOOST_FWD_REF(A1) a1, BOOST_FWD_REF(A2) a2)
-        {
-          boost::unordered::detail::func::construct_from_tuple(
-            alloc, boost::addressof(address->first), boost::forward<A1>(a1));
-          BOOST_TRY
-          {
-            boost::unordered::detail::func::construct_from_tuple(
-              alloc, boost::addressof(address->second), boost::forward<A2>(a2));
-          }
-          BOOST_CATCH(...)
-          {
-            boost::unordered::detail::func::destroy(
-              boost::addressof(address->first));
-            BOOST_RETHROW
-          }
-          BOOST_CATCH_END
-        }
-
-#else // BOOST_NO_CXX11_VARIADIC_TEMPLATES
-
-        ////////////////////////////////////////////////////////////////////////
-        // Construct from emplace_args
-
-        // Explicitly write out first three overloads for the sake of sane
-        // error messages.
-
-        template <typename Alloc, typename T, typename A0>
-        inline void construct_from_args(
-          Alloc&, T* address, emplace_args1<A0> const& args)
-        {
-          new ((void*)address) T(boost::forward<A0>(args.a0));
-        }
-
-        template <typename Alloc, typename T, typename A0, typename A1>
-        inline void construct_from_args(
-          Alloc&, T* address, emplace_args2<A0, A1> const& args)
-        {
-          new ((void*)address)
-            T(boost::forward<A0>(args.a0), boost::forward<A1>(args.a1));
-        }
-
-        template <typename Alloc, typename T, typename A0, typename A1,
-          typename A2>
-        inline void construct_from_args(
-          Alloc&, T* address, emplace_args3<A0, A1, A2> const& args)
-        {
-          new ((void*)address) T(boost::forward<A0>(args.a0),
-            boost::forward<A1>(args.a1), boost::forward<A2>(args.a2));
-        }
-
-// Use a macro for the rest.
-
-#define BOOST_UNORDERED_CONSTRUCT_IMPL(z, num_params, _)                       \
-  template <typename Alloc, typename T,                                        \
-    BOOST_PP_ENUM_PARAMS_Z(z, num_params, typename A)>                         \
-  inline void construct_from_args(Alloc&, T* address,                          \
-    boost::unordered::detail::BOOST_PP_CAT(emplace_args, num_params) <         \
-      BOOST_PP_ENUM_PARAMS_Z(z, num_params, A) > const& args)                  \
-  {                                                                            \
-    new ((void*)address)                                                       \
-      T(BOOST_PP_ENUM_##z(num_params, BOOST_UNORDERED_CALL_FORWARD, args.a));  \
-  }
-
-        BOOST_UNORDERED_CONSTRUCT_IMPL(1, 4, _)
-        BOOST_UNORDERED_CONSTRUCT_IMPL(1, 5, _)
-        BOOST_UNORDERED_CONSTRUCT_IMPL(1, 6, _)
-        BOOST_UNORDERED_CONSTRUCT_IMPL(1, 7, _)
-        BOOST_UNORDERED_CONSTRUCT_IMPL(1, 8, _)
-        BOOST_UNORDERED_CONSTRUCT_IMPL(1, 9, _)
-        BOOST_PP_REPEAT_FROM_TO(10, BOOST_PP_INC(BOOST_UNORDERED_EMPLACE_LIMIT),
-          BOOST_UNORDERED_CONSTRUCT_IMPL, _)
-
-#undef BOOST_UNORDERED_CONSTRUCT_IMPL
-
-        // Construct with piecewise_construct
-
-        template <typename Alloc, typename A, typename B, typename A0,
-          typename A1, typename A2>
-        inline typename enable_if<use_piecewise<A0>, void>::type
-        construct_from_args(Alloc& alloc, std::pair<A, B>* address,
-          boost::unordered::detail::emplace_args3<A0, A1, A2> const& args)
-        {
-          boost::unordered::detail::func::construct_from_tuple(
-            alloc, boost::addressof(address->first), args.a1);
-          BOOST_TRY
-          {
-            boost::unordered::detail::func::construct_from_tuple(
-              alloc, boost::addressof(address->second), args.a2);
-          }
-          BOOST_CATCH(...)
-          {
-            boost::unordered::detail::func::destroy(
-              boost::addressof(address->first));
-            BOOST_RETHROW
-          }
-          BOOST_CATCH_END
-        }
-
-#endif // BOOST_NO_CXX11_VARIADIC_TEMPLATES
-      }
-    }
-  }
-}
+      } // namespace func
+    } // namespace detail
+  } // namespace unordered
+} // namespace boost
 
 namespace boost {
   namespace unordered {
@@ -1180,9 +657,9 @@ namespace boost {
           boost::allocator_deallocate(alloc_, node_, 1);
         }
       }
-    }
-  }
-}
+    } // namespace detail
+  } // namespace unordered
+} // namespace boost
 
 namespace boost {
   namespace unordered {
@@ -1192,9 +669,9 @@ namespace boost {
         // Some nicer construct_node functions, might try to
         // improve implementation later.
 
-        template <typename Alloc, BOOST_UNORDERED_EMPLACE_TEMPLATE>
+        template <typename Alloc, typename... Args>
         inline typename boost::allocator_pointer<Alloc>::type
-        construct_node_from_args(Alloc& alloc, BOOST_UNORDERED_EMPLACE_ARGS)
+        construct_node_from_args(Alloc& alloc, Args&&... args)
         {
           typedef typename boost::allocator_value_type<Alloc>::type node;
           typedef typename node::value_type value_type;
@@ -1206,13 +683,13 @@ namespace boost {
           node_constructor<Alloc> a(alloc);
           a.create_node();
           construct_from_args(
-            val_alloc, a.node_->value_ptr(), BOOST_UNORDERED_EMPLACE_FORWARD);
+            val_alloc, a.node_->value_ptr(), std::forward<Args>(args)...);
           return a.release();
         }
 
         template <typename Alloc, typename U>
         inline typename boost::allocator_pointer<Alloc>::type construct_node(
-          Alloc& alloc, BOOST_FWD_REF(U) x)
+          Alloc& alloc, U&& x)
         {
           node_constructor<Alloc> a(alloc);
           a.create_node();
@@ -1225,15 +702,13 @@ namespace boost {
           value_allocator val_alloc(alloc);
 
           boost::allocator_construct(
-            val_alloc, a.node_->value_ptr(), boost::forward<U>(x));
+            val_alloc, a.node_->value_ptr(), std::forward<U>(x));
           return a.release();
         }
 
-#if BOOST_UNORDERED_CXX11_CONSTRUCTION
-
         template <typename Alloc, typename Key>
         inline typename boost::allocator_pointer<Alloc>::type
-        construct_node_pair(Alloc& alloc, BOOST_FWD_REF(Key) k)
+        construct_node_pair(Alloc& alloc, Key&& k)
         {
           node_constructor<Alloc> a(alloc);
           a.create_node();
@@ -1245,17 +720,16 @@ namespace boost {
 
           value_allocator val_alloc(alloc);
 
-          boost::allocator_construct(
-            val_alloc, a.node_->value_ptr(), std::piecewise_construct,
-            std::forward_as_tuple(boost::forward<Key>(k)),
+          boost::allocator_construct(val_alloc, a.node_->value_ptr(),
+            std::piecewise_construct,
+            std::forward_as_tuple(std::forward<Key>(k)),
             std::forward_as_tuple());
           return a.release();
         }
 
         template <typename Alloc, typename Key, typename Mapped>
         inline typename boost::allocator_pointer<Alloc>::type
-        construct_node_pair(
-          Alloc& alloc, BOOST_FWD_REF(Key) k, BOOST_FWD_REF(Mapped) m)
+        construct_node_pair(Alloc& alloc, Key&& k, Mapped&& m)
         {
           node_constructor<Alloc> a(alloc);
           a.create_node();
@@ -1269,15 +743,14 @@ namespace boost {
 
           boost::allocator_construct(val_alloc, a.node_->value_ptr(),
             std::piecewise_construct,
-            std::forward_as_tuple(boost::forward<Key>(k)),
-            std::forward_as_tuple(boost::forward<Mapped>(m)));
+            std::forward_as_tuple(std::forward<Key>(k)),
+            std::forward_as_tuple(std::forward<Mapped>(m)));
           return a.release();
         }
 
         template <typename Alloc, typename Key, typename... Args>
         inline typename boost::allocator_pointer<Alloc>::type
-        construct_node_pair_from_args(
-          Alloc& alloc, BOOST_FWD_REF(Key) k, BOOST_FWD_REF(Args)... args)
+        construct_node_pair_from_args(Alloc& alloc, Key&& k, Args&&... args)
         {
           node_constructor<Alloc> a(alloc);
           a.create_node();
@@ -1289,127 +762,31 @@ namespace boost {
 
           value_allocator val_alloc(alloc);
 
-#if !(BOOST_COMP_CLANG && BOOST_COMP_CLANG < BOOST_VERSION_NUMBER(3, 8, 0) &&  \
-      defined(BOOST_LIBSTDCXX11))
           boost::allocator_construct(val_alloc, a.node_->value_ptr(),
             std::piecewise_construct,
-            std::forward_as_tuple(boost::forward<Key>(k)),
-            std::forward_as_tuple(boost::forward<Args>(args)...));
-#else
-          // It doesn't seem to be possible to construct a tuple with 3 variadic
-          // rvalue reference members when using older versions of clang with
-          // libstdc++, so just use std::make_tuple instead of
-          // std::forward_as_tuple.
-          boost::allocator_construct(val_alloc, a.node_->value_ptr(),
-            std::piecewise_construct,
-            std::forward_as_tuple(boost::forward<Key>(k)),
-            std::make_tuple(boost::forward<Args>(args)...));
-#endif
+            std::forward_as_tuple(std::forward<Key>(k)),
+            std::forward_as_tuple(std::forward<Args>(args)...));
+
           return a.release();
         }
-
-#else
-
-        template <typename Alloc, typename Key>
-        inline
-          typename boost::unordered::detail::allocator_traits<Alloc>::pointer
-          construct_node_pair(Alloc& alloc, BOOST_FWD_REF(Key) k)
-        {
-          node_constructor<Alloc> a(alloc);
-          a.create_node();
-          boost::unordered::detail::func::construct_value(
-            boost::addressof(a.node_->value_ptr()->first),
-            boost::forward<Key>(k));
-          BOOST_TRY
-          {
-            boost::unordered::detail::func::construct_value(
-              boost::addressof(a.node_->value_ptr()->second));
-          }
-          BOOST_CATCH(...)
-          {
-            boost::unordered::detail::func::destroy(
-              boost::addressof(a.node_->value_ptr()->first));
-            BOOST_RETHROW
-          }
-          BOOST_CATCH_END
-          return a.release();
-        }
-
-        template <typename Alloc, typename Key, typename Mapped>
-        inline
-          typename boost::unordered::detail::allocator_traits<Alloc>::pointer
-          construct_node_pair(
-            Alloc& alloc, BOOST_FWD_REF(Key) k, BOOST_FWD_REF(Mapped) m)
-        {
-          node_constructor<Alloc> a(alloc);
-          a.create_node();
-          boost::unordered::detail::func::construct_value(
-            boost::addressof(a.node_->value_ptr()->first),
-            boost::forward<Key>(k));
-          BOOST_TRY
-          {
-            boost::unordered::detail::func::construct_value(
-              boost::addressof(a.node_->value_ptr()->second),
-              boost::forward<Mapped>(m));
-          }
-          BOOST_CATCH(...)
-          {
-            boost::unordered::detail::func::destroy(
-              boost::addressof(a.node_->value_ptr()->first));
-            BOOST_RETHROW
-          }
-          BOOST_CATCH_END
-          return a.release();
-        }
-
-        template <typename Alloc, typename Key,
-          BOOST_UNORDERED_EMPLACE_TEMPLATE>
-        inline
-          typename boost::unordered::detail::allocator_traits<Alloc>::pointer
-          construct_node_pair_from_args(
-            Alloc& alloc, BOOST_FWD_REF(Key) k, BOOST_UNORDERED_EMPLACE_ARGS)
-        {
-          node_constructor<Alloc> a(alloc);
-          a.create_node();
-          boost::unordered::detail::func::construct_value(
-            boost::addressof(a.node_->value_ptr()->first),
-            boost::forward<Key>(k));
-          BOOST_TRY
-          {
-            boost::unordered::detail::func::construct_from_args(alloc,
-              boost::addressof(a.node_->value_ptr()->second),
-              BOOST_UNORDERED_EMPLACE_FORWARD);
-          }
-          BOOST_CATCH(...)
-          {
-            boost::unordered::detail::func::destroy(
-              boost::addressof(a.node_->value_ptr()->first));
-            BOOST_RETHROW
-          }
-          BOOST_CATCH_END
-          return a.release();
-        }
-
-#endif
 
         template <typename T, typename Alloc, typename Key>
         inline typename boost::allocator_pointer<Alloc>::type
-        construct_node_from_key(T*, Alloc& alloc, BOOST_FWD_REF(Key) k)
+        construct_node_from_key(T*, Alloc& alloc, Key&& k)
         {
-          return construct_node(alloc, boost::forward<Key>(k));
+          return construct_node(alloc, std::forward<Key>(k));
         }
 
         template <typename T, typename V, typename Alloc, typename Key>
         inline typename boost::allocator_pointer<Alloc>::type
-        construct_node_from_key(
-          std::pair<T const, V>*, Alloc& alloc, BOOST_FWD_REF(Key) k)
+        construct_node_from_key(std::pair<T const, V>*, Alloc& alloc, Key&& k)
         {
-          return construct_node_pair(alloc, boost::forward<Key>(k));
+          return construct_node_pair(alloc, std::forward<Key>(k));
         }
       } // namespace func
-    }
-  }
-}
+    } // namespace detail
+  } // namespace unordered
+} // namespace boost
 
 #if defined(BOOST_MSVC)
 #pragma warning(pop)
@@ -1435,38 +812,35 @@ namespace boost {
       // in that region of storage. This warning is also generated in C++03
       // which does not have `std::launder`. The compiler builtin is always
       // available, regardless of the C++ standard used when compiling.
-      template <class T> T* launder(T* p) BOOST_NOEXCEPT
+      template <class T> T* launder(T* p) noexcept
       {
         return __builtin_launder(p);
       }
 #else
-      template <class T> T* launder(T* p) BOOST_NOEXCEPT { return p; }
+      template <class T> T* launder(T* p) noexcept { return p; }
 #endif
 
       template <class H, class P> class functions
       {
       public:
         static const bool nothrow_move_assignable =
-          boost::is_nothrow_move_assignable<H>::value &&
-          boost::is_nothrow_move_assignable<P>::value;
+          std::is_nothrow_move_assignable<H>::value &&
+          std::is_nothrow_move_assignable<P>::value;
         static const bool nothrow_move_constructible =
-          boost::is_nothrow_move_constructible<H>::value &&
-          boost::is_nothrow_move_constructible<P>::value;
+          std::is_nothrow_move_constructible<H>::value &&
+          std::is_nothrow_move_constructible<P>::value;
         static const bool nothrow_swappable =
-          boost::is_nothrow_swappable<H>::value &&
-          boost::is_nothrow_swappable<P>::value;
+          boost::unordered::detail::is_nothrow_swappable<H>::value &&
+          boost::unordered::detail::is_nothrow_swappable<P>::value;
 
       private:
         functions& operator=(functions const&);
 
         typedef compressed<H, P> function_pair;
 
-        typedef typename boost::aligned_storage<sizeof(function_pair),
-          boost::alignment_of<function_pair>::value>::type aligned_function;
-
         unsigned char current_; // 0/1 - Currently active functions
                                 // +2 - Both constructed
-        aligned_function funcs_[2];
+        opt_storage<function_pair> funcs_[2];
 
       public:
         functions(H const& hf, P const& eq) : current_(0)
@@ -1483,8 +857,7 @@ namespace boost {
             : current_(0)
         {
           construct_functions(current_, bf.current_functions(),
-            boost::unordered::detail::integral_constant<bool,
-              nothrow_move_constructible>());
+            std::integral_constant<bool, nothrow_move_constructible>());
         }
 
         ~functions()
@@ -1540,16 +913,15 @@ namespace boost {
           new ((void*)&funcs_[which]) function_pair(hf, eq);
         }
 
-        void construct_functions(unsigned char which, function_pair const& f,
-          boost::unordered::detail::false_type =
-            boost::unordered::detail::false_type())
+        void construct_functions(
+          unsigned char which, function_pair const& f, std::false_type = {})
         {
           BOOST_ASSERT(!(which & 2));
           new ((void*)&funcs_[which]) function_pair(f);
         }
 
-        void construct_functions(unsigned char which, function_pair& f,
-          boost::unordered::detail::true_type)
+        void construct_functions(
+          unsigned char which, function_pair& f, std::true_type)
         {
           BOOST_ASSERT(!(which & 2));
           new ((void*)&funcs_[which])
@@ -1563,34 +935,6 @@ namespace boost {
             (function_pair*)(&funcs_[which]));
         }
       };
-
-////////////////////////////////////////////////////////////////////////////
-// rvalue parameters when type can't be a BOOST_RV_REF(T) parameter
-// e.g. for int
-
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
-#define BOOST_UNORDERED_RV_REF(T) BOOST_RV_REF(T)
-#else
-      struct please_ignore_this_overload
-      {
-        typedef please_ignore_this_overload type;
-      };
-
-      template <typename T> struct rv_ref_impl
-      {
-        typedef BOOST_RV_REF(T) type;
-      };
-
-      template <typename T>
-      struct rv_ref : boost::conditional<boost::is_class<T>::value,
-                        boost::unordered::detail::rv_ref_impl<T>,
-                        please_ignore_this_overload>::type
-      {
-      };
-
-#define BOOST_UNORDERED_RV_REF(T)                                              \
-  typename boost::unordered::detail::rv_ref<T>::type
-#endif
 
 #if defined(BOOST_MSVC)
 #pragma warning(push)
@@ -1624,48 +968,48 @@ namespace boost {
           typedef std::ptrdiff_t difference_type;
           typedef std::forward_iterator_tag iterator_category;
 
-          iterator() : p(), itb(){}
+          iterator() : p(), itb() {}
 
-          reference operator*() const BOOST_NOEXCEPT { return dereference(); }
-          pointer operator->() const BOOST_NOEXCEPT
+          reference operator*() const noexcept { return dereference(); }
+          pointer operator->() const noexcept
           {
-            pointer x = boost::addressof(p->value());
+            pointer x = std::addressof(p->value());
             return x;
           }
 
-          iterator& operator++() BOOST_NOEXCEPT
+          iterator& operator++() noexcept
           {
             increment();
             return *this;
           }
 
-          iterator operator++(int) BOOST_NOEXCEPT
+          iterator operator++(int) noexcept
           {
             iterator old = *this;
             increment();
             return old;
           }
 
-          bool operator==(iterator const& other) const BOOST_NOEXCEPT
+          bool operator==(iterator const& other) const noexcept
           {
             return equal(other);
           }
 
-          bool operator!=(iterator const& other) const BOOST_NOEXCEPT
+          bool operator!=(iterator const& other) const noexcept
           {
             return !equal(other);
           }
 
           bool operator==(
             boost::unordered::detail::iterator_detail::c_iterator<Node,
-              Bucket> const& other) const BOOST_NOEXCEPT
+              Bucket> const& other) const noexcept
           {
             return equal(other);
           }
 
           bool operator!=(
             boost::unordered::detail::iterator_detail::c_iterator<Node,
-              Bucket> const& other) const BOOST_NOEXCEPT
+              Bucket> const& other) const noexcept
           {
             return !equal(other);
           }
@@ -1682,26 +1026,42 @@ namespace boost {
 
           iterator(node_pointer p_, bucket_iterator itb_) : p(p_), itb(itb_) {}
 
-          value_type& dereference() const BOOST_NOEXCEPT { return p->value(); }
+          value_type& dereference() const noexcept { return p->value(); }
 
-          bool equal(const iterator& x) const BOOST_NOEXCEPT
-          {
-            return (p == x.p);
-          }
+          bool equal(const iterator& x) const noexcept { return (p == x.p); }
 
           bool equal(
             const boost::unordered::detail::iterator_detail::c_iterator<Node,
-              Bucket>& x) const BOOST_NOEXCEPT
+              Bucket>& x) const noexcept
           {
             return (p == x.p);
           }
 
-          void increment() BOOST_NOEXCEPT
+          void increment() noexcept
           {
             p = p->next;
             if (!p) {
               p = (++itb)->next;
             }
+          }
+
+          template <typename Archive>
+          friend void serialization_track(Archive& ar, const iterator& x)
+          {
+            if (x.p) {
+              track_address(ar, x.p);
+              serialization_track(ar, x.itb);
+            }
+          }
+
+          friend class boost::serialization::access;
+
+          template <typename Archive> void serialize(Archive& ar, unsigned int)
+          {
+            if (!p)
+              itb = bucket_iterator();
+            serialize_tracked_address(ar, p);
+            ar& core::make_nvp("bucket_iterator", itb);
           }
         };
 
@@ -1715,49 +1075,49 @@ namespace boost {
           typedef std::ptrdiff_t difference_type;
           typedef std::forward_iterator_tag iterator_category;
 
-          c_iterator() : p(), itb(){}
+          c_iterator() : p(), itb() {}
           c_iterator(iterator<Node, Bucket> it) : p(it.p), itb(it.itb) {}
 
-          reference operator*() const BOOST_NOEXCEPT { return dereference(); }
-          pointer operator->() const BOOST_NOEXCEPT
+          reference operator*() const noexcept { return dereference(); }
+          pointer operator->() const noexcept
           {
-            pointer x = boost::addressof(p->value());
+            pointer x = std::addressof(p->value());
             return x;
           }
 
-          c_iterator& operator++() BOOST_NOEXCEPT
+          c_iterator& operator++() noexcept
           {
             increment();
             return *this;
           }
 
-          c_iterator operator++(int) BOOST_NOEXCEPT
+          c_iterator operator++(int) noexcept
           {
             c_iterator old = *this;
             increment();
             return old;
           }
 
-          bool operator==(c_iterator const& other) const BOOST_NOEXCEPT
+          bool operator==(c_iterator const& other) const noexcept
           {
             return equal(other);
           }
 
-          bool operator!=(c_iterator const& other) const BOOST_NOEXCEPT
+          bool operator!=(c_iterator const& other) const noexcept
           {
             return !equal(other);
           }
 
           bool operator==(
             boost::unordered::detail::iterator_detail::iterator<Node,
-              Bucket> const& other) const BOOST_NOEXCEPT
+              Bucket> const& other) const noexcept
           {
             return equal(other);
           }
 
           bool operator!=(
             boost::unordered::detail::iterator_detail::iterator<Node,
-              Bucket> const& other) const BOOST_NOEXCEPT
+              Bucket> const& other) const noexcept
           {
             return !equal(other);
           }
@@ -1776,22 +1136,35 @@ namespace boost {
           {
           }
 
-          value_type const& dereference() const BOOST_NOEXCEPT
-          {
-            return p->value();
-          }
+          value_type const& dereference() const noexcept { return p->value(); }
 
-          bool equal(const c_iterator& x) const BOOST_NOEXCEPT
-          {
-            return (p == x.p);
-          }
+          bool equal(const c_iterator& x) const noexcept { return (p == x.p); }
 
-          void increment() BOOST_NOEXCEPT
+          void increment() noexcept
           {
             p = p->next;
             if (!p) {
               p = (++itb)->next;
             }
+          }
+
+          template <typename Archive>
+          friend void serialization_track(Archive& ar, const c_iterator& x)
+          {
+            if (x.p) {
+              track_address(ar, x.p);
+              serialization_track(ar, x.itb);
+            }
+          }
+
+          friend class boost::serialization::access;
+
+          template <typename Archive> void serialize(Archive& ar, unsigned int)
+          {
+            if (!p)
+              itb = bucket_iterator();
+            serialize_tracked_address(ar, p);
+            ar& core::make_nvp("bucket_iterator", itb);
           }
         };
       } // namespace iterator_detail
@@ -1819,20 +1192,23 @@ namespace boost {
           functions;
 
         typedef typename Types::value_allocator value_allocator;
-        typedef typename boost::allocator_void_pointer<value_allocator>::type void_pointer;
+        typedef typename boost::allocator_void_pointer<value_allocator>::type
+          void_pointer;
         typedef node<value_type, void_pointer> node_type;
 
         typedef boost::unordered::detail::grouped_bucket_array<
           bucket<node_type, void_pointer>, value_allocator, prime_fmod_size<> >
           bucket_array_type;
 
-        typedef typename bucket_array_type::node_allocator_type
-          node_allocator_type;
-        typedef typename boost::allocator_pointer<node_allocator_type>::type node_pointer;
+        typedef
+          typename bucket_array_type::node_allocator_type node_allocator_type;
+        typedef typename boost::allocator_pointer<node_allocator_type>::type
+          node_pointer;
 
         typedef boost::unordered::detail::node_constructor<node_allocator_type>
           node_constructor;
-        typedef boost::unordered::detail::node_tmp<node_allocator_type> node_tmp;
+        typedef boost::unordered::detail::node_tmp<node_allocator_type>
+          node_tmp;
 
         typedef typename bucket_array_type::bucket_type bucket_type;
 
@@ -1879,8 +1255,7 @@ namespace boost {
           }
           std::size_t c = 0;
           std::size_t const key_hash = this->hash(k);
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
 
           bool found = false;
 
@@ -1922,10 +1297,7 @@ namespace boost {
           return iterator(itb->next, itb);
         }
 
-        iterator end() const
-        {
-          return iterator();
-        }
+        iterator end() const { return iterator(); }
 
         l_iterator begin(std::size_t bucket_index) const
         {
@@ -2003,7 +1375,7 @@ namespace boost {
 
         table(table& x, boost::unordered::detail::move_tag m)
             : functions(x, m), size_(x.size_), mlf_(x.mlf_),
-              max_load_(x.max_load_), buckets_(boost::move(x.buckets_))
+              max_load_(x.max_load_), buckets_(std::move(x.buckets_))
         {
           x.size_ = 0;
           x.max_load_ = 0;
@@ -2020,7 +1392,7 @@ namespace boost {
         ////////////////////////////////////////////////////////////////////////
         // Swap and Move
 
-        void swap_allocators(table& other, false_type)
+        void swap_allocators(table& other, std::false_type)
         {
           boost::unordered::detail::func::ignore_unused_variable_warning(other);
 
@@ -2031,7 +1403,7 @@ namespace boost {
         }
 
         // Not nothrow swappable
-        void swap(table& x, false_type)
+        void swap(table& x, std::false_type)
         {
           if (this == &x) {
             return;
@@ -2049,16 +1421,16 @@ namespace boost {
           x.switch_functions();
 
           buckets_.swap(x.buckets_);
-          boost::swap(size_, x.size_);
+          boost::core::invoke_swap(size_, x.size_);
           std::swap(mlf_, x.mlf_);
           std::swap(max_load_, x.max_load_);
         }
 
         // Nothrow swappable
-        void swap(table& x, true_type)
+        void swap(table& x, std::true_type)
         {
           buckets_.swap(x.buckets_);
-          boost::swap(size_, x.size_);
+          boost::core::invoke_swap(size_, x.size_);
           std::swap(mlf_, x.mlf_);
           std::swap(max_load_, x.max_load_);
           this->current_functions().swap(x.current_functions());
@@ -2072,8 +1444,7 @@ namespace boost {
           BOOST_ASSERT(boost::allocator_propagate_on_container_swap<
                          node_allocator_type>::type::value ||
                        node_alloc() == x.node_alloc());
-          swap(x, boost::unordered::detail::integral_constant<bool,
-                    functions::nothrow_swappable>());
+          swap(x, std::integral_constant<bool, functions::nothrow_swappable>());
         }
 
         // Only call with nodes allocated with the currect allocator, or
@@ -2081,7 +1452,7 @@ namespace boost {
         // allocators might have already been moved).
         void move_buckets_from(table& other)
         {
-          buckets_ = boost::move(other.buckets_);
+          buckets_ = std::move(other.buckets_);
 
           size_ = other.size_;
           max_load_ = other.max_load_;
@@ -2102,20 +1473,18 @@ namespace boost {
             return;
           }
 
-          BOOST_ASSERT(
-            buckets_.bucket_count() == src.buckets_.bucket_count());
+          BOOST_ASSERT(buckets_.bucket_count() == src.buckets_.bucket_count());
 
           this->reserve(src.size_);
           for (iterator pos = src.begin(); pos != src.end(); ++pos) {
             node_tmp b(detail::func::construct_node(
-                         this->node_alloc(), boost::move(pos.p->value())),
+                         this->node_alloc(), std::move(pos.p->value())),
               this->node_alloc());
 
             const_key_type& k = this->get_key(b.node_);
             std::size_t key_hash = this->hash(k);
 
-            bucket_iterator itb =
-              buckets_.at(buckets_.position(key_hash));
+            bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
             buckets_.insert_node(itb, b.release());
             ++size_;
           }
@@ -2132,6 +1501,7 @@ namespace boost {
 
           value_allocator val_alloc(alloc);
           boost::allocator_destroy(val_alloc, p->value_ptr());
+          boost::unordered::detail::func::destroy(boost::to_address(p));
           boost::allocator_deallocate(alloc, p, 1);
         }
 
@@ -2161,17 +1531,17 @@ namespace boost {
         template <typename UniqueType>
         void assign(table const& x, UniqueType is_unique)
         {
-          typedef typename boost::allocator_propagate_on_container_copy_assignment<node_allocator_type>::type pocca;
+          typedef
+            typename boost::allocator_propagate_on_container_copy_assignment<
+              node_allocator_type>::type pocca;
 
           if (this != &x) {
-            assign(x, is_unique,
-              boost::unordered::detail::integral_constant<bool,
-                pocca::value>());
+            assign(x, is_unique, std::integral_constant<bool, pocca::value>());
           }
         }
 
         template <typename UniqueType>
-        void assign(table const &x, UniqueType is_unique, false_type)
+        void assign(table const& x, UniqueType is_unique, std::false_type)
         {
           // Strong exception safety.
           this->construct_spare_functions(x.current_functions());
@@ -2194,15 +1564,12 @@ namespace boost {
         }
 
         template <typename UniqueType>
-        void assign(table const &x, UniqueType is_unique, true_type)
+        void assign(table const& x, UniqueType is_unique, std::true_type)
         {
-          if (node_alloc() == x.node_alloc())
-          {
+          if (node_alloc() == x.node_alloc()) {
             buckets_.reset_allocator(x.node_alloc());
-            assign(x, is_unique, false_type());
-          }
-          else
-          {
+            assign(x, is_unique, std::false_type());
+          } else {
             bucket_array_type new_buckets(x.size_, x.node_alloc());
             this->construct_spare_functions(x.current_functions());
             this->switch_functions();
@@ -2211,15 +1578,14 @@ namespace boost {
             // the new ones.
             delete_buckets();
             buckets_.reset_allocator(x.node_alloc());
-            buckets_ = boost::move(new_buckets);
+            buckets_ = std::move(new_buckets);
 
             // Copy over other data, all no throw.
             mlf_ = x.mlf_;
             reserve(x.size_);
 
             // Finally copy the elements.
-            if (x.size_)
-            {
+            if (x.size_) {
               copy_buckets(x, is_unique);
             }
           }
@@ -2230,7 +1596,7 @@ namespace boost {
         {
           if (this != &x) {
             move_assign(x, is_unique,
-              boost::unordered::detail::integral_constant<bool,
+              std::integral_constant<bool,
                 boost::allocator_propagate_on_container_move_assignment<
                   node_allocator_type>::type::value>());
           }
@@ -2238,7 +1604,7 @@ namespace boost {
 
         // Propagate allocator
         template <typename UniqueType>
-        void move_assign(table& x, UniqueType, true_type)
+        void move_assign(table& x, UniqueType, std::true_type)
         {
           if (!functions::nothrow_move_assignable) {
             this->construct_spare_functions(x.current_functions());
@@ -2255,7 +1621,7 @@ namespace boost {
 
         // Don't propagate allocator
         template <typename UniqueType>
-        void move_assign(table& x, UniqueType is_unique, false_type)
+        void move_assign(table& x, UniqueType is_unique, std::false_type)
         {
           if (node_alloc() == x.node_alloc()) {
             move_assign_equal_alloc(x);
@@ -2307,8 +1673,7 @@ namespace boost {
           return extractor::extract(n->value());
         }
 
-        template <class Key>
-        std::size_t hash(Key const& k) const
+        template <class Key> std::size_t hash(Key const& k) const
         {
           return this->hash_function()(k);
         }
@@ -2316,8 +1681,7 @@ namespace boost {
         // Find Node
 
         template <class Key>
-        node_pointer find_node_impl(
-          Key const& x, bucket_iterator itb) const
+        node_pointer find_node_impl(Key const& x, bucket_iterator itb) const
         {
           node_pointer p = node_pointer();
           if (itb != buckets_.end()) {
@@ -2335,12 +1699,10 @@ namespace boost {
         template <class Key> node_pointer find_node(Key const& k) const
         {
           std::size_t const key_hash = this->hash(k);
-          return find_node_impl(
-            k, buckets_.at(buckets_.position(key_hash)));
+          return find_node_impl(k, buckets_.at(buckets_.position(key_hash)));
         }
 
-        node_pointer find_node(
-          const_key_type& k, bucket_iterator itb) const
+        node_pointer find_node(const_key_type& k, bucket_iterator itb) const
         {
           return find_node_impl(k, itb);
         }
@@ -2373,8 +1735,8 @@ namespace boost {
         {
           if (size_ > 0) {
             key_equal pred = this->key_eq();
-            for (node_pointer* pp = boost::addressof(itb->next); *pp;
-                pp = boost::addressof((*pp)->next)) {
+            for (node_pointer* pp = std::addressof(itb->next); *pp;
+                 pp = std::addressof((*pp)->next)) {
               if (pred(key, extractor::extract((*pp)->value()))) {
                 return pp;
               }
@@ -2452,31 +1814,29 @@ namespace boost {
 
         // Emplace/Insert
 
-        template <BOOST_UNORDERED_EMPLACE_TEMPLATE>
+        template <typename... Args>
         iterator emplace_hint_unique(
-          c_iterator hint, const_key_type& k, BOOST_UNORDERED_EMPLACE_ARGS)
+          c_iterator hint, const_key_type& k, Args&&... args)
         {
           if (hint.p && this->key_eq()(k, this->get_key(hint.p))) {
             return iterator(hint.p, hint.itb);
           } else {
-            return emplace_unique(k, BOOST_UNORDERED_EMPLACE_FORWARD).first;
+            return emplace_unique(k, std::forward<Args>(args)...).first;
           }
         }
 
-        template <BOOST_UNORDERED_EMPLACE_TEMPLATE>
-        emplace_return emplace_unique(
-          const_key_type& k, BOOST_UNORDERED_EMPLACE_ARGS)
+        template <typename... Args>
+        emplace_return emplace_unique(const_key_type& k, Args&&... args)
         {
           std::size_t key_hash = this->hash(k);
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
           node_pointer pos = this->find_node_impl(k, itb);
 
           if (pos) {
             return emplace_return(iterator(pos, itb), false);
           } else {
             node_tmp b(boost::unordered::detail::func::construct_node_from_args(
-                         this->node_alloc(), BOOST_UNORDERED_EMPLACE_FORWARD),
+                         this->node_alloc(), std::forward<Args>(args)...),
               this->node_alloc());
 
             if (size_ + 1 > max_load_) {
@@ -2492,12 +1852,11 @@ namespace boost {
           }
         }
 
-        template <BOOST_UNORDERED_EMPLACE_TEMPLATE>
-        iterator emplace_hint_unique(
-          c_iterator hint, no_key, BOOST_UNORDERED_EMPLACE_ARGS)
+        template <typename... Args>
+        iterator emplace_hint_unique(c_iterator hint, no_key, Args&&... args)
         {
           node_tmp b(boost::unordered::detail::func::construct_node_from_args(
-                       this->node_alloc(), BOOST_UNORDERED_EMPLACE_FORWARD),
+                       this->node_alloc(), std::forward<Args>(args)...),
             this->node_alloc());
 
           const_key_type& k = this->get_key(b.node_);
@@ -2506,8 +1865,7 @@ namespace boost {
           }
 
           std::size_t const key_hash = this->hash(k);
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
 
           node_pointer p = this->find_node_impl(k, itb);
           if (p) {
@@ -2525,18 +1883,17 @@ namespace boost {
           return iterator(p, itb);
         }
 
-        template <BOOST_UNORDERED_EMPLACE_TEMPLATE>
-        emplace_return emplace_unique(no_key, BOOST_UNORDERED_EMPLACE_ARGS)
+        template <typename... Args>
+        emplace_return emplace_unique(no_key, Args&&... args)
         {
           node_tmp b(boost::unordered::detail::func::construct_node_from_args(
-                       this->node_alloc(), BOOST_UNORDERED_EMPLACE_FORWARD),
+                       this->node_alloc(), std::forward<Args>(args)...),
             this->node_alloc());
 
           const_key_type& k = this->get_key(b.node_);
           std::size_t key_hash = this->hash(k);
 
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
           node_pointer pos = this->find_node_impl(k, itb);
 
           if (pos) {
@@ -2555,12 +1912,10 @@ namespace boost {
           }
         }
 
-        template <typename Key>
-        emplace_return try_emplace_unique(BOOST_FWD_REF(Key) k)
+        template <typename Key> emplace_return try_emplace_unique(Key&& k)
         {
           std::size_t key_hash = this->hash(k);
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
 
           node_pointer pos = this->find_node_impl(k, itb);
 
@@ -2572,7 +1927,7 @@ namespace boost {
             value_type* dispatch = BOOST_NULLPTR;
 
             node_tmp tmp(detail::func::construct_node_from_key(
-                           dispatch, alloc, boost::forward<Key>(k)),
+                           dispatch, alloc, std::forward<Key>(k)),
               alloc);
 
             if (size_ + 1 > max_load_) {
@@ -2589,7 +1944,7 @@ namespace boost {
         }
 
         template <typename Key>
-        iterator try_emplace_hint_unique(c_iterator hint, BOOST_FWD_REF(Key) k)
+        iterator try_emplace_hint_unique(c_iterator hint, Key&& k)
         {
           if (hint.p && this->key_eq()(extractor::extract(*hint), k)) {
             return iterator(hint.p, hint.itb);
@@ -2598,13 +1953,11 @@ namespace boost {
           }
         }
 
-        template <typename Key, BOOST_UNORDERED_EMPLACE_TEMPLATE>
-        emplace_return try_emplace_unique(
-          BOOST_FWD_REF(Key) k, BOOST_UNORDERED_EMPLACE_ARGS)
+        template <typename Key, typename... Args>
+        emplace_return try_emplace_unique(Key&& k, Args&&... args)
         {
           std::size_t key_hash = this->hash(k);
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
 
           node_pointer pos = this->find_node_impl(k, itb);
 
@@ -2614,7 +1967,7 @@ namespace boost {
 
           node_tmp b(
             boost::unordered::detail::func::construct_node_pair_from_args(
-              this->node_alloc(), k, BOOST_UNORDERED_EMPLACE_FORWARD),
+              this->node_alloc(), k, std::forward<Args>(args)...),
             this->node_alloc());
 
           if (size_ + 1 > max_load_) {
@@ -2629,34 +1982,32 @@ namespace boost {
           return emplace_return(iterator(pos, itb), true);
         }
 
-        template <typename Key, BOOST_UNORDERED_EMPLACE_TEMPLATE>
+        template <typename Key, typename... Args>
         iterator try_emplace_hint_unique(
-          c_iterator hint, BOOST_FWD_REF(Key) k, BOOST_UNORDERED_EMPLACE_ARGS)
+          c_iterator hint, Key&& k, Args&&... args)
         {
           if (hint.p && this->key_eq()(hint->first, k)) {
             return iterator(hint.p, hint.itb);
           } else {
-            return try_emplace_unique(k, BOOST_UNORDERED_EMPLACE_FORWARD).first;
+            return try_emplace_unique(k, std::forward<Args>(args)...).first;
           }
         }
 
         template <typename Key, typename M>
-        emplace_return insert_or_assign_unique(
-          BOOST_FWD_REF(Key) k, BOOST_FWD_REF(M) obj)
+        emplace_return insert_or_assign_unique(Key&& k, M&& obj)
         {
           std::size_t key_hash = this->hash(k);
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
 
           node_pointer p = this->find_node_impl(k, itb);
           if (p) {
-            p->value().second = boost::forward<M>(obj);
+            p->value().second = std::forward<M>(obj);
             return emplace_return(iterator(p, itb), false);
           }
 
-          node_tmp b(boost::unordered::detail::func::construct_node_pair(
-                       this->node_alloc(), boost::forward<Key>(k),
-                       boost::forward<M>(obj)),
+          node_tmp b(
+            boost::unordered::detail::func::construct_node_pair(
+              this->node_alloc(), std::forward<Key>(k), std::forward<M>(obj)),
             node_alloc());
 
           if (size_ + 1 > max_load_) {
@@ -2683,13 +2034,12 @@ namespace boost {
 
           const_key_type& k = this->get_key(np.ptr_);
           std::size_t const key_hash = this->hash(k);
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
           node_pointer p = this->find_node_impl(k, itb);
 
           if (p) {
             iterator pos(p, itb);
-            result.node = boost::move(np);
+            result.node = std::move(np);
             result.position = pos;
             result.inserted = false;
             return;
@@ -2722,8 +2072,7 @@ namespace boost {
           }
 
           std::size_t const key_hash = this->hash(k);
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
           node_pointer p = this->find_node_impl(k, itb);
           if (p) {
             return iterator(p, itb);
@@ -2746,8 +2095,8 @@ namespace boost {
         void merge_unique(boost::unordered::detail::table<Types2>& other)
         {
           typedef boost::unordered::detail::table<Types2> other_table;
-          BOOST_STATIC_ASSERT((boost::is_same<node_type,
-            typename other_table::node_type>::value));
+          BOOST_UNORDERED_STATIC_ASSERT(
+            (std::is_same<node_type, typename other_table::node_type>::value));
           BOOST_ASSERT(this->node_alloc() == other.node_alloc());
 
           if (other.size_ == 0) {
@@ -2761,8 +2110,7 @@ namespace boost {
             const_key_type& key = other.get_key(pos.p);
             std::size_t const key_hash = this->hash(key);
 
-            bucket_iterator itb =
-              buckets_.at(buckets_.position(key_hash));
+            bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
 
             if (this->find_node_impl(key, itb)) {
               ++pos;
@@ -2847,14 +2195,15 @@ namespace boost {
           return 1;
         }
 
-        iterator erase_node(c_iterator pos) {
+        iterator erase_node(c_iterator pos)
+        {
           c_iterator next = pos;
           ++next;
-          
+
           bucket_iterator itb = pos.itb;
-          node_pointer* pp = boost::addressof(itb->next);
+          node_pointer* pp = std::addressof(itb->next);
           while (*pp != pos.p) {
-            pp = boost::addressof((*pp)->next);
+            pp = std::addressof((*pp)->next);
           }
 
           buckets_.extract_node_after(itb, pp);
@@ -2875,9 +2224,9 @@ namespace boost {
           // each bucket group so we have to retrieve it manually by iterating
           //
           bucket_iterator itb = first.itb;
-          node_pointer* pp = boost::addressof(itb->next);
+          node_pointer* pp = std::addressof(itb->next);
           while (*pp != first.p) {
-            pp = boost::addressof((*pp)->next);
+            pp = std::addressof((*pp)->next);
           }
 
           while (*pp != last.p) {
@@ -2886,7 +2235,6 @@ namespace boost {
 
             this->delete_node(p);
             --size_;
-
 
             bool const at_end = !(*pp);
             bool const is_empty_bucket = !itb->next;
@@ -2897,7 +2245,7 @@ namespace boost {
               } else {
                 ++itb;
               }
-              pp = boost::addressof(itb->next);
+              pp = std::addressof(itb->next);
             }
           }
 
@@ -2907,7 +2255,7 @@ namespace boost {
         ////////////////////////////////////////////////////////////////////////
         // fill_buckets_unique
 
-        void copy_buckets(table const& src, true_type)
+        void copy_buckets(table const& src, std::true_type)
         {
           BOOST_ASSERT(size_ == 0);
 
@@ -2928,7 +2276,7 @@ namespace boost {
           }
         }
 
-        void move_assign_buckets(table& src, true_type)
+        void move_assign_buckets(table& src, std::true_type)
         {
           BOOST_ASSERT(size_ == 0);
           BOOST_ASSERT(max_load_ >= src.size_);
@@ -2937,14 +2285,14 @@ namespace boost {
           node_allocator_type alloc = this->node_alloc();
 
           for (iterator pos = src.begin(); pos != last; ++pos) {
-            value_type value = boost::move(*pos);
+            value_type value = std::move(*pos);
             const_key_type& key = extractor::extract(value);
             std::size_t const key_hash = this->hash(key);
 
             bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
 
             node_tmp tmp(
-              detail::func::construct_node(alloc, boost::move(value)), alloc);
+              detail::func::construct_node(alloc, std::move(value)), alloc);
 
             buckets_.insert_node(itb, tmp.release());
             ++size_;
@@ -2982,8 +2330,8 @@ namespace boost {
           return true;
         }
 
-        static bool group_equals_equiv(iterator n1, iterator end1,
-          iterator n2, iterator end2)
+        static bool group_equals_equiv(
+          iterator n1, iterator end1, iterator n2, iterator end2)
         {
           for (;;) {
             if (*n1 != *n2)
@@ -3031,8 +2379,7 @@ namespace boost {
           return true;
         }
 
-        static bool find_equiv(
-          iterator n, iterator last, value_type const& v)
+        static bool find_equiv(iterator n, iterator last, value_type const& v)
         {
           for (; n != last; ++n)
             if (*n == v)
@@ -3057,8 +2404,7 @@ namespace boost {
           node_tmp a(n, this->node_alloc());
           const_key_type& k = this->get_key(a.node_);
           std::size_t key_hash = this->hash(k);
-          bucket_iterator itb =
-            buckets_.at(buckets_.position(key_hash));
+          bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
           node_pointer hint = this->find_node_impl(k, itb);
 
           if (size_ + 1 > max_load_) {
@@ -3126,8 +2472,7 @@ namespace boost {
             const_key_type& k = this->get_key(np.ptr_);
             std::size_t key_hash = this->hash(k);
 
-            bucket_iterator itb =
-              buckets_.at(buckets_.position(key_hash));
+            bucket_iterator itb = buckets_.at(buckets_.position(key_hash));
 
             node_pointer hint = this->find_node_impl(k, itb);
             buckets_.insert_node_hint(itb, np.ptr_, hint);
@@ -3256,7 +2601,7 @@ namespace boost {
         ////////////////////////////////////////////////////////////////////////
         // fill_buckets
 
-        void copy_buckets(table const& src, false_type)
+        void copy_buckets(table const& src, std::false_type)
         {
           BOOST_ASSERT(size_ == 0);
 
@@ -3277,7 +2622,7 @@ namespace boost {
           }
         }
 
-        void move_assign_buckets(table& src, false_type)
+        void move_assign_buckets(table& src, std::false_type)
         {
           BOOST_ASSERT(size_ == 0);
           BOOST_ASSERT(max_load_ >= src.size_);
@@ -3286,7 +2631,7 @@ namespace boost {
           node_allocator_type alloc = this->node_alloc();
 
           for (iterator pos = src.begin(); pos != last; ++pos) {
-            value_type value = boost::move(*pos);
+            value_type value = std::move(*pos);
             const_key_type& key = extractor::extract(value);
             std::size_t const key_hash = this->hash(key);
 
@@ -3294,7 +2639,7 @@ namespace boost {
 
             node_pointer hint = this->find_node_impl(key, itb);
             node_tmp tmp(
-              detail::func::construct_node(alloc, boost::move(value)), alloc);
+              detail::func::construct_node(alloc, std::move(value)), alloc);
 
             buckets_.insert_node_hint(itb, tmp.release(), hint);
             ++size_;
@@ -3311,7 +2656,7 @@ namespace boost {
         for (; itb != last;) {
           bucket_iterator next_itb = itb;
           ++next_itb;
-          node_pointer* pp = boost::addressof(itb->next);
+          node_pointer* pp = std::addressof(itb->next);
           while (*pp) {
             node_pointer p = *pp;
             buckets_.extract_node_after(itb, pp);
@@ -3397,7 +2742,7 @@ namespace boost {
         }
         BOOST_CATCH_END
 
-        buckets_ = boost::move(new_buckets);
+        buckets_ = std::move(new_buckets);
         recalculate_max_load();
       }
 
@@ -3428,8 +2773,7 @@ namespace boost {
                   sizeof(choice2::type)
         };
 
-        typedef
-          typename boost::conditional<value, Key const&, no_key>::type type;
+        typedef typename std::conditional<value, Key const&, no_key>::type type;
       };
 
       template <class ValueType> struct set_extractor
@@ -3439,10 +2783,7 @@ namespace boost {
 
         static key_type const& extract(value_type const& v) { return v; }
 
-        static key_type const& extract(BOOST_UNORDERED_RV_REF(value_type) v)
-        {
-          return v;
-        }
+        static key_type const& extract(value_type&& v) { return v; }
 
         static no_key extract() { return no_key(); }
 
@@ -3451,25 +2792,17 @@ namespace boost {
           return no_key();
         }
 
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
         template <class Arg1, class Arg2, class... Args>
         static no_key extract(Arg1 const&, Arg2 const&, Args const&...)
         {
           return no_key();
         }
-#else
-        template <class Arg1, class Arg2>
-        static no_key extract(Arg1 const&, Arg2 const&)
-        {
-          return no_key();
-        }
-#endif
       };
 
       template <class ValueType> struct map_extractor
       {
         typedef ValueType value_type;
-        typedef typename boost::remove_const<typename boost::unordered::detail::
+        typedef typename std::remove_const<typename boost::unordered::detail::
             pair_traits<ValueType>::first_type>::type key_type;
 
         static key_type const& extract(value_type const& v) { return v.first; }
@@ -3486,22 +2819,6 @@ namespace boost {
         {
           return v.first;
         }
-
-#if defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
-        template <class Second>
-        static key_type const& extract(
-          boost::rv<std::pair<key_type, Second> > const& v)
-        {
-          return v.first;
-        }
-
-        template <class Second>
-        static key_type const& extract(
-          boost::rv<std::pair<key_type const, Second> > const& v)
-        {
-          return v.first;
-        }
-#endif
 
         template <class Arg1>
         static key_type const& extract(key_type const& k, Arg1 const&)
@@ -3522,58 +2839,31 @@ namespace boost {
           return no_key();
         }
 
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
         template <class Arg1, class Arg2, class Arg3, class... Args>
         static no_key extract(
           Arg1 const&, Arg2 const&, Arg3 const&, Args const&...)
         {
           return no_key();
         }
-#endif
 
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
+        template <template <class...> class Tuple, typename T2>
+        static no_key extract(
+          std::piecewise_construct_t, Tuple<> const&, T2 const&)
+        {
+          return no_key();
+        }
 
-#define BOOST_UNORDERED_KEY_FROM_TUPLE(namespace_)                             \
-  template <typename T2>                                                       \
-  static no_key extract(boost::unordered::piecewise_construct_t,               \
-    namespace_ tuple<> const&, T2 const&)                                      \
-  {                                                                            \
-    return no_key();                                                           \
-  }                                                                            \
-                                                                               \
-  template <typename T, typename T2>                                           \
-  static typename is_key<key_type, T>::type extract(                           \
-    boost::unordered::piecewise_construct_t, namespace_ tuple<T> const& k,     \
-    T2 const&)                                                                 \
-  {                                                                            \
-    return typename is_key<key_type, T>::type(namespace_ get<0>(k));           \
-  }
-
-#else
-
-#define BOOST_UNORDERED_KEY_FROM_TUPLE(namespace_)                             \
-  static no_key extract(                                                       \
-    boost::unordered::piecewise_construct_t, namespace_ tuple<> const&)        \
-  {                                                                            \
-    return no_key();                                                           \
-  }                                                                            \
-                                                                               \
-  template <typename T>                                                        \
-  static typename is_key<key_type, T>::type extract(                           \
-    boost::unordered::piecewise_construct_t, namespace_ tuple<T> const& k)     \
-  {                                                                            \
-    return typename is_key<key_type, T>::type(namespace_ get<0>(k));           \
-  }
-
-#endif
-
-        BOOST_UNORDERED_KEY_FROM_TUPLE(boost::)
-
-#if BOOST_UNORDERED_TUPLE_ARGS
-        BOOST_UNORDERED_KEY_FROM_TUPLE(std::)
-#endif
-
-#undef BOOST_UNORDERED_KEY_FROM_TUPLE
+        template <template <typename...> class Tuple, typename T, typename T2,
+          typename... Args>
+        static auto extract(
+          std::piecewise_construct_t, Tuple<T, Args...> const& k, T2 const&) ->
+          typename std::enable_if<
+            !std::is_same<T, boost::tuples::null_type>::value,
+            typename is_key<key_type, T>::type>::type
+        {
+          using std::get;
+          return typename is_key<key_type, T>::type(get<0>(k));
+        }
       };
 
       template <class Container, class Predicate>
@@ -3594,12 +2884,8 @@ namespace boost {
 
         return (size - c.size());
       }
-    }
-  }
-}
-
-#undef BOOST_UNORDERED_EMPLACE_TEMPLATE
-#undef BOOST_UNORDERED_EMPLACE_ARGS
-#undef BOOST_UNORDERED_EMPLACE_FORWARD
+    } // namespace detail
+  } // namespace unordered
+} // namespace boost
 
 #endif

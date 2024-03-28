@@ -5,13 +5,10 @@
 #ifndef BOOST_TYPEOF_STD_stack_hpp_INCLUDED
 #define BOOST_TYPEOF_STD_stack_hpp_INCLUDED
 
+// This header is no longer useful and is only retained for compatibility
+
 #include <stack>
 #include <boost/typeof/typeof.hpp>
 #include <boost/typeof/std/memory.hpp>
-
-#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::stack, 1)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::stack, 2)
 
 #endif//BOOST_TYPEOF_STD_stack_hpp_INCLUDED

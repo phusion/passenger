@@ -9,6 +9,8 @@
 #ifndef BOOST_UNORDERED_DETAIL_FOA_NODE_HANDLE_HPP
 #define BOOST_UNORDERED_DETAIL_FOA_NODE_HANDLE_HPP
 
+#include <boost/unordered/detail/opt_storage.hpp>
+
 #include <boost/config.hpp>
 #include <boost/core/allocator_access.hpp>
 
@@ -23,14 +25,6 @@ struct insert_return_type
   Iterator position;
   bool     inserted;
   NodeType node;
-};
-
-template <class T>
-union opt_storage {
-  BOOST_ATTRIBUTE_NO_UNIQUE_ADDRESS T t_;
-
-  opt_storage(){}
-  ~opt_storage(){}
 };
 
 template <class TypePolicy,class Allocator>

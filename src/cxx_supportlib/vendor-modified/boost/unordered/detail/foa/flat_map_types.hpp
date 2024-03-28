@@ -14,6 +14,7 @@ namespace boost {
         template <class Key, class T> struct flat_map_types
         {
           using key_type = Key;
+          using mapped_type = T;
           using raw_key_type = typename std::remove_const<Key>::type;
           using raw_mapped_type = typename std::remove_const<T>::type;
 

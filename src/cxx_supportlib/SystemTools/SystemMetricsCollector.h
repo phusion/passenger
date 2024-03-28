@@ -835,8 +835,8 @@ private:
 		void updateCpuMetrics(SystemMetrics::CpuUsage &cpuUsage, long long user, long long nice,
 			long long sys, long long iowait, long long idle, long long steal) const
 		{
-			unsigned long long userDiff, niceDiff, systemDiff, ioWaitDiff,
-				idleDiff, stealDiff;
+			unsigned long long userDiff, niceDiff, systemDiff, idleDiff,
+				ioWaitDiff = 0, stealDiff = 0;
 			double totalCalculationTicks, totalTicks;
 
 			userDiff   = (unsigned long long) user - cpuUsage.lastUserTicks;

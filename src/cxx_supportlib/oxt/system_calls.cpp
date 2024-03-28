@@ -635,7 +635,7 @@ syscalls::nanosleep(const struct timespec *req, struct timespec *rem) {
 	struct timespec req2 = *req;
 	struct timespec rem2;
 	int ret, e;
-	bool intr_requested;
+	bool intr_requested = false;
 
 	/* We never simulate failure in this function. */
 

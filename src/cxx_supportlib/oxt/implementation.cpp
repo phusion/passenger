@@ -28,6 +28,7 @@
 #include <boost/make_shared.hpp>
 #include "tracable_exception.hpp"
 #include "backtrace.hpp"
+#include "initialize.hpp"
 #include "macros.hpp"
 #include "thread.hpp"
 #include "spin_lock.hpp"
@@ -330,8 +331,6 @@ void
 initialize() {
 	global_context = new global_context_t();
 	init_thread_local_context_support();
-	// For some reason make_shared() crashes here when compiled with clang 3.2 on OS X.
-	// Clang bug? We use 'new' to work around it.
 	thread_local_context_ptr ctx = thread_local_context::make_shared_ptr();
 	ctx->thread_number = 1;
 	ctx->thread_name = "Main thread";

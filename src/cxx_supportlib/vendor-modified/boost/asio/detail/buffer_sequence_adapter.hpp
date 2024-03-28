@@ -675,7 +675,7 @@ private:
 };
 
 template <typename Buffer, typename Elem>
-class buffer_sequence_adapter<Buffer, boost::array<Elem, 2> >
+class buffer_sequence_adapter<Buffer, boost::array<Elem, 2>>
   : buffer_sequence_adapter_base
 {
 public:
@@ -750,10 +750,8 @@ private:
   std::size_t total_buffer_size_;
 };
 
-#if defined(BOOST_ASIO_HAS_STD_ARRAY)
-
 template <typename Buffer, typename Elem>
-class buffer_sequence_adapter<Buffer, std::array<Elem, 2> >
+class buffer_sequence_adapter<Buffer, std::array<Elem, 2>>
   : buffer_sequence_adapter_base
 {
 public:
@@ -827,8 +825,6 @@ private:
   native_buffer_type buffers_[2];
   std::size_t total_buffer_size_;
 };
-
-#endif // defined(BOOST_ASIO_HAS_STD_ARRAY)
 
 } // namespace detail
 } // namespace asio

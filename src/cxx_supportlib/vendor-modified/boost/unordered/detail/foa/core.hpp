@@ -22,13 +22,10 @@
 #include <boost/core/pointer_traits.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/predef.h>
-#include <boost/static_assert.hpp>
-#include <boost/type_traits/has_trivial_constructor.hpp>
-#include <boost/type_traits/has_trivial_copy.hpp>
-#include <boost/type_traits/has_trivial_assign.hpp>
-#include <boost/type_traits/is_nothrow_swappable.hpp>
 #include <boost/unordered/detail/narrow_cast.hpp>
 #include <boost/unordered/detail/mulx.hpp>
+#include <boost/unordered/detail/static_assert.hpp>
+#include <boost/unordered/detail/type_traits.hpp>
 #include <boost/unordered/hash_traits.hpp>
 #include <climits>
 #include <cmath>
@@ -95,7 +92,7 @@
 #elif defined(BOOST_UNORDERED_SSE2)
 #define BOOST_UNORDERED_PREFETCH(p) _mm_prefetch((const char*)(p),_MM_HINT_T0)
 #else
-#define BOOST_UNORDERED_PREFETCH(p) ((void)0)
+#define BOOST_UNORDERED_PREFETCH(p) ((void)(p))
 #endif
 
 /* We have experimentally confirmed that ARM architectures get a higher
@@ -134,9 +131,9 @@
 #endif
 
 #define BOOST_UNORDERED_STATIC_ASSERT_HASH_PRED(Hash, Pred)                    \
-  static_assert(boost::is_nothrow_swappable<Hash>::value,                      \
+  static_assert(boost::unordered::detail::is_nothrow_swappable<Hash>::value,   \
     "Template parameter Hash is required to be nothrow Swappable.");           \
-  static_assert(boost::is_nothrow_swappable<Pred>::value,                      \
+  static_assert(boost::unordered::detail::is_nothrow_swappable<Pred>::value,   \
     "Template parameter Pred is required to be nothrow Swappable");
 
 namespace boost{
@@ -148,7 +145,7 @@ static constexpr std::size_t default_bucket_count=0;
 
 /* foa::table_core is the common base of foa::table and foa::concurrent_table,
  * which in their turn serve as the foundational core of
- * boost::unordered_(flat|node)_(map|set) and boost::concurrent_flat_map,
+ * boost::unordered_(flat|node)_(map|set) and boost::concurrent_flat_(map|set),
  * respectively. Its main internal design aspects are:
  * 
  *   - Element slots are logically split into groups of size N=15. The number
@@ -311,7 +308,7 @@ struct group15
 
 private:
   using slot_type=IntegralWrapper<unsigned char>;
-  BOOST_STATIC_ASSERT(sizeof(slot_type)==1);
+  BOOST_UNORDERED_STATIC_ASSERT(sizeof(slot_type)==1);
 
   static constexpr unsigned char available_=0,
                                  sentinel_=1;
@@ -337,38 +334,49 @@ private:
   {
     static constexpr boost::uint32_t word[]=
     {
-      0x08080808u,0x09090909u,0x02020202u,0x03030303u,0x04040404u,0x05050505u,0x06060606u,0x07070707u,
-      0x08080808u,0x09090909u,0x0A0A0A0Au,0x0B0B0B0Bu,0x0C0C0C0Cu,0x0D0D0D0Du,0x0E0E0E0Eu,0x0F0F0F0Fu,
-      0x10101010u,0x11111111u,0x12121212u,0x13131313u,0x14141414u,0x15151515u,0x16161616u,0x17171717u,
-      0x18181818u,0x19191919u,0x1A1A1A1Au,0x1B1B1B1Bu,0x1C1C1C1Cu,0x1D1D1D1Du,0x1E1E1E1Eu,0x1F1F1F1Fu,
-      0x20202020u,0x21212121u,0x22222222u,0x23232323u,0x24242424u,0x25252525u,0x26262626u,0x27272727u,
-      0x28282828u,0x29292929u,0x2A2A2A2Au,0x2B2B2B2Bu,0x2C2C2C2Cu,0x2D2D2D2Du,0x2E2E2E2Eu,0x2F2F2F2Fu,
-      0x30303030u,0x31313131u,0x32323232u,0x33333333u,0x34343434u,0x35353535u,0x36363636u,0x37373737u,
-      0x38383838u,0x39393939u,0x3A3A3A3Au,0x3B3B3B3Bu,0x3C3C3C3Cu,0x3D3D3D3Du,0x3E3E3E3Eu,0x3F3F3F3Fu,
-      0x40404040u,0x41414141u,0x42424242u,0x43434343u,0x44444444u,0x45454545u,0x46464646u,0x47474747u,
-      0x48484848u,0x49494949u,0x4A4A4A4Au,0x4B4B4B4Bu,0x4C4C4C4Cu,0x4D4D4D4Du,0x4E4E4E4Eu,0x4F4F4F4Fu,
-      0x50505050u,0x51515151u,0x52525252u,0x53535353u,0x54545454u,0x55555555u,0x56565656u,0x57575757u,
-      0x58585858u,0x59595959u,0x5A5A5A5Au,0x5B5B5B5Bu,0x5C5C5C5Cu,0x5D5D5D5Du,0x5E5E5E5Eu,0x5F5F5F5Fu,
-      0x60606060u,0x61616161u,0x62626262u,0x63636363u,0x64646464u,0x65656565u,0x66666666u,0x67676767u,
-      0x68686868u,0x69696969u,0x6A6A6A6Au,0x6B6B6B6Bu,0x6C6C6C6Cu,0x6D6D6D6Du,0x6E6E6E6Eu,0x6F6F6F6Fu,
-      0x70707070u,0x71717171u,0x72727272u,0x73737373u,0x74747474u,0x75757575u,0x76767676u,0x77777777u,
-      0x78787878u,0x79797979u,0x7A7A7A7Au,0x7B7B7B7Bu,0x7C7C7C7Cu,0x7D7D7D7Du,0x7E7E7E7Eu,0x7F7F7F7Fu,
-      0x80808080u,0x81818181u,0x82828282u,0x83838383u,0x84848484u,0x85858585u,0x86868686u,0x87878787u,
-      0x88888888u,0x89898989u,0x8A8A8A8Au,0x8B8B8B8Bu,0x8C8C8C8Cu,0x8D8D8D8Du,0x8E8E8E8Eu,0x8F8F8F8Fu,
-      0x90909090u,0x91919191u,0x92929292u,0x93939393u,0x94949494u,0x95959595u,0x96969696u,0x97979797u,
-      0x98989898u,0x99999999u,0x9A9A9A9Au,0x9B9B9B9Bu,0x9C9C9C9Cu,0x9D9D9D9Du,0x9E9E9E9Eu,0x9F9F9F9Fu,
-      0xA0A0A0A0u,0xA1A1A1A1u,0xA2A2A2A2u,0xA3A3A3A3u,0xA4A4A4A4u,0xA5A5A5A5u,0xA6A6A6A6u,0xA7A7A7A7u,
-      0xA8A8A8A8u,0xA9A9A9A9u,0xAAAAAAAAu,0xABABABABu,0xACACACACu,0xADADADADu,0xAEAEAEAEu,0xAFAFAFAFu,
-      0xB0B0B0B0u,0xB1B1B1B1u,0xB2B2B2B2u,0xB3B3B3B3u,0xB4B4B4B4u,0xB5B5B5B5u,0xB6B6B6B6u,0xB7B7B7B7u,
-      0xB8B8B8B8u,0xB9B9B9B9u,0xBABABABAu,0xBBBBBBBBu,0xBCBCBCBCu,0xBDBDBDBDu,0xBEBEBEBEu,0xBFBFBFBFu,
-      0xC0C0C0C0u,0xC1C1C1C1u,0xC2C2C2C2u,0xC3C3C3C3u,0xC4C4C4C4u,0xC5C5C5C5u,0xC6C6C6C6u,0xC7C7C7C7u,
-      0xC8C8C8C8u,0xC9C9C9C9u,0xCACACACAu,0xCBCBCBCBu,0xCCCCCCCCu,0xCDCDCDCDu,0xCECECECEu,0xCFCFCFCFu,
-      0xD0D0D0D0u,0xD1D1D1D1u,0xD2D2D2D2u,0xD3D3D3D3u,0xD4D4D4D4u,0xD5D5D5D5u,0xD6D6D6D6u,0xD7D7D7D7u,
-      0xD8D8D8D8u,0xD9D9D9D9u,0xDADADADAu,0xDBDBDBDBu,0xDCDCDCDCu,0xDDDDDDDDu,0xDEDEDEDEu,0xDFDFDFDFu,
-      0xE0E0E0E0u,0xE1E1E1E1u,0xE2E2E2E2u,0xE3E3E3E3u,0xE4E4E4E4u,0xE5E5E5E5u,0xE6E6E6E6u,0xE7E7E7E7u,
-      0xE8E8E8E8u,0xE9E9E9E9u,0xEAEAEAEAu,0xEBEBEBEBu,0xECECECECu,0xEDEDEDEDu,0xEEEEEEEEu,0xEFEFEFEFu,
-      0xF0F0F0F0u,0xF1F1F1F1u,0xF2F2F2F2u,0xF3F3F3F3u,0xF4F4F4F4u,0xF5F5F5F5u,0xF6F6F6F6u,0xF7F7F7F7u,
-      0xF8F8F8F8u,0xF9F9F9F9u,0xFAFAFAFAu,0xFBFBFBFBu,0xFCFCFCFCu,0xFDFDFDFDu,0xFEFEFEFEu,0xFFFFFFFFu,
+      0x08080808u,0x09090909u,0x02020202u,0x03030303u,0x04040404u,0x05050505u,
+      0x06060606u,0x07070707u,0x08080808u,0x09090909u,0x0A0A0A0Au,0x0B0B0B0Bu,
+      0x0C0C0C0Cu,0x0D0D0D0Du,0x0E0E0E0Eu,0x0F0F0F0Fu,0x10101010u,0x11111111u,
+      0x12121212u,0x13131313u,0x14141414u,0x15151515u,0x16161616u,0x17171717u,
+      0x18181818u,0x19191919u,0x1A1A1A1Au,0x1B1B1B1Bu,0x1C1C1C1Cu,0x1D1D1D1Du,
+      0x1E1E1E1Eu,0x1F1F1F1Fu,0x20202020u,0x21212121u,0x22222222u,0x23232323u,
+      0x24242424u,0x25252525u,0x26262626u,0x27272727u,0x28282828u,0x29292929u,
+      0x2A2A2A2Au,0x2B2B2B2Bu,0x2C2C2C2Cu,0x2D2D2D2Du,0x2E2E2E2Eu,0x2F2F2F2Fu,
+      0x30303030u,0x31313131u,0x32323232u,0x33333333u,0x34343434u,0x35353535u,
+      0x36363636u,0x37373737u,0x38383838u,0x39393939u,0x3A3A3A3Au,0x3B3B3B3Bu,
+      0x3C3C3C3Cu,0x3D3D3D3Du,0x3E3E3E3Eu,0x3F3F3F3Fu,0x40404040u,0x41414141u,
+      0x42424242u,0x43434343u,0x44444444u,0x45454545u,0x46464646u,0x47474747u,
+      0x48484848u,0x49494949u,0x4A4A4A4Au,0x4B4B4B4Bu,0x4C4C4C4Cu,0x4D4D4D4Du,
+      0x4E4E4E4Eu,0x4F4F4F4Fu,0x50505050u,0x51515151u,0x52525252u,0x53535353u,
+      0x54545454u,0x55555555u,0x56565656u,0x57575757u,0x58585858u,0x59595959u,
+      0x5A5A5A5Au,0x5B5B5B5Bu,0x5C5C5C5Cu,0x5D5D5D5Du,0x5E5E5E5Eu,0x5F5F5F5Fu,
+      0x60606060u,0x61616161u,0x62626262u,0x63636363u,0x64646464u,0x65656565u,
+      0x66666666u,0x67676767u,0x68686868u,0x69696969u,0x6A6A6A6Au,0x6B6B6B6Bu,
+      0x6C6C6C6Cu,0x6D6D6D6Du,0x6E6E6E6Eu,0x6F6F6F6Fu,0x70707070u,0x71717171u,
+      0x72727272u,0x73737373u,0x74747474u,0x75757575u,0x76767676u,0x77777777u,
+      0x78787878u,0x79797979u,0x7A7A7A7Au,0x7B7B7B7Bu,0x7C7C7C7Cu,0x7D7D7D7Du,
+      0x7E7E7E7Eu,0x7F7F7F7Fu,0x80808080u,0x81818181u,0x82828282u,0x83838383u,
+      0x84848484u,0x85858585u,0x86868686u,0x87878787u,0x88888888u,0x89898989u,
+      0x8A8A8A8Au,0x8B8B8B8Bu,0x8C8C8C8Cu,0x8D8D8D8Du,0x8E8E8E8Eu,0x8F8F8F8Fu,
+      0x90909090u,0x91919191u,0x92929292u,0x93939393u,0x94949494u,0x95959595u,
+      0x96969696u,0x97979797u,0x98989898u,0x99999999u,0x9A9A9A9Au,0x9B9B9B9Bu,
+      0x9C9C9C9Cu,0x9D9D9D9Du,0x9E9E9E9Eu,0x9F9F9F9Fu,0xA0A0A0A0u,0xA1A1A1A1u,
+      0xA2A2A2A2u,0xA3A3A3A3u,0xA4A4A4A4u,0xA5A5A5A5u,0xA6A6A6A6u,0xA7A7A7A7u,
+      0xA8A8A8A8u,0xA9A9A9A9u,0xAAAAAAAAu,0xABABABABu,0xACACACACu,0xADADADADu,
+      0xAEAEAEAEu,0xAFAFAFAFu,0xB0B0B0B0u,0xB1B1B1B1u,0xB2B2B2B2u,0xB3B3B3B3u,
+      0xB4B4B4B4u,0xB5B5B5B5u,0xB6B6B6B6u,0xB7B7B7B7u,0xB8B8B8B8u,0xB9B9B9B9u,
+      0xBABABABAu,0xBBBBBBBBu,0xBCBCBCBCu,0xBDBDBDBDu,0xBEBEBEBEu,0xBFBFBFBFu,
+      0xC0C0C0C0u,0xC1C1C1C1u,0xC2C2C2C2u,0xC3C3C3C3u,0xC4C4C4C4u,0xC5C5C5C5u,
+      0xC6C6C6C6u,0xC7C7C7C7u,0xC8C8C8C8u,0xC9C9C9C9u,0xCACACACAu,0xCBCBCBCBu,
+      0xCCCCCCCCu,0xCDCDCDCDu,0xCECECECEu,0xCFCFCFCFu,0xD0D0D0D0u,0xD1D1D1D1u,
+      0xD2D2D2D2u,0xD3D3D3D3u,0xD4D4D4D4u,0xD5D5D5D5u,0xD6D6D6D6u,0xD7D7D7D7u,
+      0xD8D8D8D8u,0xD9D9D9D9u,0xDADADADAu,0xDBDBDBDBu,0xDCDCDCDCu,0xDDDDDDDDu,
+      0xDEDEDEDEu,0xDFDFDFDFu,0xE0E0E0E0u,0xE1E1E1E1u,0xE2E2E2E2u,0xE3E3E3E3u,
+      0xE4E4E4E4u,0xE5E5E5E5u,0xE6E6E6E6u,0xE7E7E7E7u,0xE8E8E8E8u,0xE9E9E9E9u,
+      0xEAEAEAEAu,0xEBEBEBEBu,0xECECECECu,0xEDEDEDEDu,0xEEEEEEEEu,0xEFEFEFEFu,
+      0xF0F0F0F0u,0xF1F1F1F1u,0xF2F2F2F2u,0xF3F3F3F3u,0xF4F4F4F4u,0xF5F5F5F5u,
+      0xF6F6F6F6u,0xF7F7F7F7u,0xF8F8F8F8u,0xF9F9F9F9u,0xFAFAFAFAu,0xFBFBFBFBu,
+      0xFCFCFCFCu,0xFDFDFDFDu,0xFEFEFEFEu,0xFFFFFFFFu,
     };
 
     return (int)word[narrow_cast<unsigned char>(hash)];
@@ -503,7 +511,7 @@ struct group15
 
 private:
   using slot_type=IntegralWrapper<unsigned char>;
-  BOOST_STATIC_ASSERT(sizeof(slot_type)==1);
+  BOOST_UNORDERED_STATIC_ASSERT(sizeof(slot_type)==1);
 
   static constexpr unsigned char available_=0,
                                  sentinel_=1;
@@ -549,7 +557,8 @@ private:
   }
 
   /* Copied from 
-   * https://github.com/simd-everywhere/simde/blob/master/simde/x86/sse2.h#L3763
+   * https://github.com/simd-everywhere/simde/blob/master/simde/x86/
+   * sse2.h#L3763
    */
 
   static inline int simde_mm_movemask_epi8(uint8x16_t a)
@@ -628,7 +637,8 @@ struct group15
     BOOST_ASSERT(pos<N);
     return 
       pos==N-1&&
-      (m[0] & boost::uint64_t(0x4000400040004000ull))==boost::uint64_t(0x4000ull)&&
+      (m[0] & boost::uint64_t(0x4000400040004000ull))==
+        boost::uint64_t(0x4000ull)&&
       (m[1] & boost::uint64_t(0x4000400040004000ull))==0;
   }
 
@@ -694,7 +704,7 @@ struct group15
 
 private:
   using word_type=IntegralWrapper<uint64_t>;
-  BOOST_STATIC_ASSERT(sizeof(word_type)==8);
+  BOOST_UNORDERED_STATIC_ASSERT(sizeof(word_type)==8);
 
   static constexpr unsigned char available_=0,
                                  sentinel_=1;
@@ -787,8 +797,8 @@ private:
  * 
  *   - size_index(n) returns an unspecified "index" number used in other policy
  *     operations.
- *   - size(size_index_) returns the number of groups for the given index. It is
- *     guaranteed that size(size_index(n)) >= n.
+ *   - size(size_index_) returns the number of groups for the given index. It
+ *     is guaranteed that size(size_index(n)) >= n.
  *   - min_size() is the minimum number of groups permissible, i.e.
  *     size(size_index(0)).
  *   - position(hash,size_index_) maps hash to a position in the range
@@ -938,74 +948,134 @@ Group* dummy_groups()
     const_cast<typename Group::dummy_group_type*>(storage));
 }
 
-template<typename Value,typename Group,typename SizePolicy>
+template<
+  typename Ptr,typename Ptr2,
+  typename std::enable_if<!std::is_same<Ptr,Ptr2>::value>::type* = nullptr
+>
+Ptr to_pointer(Ptr2 p)
+{
+  if(!p){return nullptr;}
+  return boost::pointer_traits<Ptr>::pointer_to(*p);
+}
+
+template<typename Ptr>
+Ptr to_pointer(Ptr p)
+{
+  return p;
+}
+
+template<typename Arrays,typename Allocator>
+struct arrays_holder
+{
+  arrays_holder(const Arrays& arrays,const Allocator& al):
+    arrays_{arrays},al_{al}
+  {}
+  
+  /* not defined but VS in pre-C++17 mode needs to see it for RVO */
+  arrays_holder(arrays_holder const&);
+  arrays_holder& operator=(arrays_holder const&)=delete;
+
+  ~arrays_holder(){if(!released_)arrays_.delete_(al_,arrays_);}
+
+  const Arrays& release()
+  {
+    released_=true;
+    return arrays_;
+  }
+
+private:
+  Arrays    arrays_;
+  Allocator al_;
+  bool      released_=false;
+};
+
+template<typename Value,typename Group,typename SizePolicy,typename Allocator>
 struct table_arrays
 {
+  using allocator_type=typename boost::allocator_rebind<Allocator,Value>::type;
+
   using value_type=Value;
   using group_type=Group;
   static constexpr auto N=group_type::N;
   using size_policy=SizePolicy;
+  using value_type_pointer=
+    typename boost::allocator_pointer<allocator_type>::type;
+  using group_type_pointer=
+    typename boost::pointer_traits<value_type_pointer>::template
+      rebind<group_type>;
+  using group_type_pointer_traits=boost::pointer_traits<group_type_pointer>;
 
-  table_arrays(std::size_t gsi,std::size_t gsm,group_type *pg,value_type *pe):
-    groups_size_index{gsi},groups_size_mask{gsm},groups{pg},elements{pe}{}
+  table_arrays(
+    std::size_t gsi,std::size_t gsm,
+    group_type_pointer pg,value_type_pointer pe):
+    groups_size_index{gsi},groups_size_mask{gsm},groups_{pg},elements_{pe}{}
 
-  template<typename Allocator>
-  static table_arrays new_(Allocator& al,std::size_t n)
+  value_type* elements()const noexcept{return boost::to_address(elements_);}
+  group_type* groups()const noexcept{return boost::to_address(groups_);}
+
+  static void set_arrays(table_arrays& arrays,allocator_type al,std::size_t n)
   {
-    using storage_allocator=
-      typename boost::allocator_rebind<Allocator, Value>::type;
-    using storage_traits=boost::allocator_traits<storage_allocator>;
+    return set_arrays(
+      arrays,al,n,std::is_same<group_type*,group_type_pointer>{});
+  }
 
+  static void set_arrays(
+    table_arrays& arrays,allocator_type al,std::size_t,
+    std::false_type /* always allocate */)
+  {
+    using storage_traits=boost::allocator_traits<allocator_type>;
+    auto groups_size_index=arrays.groups_size_index;
+    auto groups_size=size_policy::size(groups_size_index);
+
+    auto sal=allocator_type(al);
+    arrays.elements_=storage_traits::allocate(sal,buffer_size(groups_size));
+    
+    /* Align arrays.groups to sizeof(group_type). table_iterator critically
+      * depends on such alignment for its increment operation.
+      */
+
+    auto p=reinterpret_cast<unsigned char*>(arrays.elements()+groups_size*N-1);
+    p+=(uintptr_t(sizeof(group_type))-
+        reinterpret_cast<uintptr_t>(p))%sizeof(group_type);
+    arrays.groups_=
+      group_type_pointer_traits::pointer_to(*reinterpret_cast<group_type*>(p));
+
+    initialize_groups(
+      arrays.groups(),groups_size,
+      is_trivially_default_constructible<group_type>{});
+    arrays.groups()[groups_size-1].set_sentinel();
+  }
+
+  static void set_arrays(
+    table_arrays& arrays,allocator_type al,std::size_t n,
+    std::true_type /* optimize for n==0*/)
+  {
+    if(!n){
+      arrays.groups_=dummy_groups<group_type,size_policy::min_size()>();
+    }
+    else{
+      set_arrays(arrays,al,n,std::false_type{});
+    }
+  }
+
+  static table_arrays new_(allocator_type al,std::size_t n)
+  {
     auto         groups_size_index=size_index_for<group_type,size_policy>(n);
     auto         groups_size=size_policy::size(groups_size_index);
     table_arrays arrays{groups_size_index,groups_size-1,nullptr,nullptr};
 
-    if(!n){
-      arrays.groups=dummy_groups<group_type,size_policy::min_size()>();
-    }
-    else{
-      auto sal=storage_allocator(al);
-      arrays.elements=boost::to_address(
-        storage_traits::allocate(sal,buffer_size(groups_size)));
-      
-      /* Align arrays.groups to sizeof(group_type). table_iterator critically
-       * depends on such alignment for its increment operation.
-       */
-
-      auto p=reinterpret_cast<unsigned char*>(arrays.elements+groups_size*N-1);
-      p+=(uintptr_t(sizeof(group_type))-
-          reinterpret_cast<uintptr_t>(p))%sizeof(group_type);
-      arrays.groups=reinterpret_cast<group_type*>(p);
-
-      initialize_groups(
-        arrays.groups,groups_size,
-        std::integral_constant<
-          bool,
-#if BOOST_WORKAROUND(BOOST_LIBSTDCXX_VERSION,<50000)
-        /* std::is_trivially_constructible not provided */
-        boost::has_trivial_constructor<group_type>::value
-#else
-        std::is_trivially_constructible<group_type>::value
-#endif  
-        >{});
-      arrays.groups[groups_size-1].set_sentinel();
-    }
+    set_arrays(arrays,al,n);
     return arrays;
   }
 
-  template<typename Allocator>
-  static void delete_(Allocator& al,table_arrays& arrays)noexcept
+  static void delete_(allocator_type al,table_arrays& arrays)noexcept
   {
-    using storage_alloc=typename boost::allocator_rebind<Allocator,Value>::type;
-    using storage_traits=boost::allocator_traits<storage_alloc>;
-    using pointer=typename storage_traits::pointer;
-    using pointer_traits=boost::pointer_traits<pointer>;
+    using storage_traits=boost::allocator_traits<allocator_type>;
 
-    auto sal=storage_alloc(al);
-    if(arrays.elements){
+    auto sal=allocator_type(al);
+    if(arrays.elements()){
       storage_traits::deallocate(
-        sal,pointer_traits::pointer_to(*arrays.elements),
-        buffer_size(arrays.groups_size_mask+1));
+        sal,arrays.elements_,buffer_size(arrays.groups_size_mask+1));
     }
   }
 
@@ -1024,7 +1094,7 @@ struct table_arrays
   }
 
   static void initialize_groups(
-    group_type* groups_,std::size_t size,std::true_type /* memset */)
+    group_type* pg,std::size_t size,std::true_type /* memset */)
   {
     /* memset faster/not slower than manual, assumes all zeros is group_type's
      * default layout.
@@ -1033,19 +1103,19 @@ struct table_arrays
      */
 
     std::memset(
-      reinterpret_cast<unsigned char*>(groups_),0,sizeof(group_type)*size);
+      reinterpret_cast<unsigned char*>(pg),0,sizeof(group_type)*size);
   }
 
   static void initialize_groups(
-    group_type* groups_,std::size_t size,std::false_type /* manual */)
+    group_type* pg,std::size_t size,std::false_type /* manual */)
   {
-    while(size--!=0)::new (groups_++) group_type();
+    while(size--!=0)::new (pg++) group_type();
   }
 
-  std::size_t  groups_size_index;
-  std::size_t  groups_size_mask;
-  group_type  *groups;
-  value_type  *elements;
+  std::size_t        groups_size_index;
+  std::size_t        groups_size_mask;
+  group_type_pointer groups_;
+  value_type_pointer elements_;
 };
 
 struct if_constexpr_void_else{void operator()()const{}};
@@ -1180,7 +1250,8 @@ alloc_make_insert_type(const Allocator& al,Args&&... args)
  * init_type and element_type:
  *
  *   - TypePolicy::key_type and TypePolicy::value_type have the obvious
- *     meaning.
+ *     meaning. TypePolicy::mapped_type is expected to be provided as well
+ *     when key_type and value_type are not the same.
  *
  *   - TypePolicy::init_type is the type implicitly converted to when
  *     writing x.insert({...}). For maps, this is std::pair<Key,T> rather
@@ -1190,8 +1261,8 @@ alloc_make_insert_type(const Allocator& al,Args&&... args)
  *     both init_type and value_type references.
  *
  *   - TypePolicy::construct and TypePolicy::destroy are used for the
- *     construction and destruction of the internal types: value_type, init_type
- *     and element_type.
+ *     construction and destruction of the internal types: value_type,
+ *     init_type and element_type.
  * 
  *   - TypePolicy::move is used to provide move semantics for the internal
  *     types used by the container during rehashing and emplace. These types
@@ -1257,8 +1328,12 @@ public:
   >::type;
   using alloc_traits=boost::allocator_traits<Allocator>;
   using element_type=typename type_policy::element_type;
-  using arrays_type=Arrays<element_type,group_type,size_policy>;
+  using arrays_type=Arrays<element_type,group_type,size_policy,Allocator>;
   using size_ctrl_type=SizeControl;
+  static constexpr auto uses_fancy_pointers=!std::is_same<
+    typename alloc_traits::pointer,
+    typename alloc_traits::value_type*
+  >::value;
 
   using key_type=typename type_policy::key_type;
   using init_type=typename type_policy::init_type;
@@ -1273,6 +1348,7 @@ public:
   using size_type=std::size_t;
   using difference_type=std::ptrdiff_t;
   using locator=table_locator<group_type,element_type>;
+  using arrays_holder_type=arrays_holder<arrays_type,Allocator>;
 
   table_core(
     std::size_t n=default_bucket_count,const Hash& h_=Hash(),
@@ -1282,23 +1358,43 @@ public:
     size_ctrl{initial_max_load(),0}
     {}
 
+  /* genericize on an ArraysFn so that we can do things like delay an
+   * allocation for the group_access data required by cfoa after the move
+   * constructors of Hash, Pred have been invoked
+   */
+  template<typename ArraysFn>
+  table_core(
+    Hash&& h_,Pred&& pred_,Allocator&& al_,
+    ArraysFn arrays_fn,const size_ctrl_type& size_ctrl_):
+    hash_base{empty_init,std::move(h_)},
+    pred_base{empty_init,std::move(pred_)},
+    allocator_base{empty_init,std::move(al_)},
+    arrays(arrays_fn()),size_ctrl(size_ctrl_)
+  {}
+
   table_core(const table_core& x):
     table_core{x,alloc_traits::select_on_container_copy_construction(x.al())}{}
+
+  template<typename ArraysFn>
+  table_core(table_core&& x,arrays_holder_type&& ah,ArraysFn arrays_fn):
+    table_core(
+      std::move(x.h()),std::move(x.pred()),std::move(x.al()),
+      arrays_fn,x.size_ctrl)
+  {
+    x.arrays=ah.release();
+    x.size_ctrl.ml=x.initial_max_load();
+    x.size_ctrl.size=0;
+  }
 
   table_core(table_core&& x)
     noexcept(
       std::is_nothrow_move_constructible<Hash>::value&&
       std::is_nothrow_move_constructible<Pred>::value&&
-      std::is_nothrow_move_constructible<Allocator>::value):
-    hash_base{empty_init,std::move(x.h())},
-    pred_base{empty_init,std::move(x.pred())},
-    allocator_base{empty_init,std::move(x.al())},
-    arrays(x.arrays),size_ctrl(x.size_ctrl)
-  {
-    x.arrays=x.new_arrays(0);
-    x.size_ctrl.ml=x.initial_max_load();
-    x.size_ctrl.size=0;
-  }
+      std::is_nothrow_move_constructible<Allocator>::value&&
+      !uses_fancy_pointers):
+    table_core{
+      std::move(x),x.make_empty_arrays(),[&x]{return x.arrays;}}
+  {}
 
   table_core(const table_core& x,const Allocator& al_):
     table_core{std::size_t(std::ceil(float(x.size())/mlf)),x.h(),x.pred(),al_}
@@ -1336,6 +1432,24 @@ public:
     delete_arrays(arrays);
   }
 
+  std::size_t initial_max_load()const
+  {
+    static constexpr std::size_t small_capacity=2*N-1;
+
+    auto capacity_=capacity();
+    if(capacity_<=small_capacity){
+      return capacity_; /* we allow 100% usage */
+    }
+    else{
+      return (std::size_t)(mlf*(float)(capacity_));
+    }
+  }
+
+  arrays_holder_type make_empty_arrays()const
+  {
+    return make_arrays(0);
+  }
+
   table_core& operator=(const table_core& x)
   {
     BOOST_UNORDERED_STATIC_ASSERT_HASH_PRED(Hash, Pred)
@@ -1350,9 +1464,6 @@ public:
       hasher    tmp_h=x.h();
       key_equal tmp_p=x.pred();
 
-      /* already noexcept, clear() before we swap the Hash, Pred just in case
-       * the clear() impl relies on them at some point in the future.
-       */
       clear();
 
       /* Because we've asserted at compile-time that Hash and Pred are nothrow
@@ -1364,7 +1475,12 @@ public:
       swap(pred(),tmp_p);
 
       if_constexpr<pocca>([&,this]{
-        if(al()!=x.al())reserve(0);
+        if(al()!=x.al()){
+          auto ah=x.make_arrays(std::size_t(std::ceil(float(x.size())/mlf)));
+          delete_arrays(arrays);
+          arrays=ah.release();
+          size_ctrl.ml=initial_max_load();
+        }
         copy_assign_if<pocca>(al(),x.al());
       });
       /* noshrink: favor memory reuse over tightness */
@@ -1381,8 +1497,8 @@ public:
 
   table_core& operator=(table_core&& x)
     noexcept(
-      alloc_traits::propagate_on_container_move_assignment::value||
-      alloc_traits::is_always_equal::value)
+      (alloc_traits::propagate_on_container_move_assignment::value||
+      alloc_traits::is_always_equal::value)&&!uses_fancy_pointers)
   {
     BOOST_UNORDERED_STATIC_ASSERT_HASH_PRED(Hash, Pred)
 
@@ -1403,16 +1519,24 @@ public:
       using std::swap;
 
       clear();
-      swap(h(),x.h());
-      swap(pred(),x.pred());
 
       if(pocma||al()==x.al()){
-        reserve(0);
+        auto ah=x.make_empty_arrays();
+        swap(h(),x.h());
+        swap(pred(),x.pred());
+        delete_arrays(arrays);
         move_assign_if<pocma>(al(),x.al());
-        swap(arrays,x.arrays);
-        swap(size_ctrl,x.size_ctrl);
+        arrays=x.arrays;
+        size_ctrl.ml=std::size_t(x.size_ctrl.ml);
+        size_ctrl.size=std::size_t(x.size_ctrl.size);
+        x.arrays=ah.release();
+        x.size_ctrl.ml=x.initial_max_load();
+        x.size_ctrl.size=0;
       }
       else{
+        swap(h(),x.h());
+        swap(pred(),x.pred());
+
         /* noshrink: favor memory reuse over tightness */
         noshrink_reserve(x.size());
         clear_on_exit c{x};
@@ -1473,11 +1597,12 @@ public:
     prober pb(pos0);
     do{
       auto pos=pb.get();
-      auto pg=arrays.groups+pos;
+      auto pg=arrays.groups()+pos;
       auto mask=pg->match(hash);
       if(mask){
-        BOOST_UNORDERED_ASSUME(arrays.elements!=nullptr);
-        auto p=arrays.elements+pos*N;
+        auto elements=arrays.elements();
+        BOOST_UNORDERED_ASSUME(elements!=nullptr);
+        auto p=elements+pos*N;
         BOOST_UNORDERED_PREFETCH_ELEMENTS(p,N);
         do{
           auto n=unchecked_countr_zero(mask);
@@ -1526,9 +1651,9 @@ public:
 
   void clear()noexcept
   {
-    auto p=arrays.elements;
+    auto p=arrays.elements();
     if(p){
-      for(auto pg=arrays.groups,last=pg+arrays.groups_size_mask+1;
+      for(auto pg=arrays.groups(),last=pg+arrays.groups_size_mask+1;
           pg!=last;++pg,p+=N){
         auto mask=match_really_occupied(pg,last);
         while(mask){
@@ -1538,7 +1663,7 @@ public:
         /* we wipe the entire metadata to reset the overflow byte as well */
         pg->initialize();
       }
-      arrays.groups[arrays.groups_size_mask].set_sentinel();
+      arrays.groups()[arrays.groups_size_mask].set_sentinel();
       size_ctrl.ml=initial_max_load();
       size_ctrl.size=0;
     }
@@ -1549,7 +1674,7 @@ public:
 
   std::size_t capacity()const noexcept
   {
-    return arrays.elements?(arrays.groups_size_mask+1)*N-1:0;
+    return arrays.elements()?(arrays.groups_size_mask+1)*N-1:0;
   }
   
   float load_factor()const noexcept
@@ -1768,9 +1893,9 @@ public:
   static auto for_all_elements_while(const arrays_type& arrays_,F f)
     ->decltype(f(nullptr,0,nullptr),bool())
   {
-    auto p=arrays_.elements;
+    auto p=arrays_.elements();
     if(p){
-      for(auto pg=arrays_.groups,last=pg+arrays_.groups_size_mask+1;
+      for(auto pg=arrays_.groups(),last=pg+arrays_.groups_size_mask+1;
           pg!=last;++pg,p+=N){
         auto mask=match_really_occupied(pg,last);
         while(mask){
@@ -1804,14 +1929,15 @@ private:
     pred_base{empty_init,std::move(pred_)},
     allocator_base{empty_init,al_},arrays(new_arrays(0)),
     size_ctrl{initial_max_load(),0}
-    {}
+  {
+  }
 
-  arrays_type new_arrays(std::size_t n)
+  arrays_type new_arrays(std::size_t n)const
   {
     return arrays_type::new_(al(),n);
   }
 
-  arrays_type new_arrays_for_growth()
+  arrays_type new_arrays_for_growth()const
   {
     /* Due to the anti-drift mechanism (see recover_slot), the new arrays may
      * be of the same size as the old arrays; in the limit, erasing one
@@ -1830,6 +1956,11 @@ private:
   void delete_arrays(arrays_type& arrays_)noexcept
   {
     arrays_type::delete_(al(),arrays_);
+  }
+
+  arrays_holder_type make_arrays(std::size_t n)const
+  {
+    return {new_arrays(n),al()};
   }
 
   template<typename Key,typename... Args>
@@ -1870,9 +2001,10 @@ private:
 
   void fast_copy_elements_from(const table_core& x)
   {
-    if(arrays.elements){
+    if(arrays.elements()&&x.arrays.elements()){
       copy_elements_array_from(x);
       copy_groups_array_from(x);
+      size_ctrl.ml=std::size_t(x.size_ctrl.ml);
       size_ctrl.size=std::size_t(x.size_ctrl.size);
     }
   }
@@ -1883,13 +2015,7 @@ private:
       x,
       std::integral_constant<
         bool,
-#if BOOST_WORKAROUND(BOOST_LIBSTDCXX_VERSION,<50000)
-        /* std::is_trivially_copy_constructible not provided */
-        boost::has_trivial_copy<element_type>::value
-#else
-        std::is_trivially_copy_constructible<element_type>::value
-#endif
-        &&(
+        is_trivially_copy_constructible<element_type>::value&&(
           is_std_allocator<Allocator>::value||
           !alloc_has_construct<Allocator,value_type*,const value_type&>::value)
       >{}
@@ -1903,8 +2029,8 @@ private:
      * copy-assignable when we're relying on trivial copy constructibility.
      */
     std::memcpy(
-      reinterpret_cast<unsigned char*>(arrays.elements),
-      reinterpret_cast<unsigned char*>(x.arrays.elements),
+      reinterpret_cast<unsigned char*>(arrays.elements()),
+      reinterpret_cast<unsigned char*>(x.arrays.elements()),
       x.capacity()*sizeof(value_type));
   }
 
@@ -1914,14 +2040,14 @@ private:
     std::size_t num_constructed=0;
     BOOST_TRY{
       x.for_all_elements([&,this](const element_type* p){
-        construct_element(arrays.elements+(p-x.arrays.elements),*p);
+        construct_element(arrays.elements()+(p-x.arrays.elements()),*p);
         ++num_constructed;
       });
     }
     BOOST_CATCH(...){
       if(num_constructed){
         x.for_all_elements_while([&,this](const element_type* p){
-          destroy_element(arrays.elements+(p-x.arrays.elements));
+          destroy_element(arrays.elements()+(p-x.arrays.elements()));
           return --num_constructed!=0;
         });
       }
@@ -1931,37 +2057,31 @@ private:
   }
 
   void copy_groups_array_from(const table_core& x) {
-    copy_groups_array_from(x, std::integral_constant<bool,
-#if BOOST_WORKAROUND(BOOST_LIBSTDCXX_VERSION,<50000)
-      /* std::is_trivially_copy_assignable not provided */
-      boost::has_trivial_assign<group_type>::value
-#else
-      std::is_trivially_copy_assignable<group_type>::value
-#endif
-      >{}
-    );
+    copy_groups_array_from(x,is_trivially_copy_assignable<group_type>{});
   }
 
   void copy_groups_array_from(
     const table_core& x, std::true_type /* -> memcpy */)
   {
     std::memcpy(
-      arrays.groups,x.arrays.groups,
+      arrays.groups(),x.arrays.groups(),
       (arrays.groups_size_mask+1)*sizeof(group_type));
   }
 
   void copy_groups_array_from(
     const table_core& x, std::false_type /* -> manual */) 
   {
+    auto pg=arrays.groups();
+    auto xpg=x.arrays.groups();
     for(std::size_t i=0;i<arrays.groups_size_mask+1;++i){
-      arrays.groups[i]=x.arrays.groups[i];
+      pg[i]=xpg[i];
     }
   }
 
   void recover_slot(unsigned char* pc)
   {
-    /* If this slot potentially caused overflow, we decrease the maximum load so
-     * that average probe length won't increase unboundedly in repeated
+    /* If this slot potentially caused overflow, we decrease the maximum load
+     * so that average probe length won't increase unboundedly in repeated
      * insert/erase cycles (drift).
      */
     size_ctrl.ml-=group_type::maybe_caused_overflow(pc);
@@ -1973,19 +2093,6 @@ private:
   {
     recover_slot(reinterpret_cast<unsigned char*>(pg)+pos);
   }
-
-  std::size_t initial_max_load()const
-  {
-    static constexpr std::size_t small_capacity=2*N-1;
-
-    auto capacity_=capacity();
-    if(capacity_<=small_capacity){
-      return capacity_; /* we allow 100% usage */
-    }
-    else{
-      return (std::size_t)(mlf*(float)(capacity_));
-    }
-  }  
 
   static std::size_t capacity_for(std::size_t n)
   {
@@ -2084,11 +2191,11 @@ private:
   {
     for(prober pb(pos0);;pb.next(arrays_.groups_size_mask)){
       auto pos=pb.get();
-      auto pg=arrays_.groups+pos;
+      auto pg=arrays_.groups()+pos;
       auto mask=pg->match_available();
       if(BOOST_LIKELY(mask!=0)){
         auto n=unchecked_countr_zero(mask);
-        auto p=arrays_.elements+pos*N+n;
+        auto p=arrays_.elements()+pos*N+n;
         construct_element(p,std::forward<Args>(args)...);
         pg->set(n,hash);
         return {pg,n,p};

@@ -18,7 +18,6 @@
 #include <boost/asio/detail/completion_handler.hpp>
 #include <boost/asio/detail/fenced_block.hpp>
 #include <boost/asio/detail/handler_alloc_helpers.hpp>
-#include <boost/asio/detail/handler_invoke_helpers.hpp>
 #include <boost/asio/detail/memory.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
@@ -41,7 +40,7 @@ void strand_service::dispatch(strand_service::implementation_type& impl,
   if (running_in_this_thread(impl))
   {
     fenced_block b(fenced_block::full);
-    boost_asio_handler_invoke_helpers::invoke(handler, handler);
+    static_cast<Handler&&>(handler)();
     return;
   }
 

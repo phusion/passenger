@@ -22,7 +22,6 @@
 #include <boost/asio/cancellation_type.hpp>
 #include <boost/asio/detail/cstddef.hpp>
 #include <boost/asio/detail/type_traits.hpp>
-#include <boost/asio/detail/variadic_templates.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
 
@@ -34,7 +33,7 @@ class cancellation_handler_base
 {
 public:
   virtual void call(cancellation_type_t) = 0;
-  virtual std::pair<void*, std::size_t> destroy() BOOST_ASIO_NOEXCEPT = 0;
+  virtual std::pair<void*, std::size_t> destroy() noexcept = 0;
 
 protected:
   ~cancellation_handler_base() {}
@@ -45,45 +44,26 @@ class cancellation_handler
   : public cancellation_handler_base
 {
 public:
-#if defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
   template <typename... Args>
-  cancellation_handler(std::size_t size, BOOST_ASIO_MOVE_ARG(Args)... args)
-    : handler_(BOOST_ASIO_MOVE_CAST(Args)(args)...),
+  cancellation_handler(std::size_t size, Args&&... args)
+    : handler_(static_cast<Args&&>(args)...),
       size_(size)
   {
   }
-#else // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
-  cancellation_handler(std::size_t size)
-    : handler_(),
-      size_(size)
-  {
-  }
-
-#define BOOST_ASIO_PRIVATE_HANDLER_CTOR_DEF(n) \
-  template <BOOST_ASIO_VARIADIC_TPARAMS(n)> \
-  cancellation_handler(std::size_t size, BOOST_ASIO_VARIADIC_MOVE_PARAMS(n)) \
-    : handler_(BOOST_ASIO_VARIADIC_MOVE_ARGS(n)), \
-      size_(size) \
-  { \
-  } \
-  /**/
-  BOOST_ASIO_VARIADIC_GENERATE(BOOST_ASIO_PRIVATE_HANDLER_CTOR_DEF)
-#undef BOOST_ASIO_PRIVATE_HANDLER_CTOR_DEF
-#endif // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 
   void call(cancellation_type_t type)
   {
     handler_(type);
   }
 
-  std::pair<void*, std::size_t> destroy() BOOST_ASIO_NOEXCEPT
+  std::pair<void*, std::size_t> destroy() noexcept
   {
     std::pair<void*, std::size_t> mem(this, size_);
     this->cancellation_handler::~cancellation_handler();
     return mem;
   }
 
-  Handler& handler() BOOST_ASIO_NOEXCEPT
+  Handler& handler() noexcept
   {
     return handler_;
   }
@@ -105,7 +85,7 @@ class cancellation_slot;
 class cancellation_signal
 {
 public:
-  BOOST_ASIO_CONSTEXPR cancellation_signal()
+  constexpr cancellation_signal()
     : handler_(0)
   {
   }
@@ -124,11 +104,11 @@ public:
    * The signal object must remain valid for as long the slot may be used.
    * Destruction of the signal invalidates the slot.
    */
-  cancellation_slot slot() BOOST_ASIO_NOEXCEPT;
+  cancellation_slot slot() noexcept;
 
 private:
-  cancellation_signal(const cancellation_signal&) BOOST_ASIO_DELETED;
-  cancellation_signal& operator=(const cancellation_signal&) BOOST_ASIO_DELETED;
+  cancellation_signal(const cancellation_signal&) = delete;
+  cancellation_signal& operator=(const cancellation_signal&) = delete;
 
   detail::cancellation_handler_base* handler_;
 };
@@ -138,13 +118,11 @@ class cancellation_slot
 {
 public:
   /// Creates a slot that is not connected to any cancellation signal.
-  BOOST_ASIO_CONSTEXPR cancellation_slot()
+  constexpr cancellation_slot()
     : handler_(0)
   {
   }
 
-#if defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES) \
-  || defined(GENERATING_DOCUMENTATION)
   /// Installs a handler into the slot, constructing the new object directly.
   /**
    * Destroys any existing handler in the slot, then installs the new handler,
@@ -163,57 +141,20 @@ public:
    * be copy constructible or move constructible.
    */
   template <typename CancellationHandler, typename... Args>
-  CancellationHandler& emplace(BOOST_ASIO_MOVE_ARG(Args)... args)
+  CancellationHandler& emplace(Args&&... args)
   {
     typedef detail::cancellation_handler<CancellationHandler>
       cancellation_handler_type;
     auto_delete_helper del = { prepare_memory(
         sizeof(cancellation_handler_type),
-        BOOST_ASIO_ALIGNOF(CancellationHandler)) };
+        alignof(CancellationHandler)) };
     cancellation_handler_type* handler_obj =
       new (del.mem.first) cancellation_handler_type(
-        del.mem.second, BOOST_ASIO_MOVE_CAST(Args)(args)...);
+        del.mem.second, static_cast<Args&&>(args)...);
     del.mem.first = 0;
     *handler_ = handler_obj;
     return handler_obj->handler();
   }
-#else // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
-      //   || defined(GENERATING_DOCUMENTATION)
-  template <typename CancellationHandler>
-  CancellationHandler& emplace()
-  {
-    typedef detail::cancellation_handler<CancellationHandler>
-      cancellation_handler_type;
-    auto_delete_helper del = { prepare_memory(
-        sizeof(cancellation_handler_type),
-        BOOST_ASIO_ALIGNOF(CancellationHandler)) };
-    cancellation_handler_type* handler_obj =
-      new (del.mem.first) cancellation_handler_type(del.mem.second);
-    del.mem.first = 0;
-    *handler_ = handler_obj;
-    return handler_obj->handler();
-  }
-
-#define BOOST_ASIO_PRIVATE_HANDLER_EMPLACE_DEF(n) \
-  template <typename CancellationHandler, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
-  CancellationHandler& emplace(BOOST_ASIO_VARIADIC_MOVE_PARAMS(n)) \
-  { \
-    typedef detail::cancellation_handler<CancellationHandler> \
-      cancellation_handler_type; \
-    auto_delete_helper del = { prepare_memory( \
-        sizeof(cancellation_handler_type), \
-        BOOST_ASIO_ALIGNOF(CancellationHandler)) }; \
-    cancellation_handler_type* handler_obj = \
-      new (del.mem.first) cancellation_handler_type( \
-        del.mem.second, BOOST_ASIO_VARIADIC_MOVE_ARGS(n)); \
-    del.mem.first = 0; \
-    *handler_ = handler_obj; \
-    return handler_obj->handler(); \
-  } \
-  /**/
-  BOOST_ASIO_VARIADIC_GENERATE(BOOST_ASIO_PRIVATE_HANDLER_EMPLACE_DEF)
-#undef BOOST_ASIO_PRIVATE_HANDLER_EMPLACE_DEF
-#endif // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 
   /// Installs a handler into the slot.
   /**
@@ -229,11 +170,10 @@ public:
    * @returns A reference to the newly installed handler.
    */
   template <typename CancellationHandler>
-  typename decay<CancellationHandler>::type& assign(
-      BOOST_ASIO_MOVE_ARG(CancellationHandler) handler)
+  decay_t<CancellationHandler>& assign(CancellationHandler&& handler)
   {
-    return this->emplace<typename decay<CancellationHandler>::type>(
-        BOOST_ASIO_MOVE_CAST(CancellationHandler)(handler));
+    return this->emplace<decay_t<CancellationHandler>>(
+        static_cast<CancellationHandler&&>(handler));
   }
 
   /// Clears the slot.
@@ -243,27 +183,27 @@ public:
   BOOST_ASIO_DECL void clear();
 
   /// Returns whether the slot is connected to a signal.
-  BOOST_ASIO_CONSTEXPR bool is_connected() const BOOST_ASIO_NOEXCEPT
+  constexpr bool is_connected() const noexcept
   {
     return handler_ != 0;
   }
 
   /// Returns whether the slot is connected and has an installed handler.
-  BOOST_ASIO_CONSTEXPR bool has_handler() const BOOST_ASIO_NOEXCEPT
+  constexpr bool has_handler() const noexcept
   {
     return handler_ != 0 && *handler_ != 0;
   }
 
   /// Compare two slots for equality.
-  friend BOOST_ASIO_CONSTEXPR bool operator==(const cancellation_slot& lhs,
-      const cancellation_slot& rhs) BOOST_ASIO_NOEXCEPT
+  friend constexpr bool operator==(const cancellation_slot& lhs,
+      const cancellation_slot& rhs) noexcept
   {
     return lhs.handler_ == rhs.handler_;
   }
 
   /// Compare two slots for inequality.
-  friend BOOST_ASIO_CONSTEXPR bool operator!=(const cancellation_slot& lhs,
-      const cancellation_slot& rhs) BOOST_ASIO_NOEXCEPT
+  friend constexpr bool operator!=(const cancellation_slot& lhs,
+      const cancellation_slot& rhs) noexcept
   {
     return lhs.handler_ != rhs.handler_;
   }
@@ -271,7 +211,7 @@ public:
 private:
   friend class cancellation_signal;
 
-  BOOST_ASIO_CONSTEXPR cancellation_slot(int,
+  constexpr cancellation_slot(int,
       detail::cancellation_handler_base** handler)
     : handler_(handler)
   {
@@ -290,7 +230,7 @@ private:
   detail::cancellation_handler_base** handler_;
 };
 
-inline cancellation_slot cancellation_signal::slot() BOOST_ASIO_NOEXCEPT
+inline cancellation_slot cancellation_signal::slot() noexcept
 {
   return cancellation_slot(0, &handler_);
 }

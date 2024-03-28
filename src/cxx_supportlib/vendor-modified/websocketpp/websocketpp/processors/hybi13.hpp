@@ -88,11 +88,11 @@ public:
     err_str_pair negotiate_extensions(request_type const & request) {
         return negotiate_extensions_helper(request);
     }
-    
+
     err_str_pair negotiate_extensions(response_type const & response) {
         return negotiate_extensions_helper(response);
     }
-    
+
     /// Extension negotiation helper function
     /**
      * This exists mostly because the code for requests and responses is
@@ -137,11 +137,11 @@ public:
 
                 // if we have already successfully negotiated this extension
                 // then skip any other requests to negotiate the same one
-                // with different parameters 
+                // with different parameters
                 if (m_permessage_deflate.is_enabled()) {
                     continue;
                 }
-                
+
                 // attempt to negotiate this offer
                 neg_ret = m_permessage_deflate.negotiate(it->second);
 
@@ -158,8 +158,8 @@ public:
                 lib::error_code ec = m_permessage_deflate.init(base::m_server);
 
                 if (ec) {
-                    // Negotiation succeeded but initialization failed this is 
-                    // an error that should stop negotiation of permessage 
+                    // Negotiation succeeded but initialization failed this is
+                    // an error that should stop negotiation of permessage
                     // deflate. Return the reason for the init failure
 
                     ret.first = ec;
@@ -174,7 +174,7 @@ public:
             }
         }
 
-        // support for future extensions would go here. Should check the value of 
+        // support for future extensions would go here. Should check the value of
         // ret.first before continuing. Might need to consider whether failure of
         // negotiation of an earlier extension should stop negotiation of subsequent
         // ones
@@ -206,7 +206,7 @@ public:
      * generic struct if other user input parameters to the processed handshake
      * are found.
      */
-    lib::error_code process_handshake(request_type const & request, 
+    lib::error_code process_handshake(request_type const & request,
         std::string const & subprotocol, response_type & response) const
     {
         std::string server_key = request.get_header("Sec-WebSocket-Key");
@@ -440,12 +440,12 @@ public:
                             ec = make_error_code(error::message_too_big);
                             break;
                         }
-                        
+
                         m_data_msg = msg_metadata(
                             m_msg_manager->get_message(op,m_bytes_needed),
                             frame::get_masking_key(m_basic_header,m_extended_header)
                         );
-                        
+
                         if (m_permessage_deflate.is_enabled()) {
                             m_data_msg.msg_ptr->set_compressed(frame::get_rsv1(m_basic_header));
                         }
@@ -453,12 +453,12 @@ public:
                         // Fetch the underlying payload buffer from the data message we
                         // are writing into.
                         std::string & out = m_data_msg.msg_ptr->get_raw_payload();
-                        
+
                         if (out.size() + m_bytes_needed > base::m_max_message_size) {
                             ec = make_error_code(error::message_too_big);
                             break;
                         }
-                        
+
                         // Each frame starts a new masking key. All other state
                         // remains between frames.
                         m_data_msg.prepared_key = prepare_masking_key(
@@ -467,7 +467,7 @@ public:
                                 m_extended_header
                             )
                         );
-                        
+
                         out.reserve(out.size() + m_bytes_needed);
                     }
                     m_current_msg = &m_data_msg;
@@ -878,12 +878,6 @@ protected:
             return make_error_code(error::invalid_opcode);
         }
 
-        // Check for invalid opcodes
-        // TODO: unit tests for this?
-        if (frame::opcode::invalid(op)) {
-            return make_error_code(error::invalid_opcode);
-        }
-
         // Check for fragmented control message
         if (frame::opcode::is_control(op) && !frame::get_fin(h)) {
             return make_error_code(error::fragmented_control);
@@ -1009,7 +1003,7 @@ protected:
             out->set_header(frame::prepare_header(h,e));
             std::copy(payload.begin(),payload.end(),o.begin());
         }
-    
+
         out->set_opcode(op);
         out->set_prepared(true);
 

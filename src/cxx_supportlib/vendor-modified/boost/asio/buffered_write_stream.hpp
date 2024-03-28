@@ -56,7 +56,7 @@ class buffered_write_stream
 {
 public:
   /// The type of the next layer.
-  typedef typename remove_reference<Stream>::type next_layer_type;
+  typedef remove_reference_t<Stream> next_layer_type;
 
   /// The type of the lowest layer.
   typedef typename next_layer_type::lowest_layer_type lowest_layer_type;
@@ -73,17 +73,17 @@ public:
 
   /// Construct, passing the specified argument to initialise the next layer.
   template <typename Arg>
-  explicit buffered_write_stream(BOOST_ASIO_MOVE_OR_LVALUE_ARG(Arg) a)
-    : next_layer_(BOOST_ASIO_MOVE_OR_LVALUE(Arg)(a)),
+  explicit buffered_write_stream(Arg&& a)
+    : next_layer_(static_cast<Arg&&>(a)),
       storage_(default_buffer_size)
   {
   }
 
   /// Construct, passing the specified argument to initialise the next layer.
   template <typename Arg>
-  buffered_write_stream(BOOST_ASIO_MOVE_OR_LVALUE_ARG(Arg) a,
+  buffered_write_stream(Arg&& a,
       std::size_t buffer_size)
-    : next_layer_(BOOST_ASIO_MOVE_OR_LVALUE(Arg)(a)),
+    : next_layer_(static_cast<Arg&&>(a)),
       storage_(buffer_size)
   {
   }
@@ -107,7 +107,7 @@ public:
   }
 
   /// Get the executor associated with the object.
-  executor_type get_executor() BOOST_ASIO_NOEXCEPT
+  executor_type get_executor() noexcept
   {
     return next_layer_.lowest_layer().get_executor();
   }
@@ -142,18 +142,14 @@ public:
    */
   template <
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-        std::size_t)) WriteHandler
-          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteHandler,
-      void (boost::system::error_code, std::size_t))
-  async_flush(
-      BOOST_ASIO_MOVE_ARG(WriteHandler) handler
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+        std::size_t)) WriteHandler = default_completion_token_t<executor_type>>
+  auto async_flush(
+      WriteHandler&& handler = default_completion_token_t<executor_type>())
+    -> decltype(
       async_initiate<WriteHandler,
         void (boost::system::error_code, std::size_t)>(
-          declval<detail::initiate_async_buffered_flush<Stream> >(),
-          handler, declval<detail::buffered_stream_storage*>())));
+          declval<detail::initiate_async_buffered_flush<Stream>>(),
+          handler, declval<detail::buffered_stream_storage*>()));
 
   /// Write the given data to the stream. Returns the number of bytes written.
   /// Throws an exception on failure.
@@ -174,18 +170,14 @@ public:
    */
   template <typename ConstBufferSequence,
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-        std::size_t)) WriteHandler
-          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteHandler,
-      void (boost::system::error_code, std::size_t))
-  async_write_some(const ConstBufferSequence& buffers,
-      BOOST_ASIO_MOVE_ARG(WriteHandler) handler
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+        std::size_t)) WriteHandler = default_completion_token_t<executor_type>>
+  auto async_write_some(const ConstBufferSequence& buffers,
+      WriteHandler&& handler = default_completion_token_t<executor_type>())
+    -> decltype(
       async_initiate<WriteHandler,
         void (boost::system::error_code, std::size_t)>(
-          declval<detail::initiate_async_buffered_write_some<Stream> >(),
-          handler, declval<detail::buffered_stream_storage*>(), buffers)));
+          declval<detail::initiate_async_buffered_write_some<Stream>>(),
+          handler, declval<detail::buffered_stream_storage*>(), buffers));
 
   /// Read some data from the stream. Returns the number of bytes read. Throws
   /// an exception on failure.
@@ -212,20 +204,15 @@ public:
    */
   template <typename MutableBufferSequence,
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-        std::size_t)) ReadHandler
-          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadHandler,
-      void (boost::system::error_code, std::size_t))
-  async_read_some(const MutableBufferSequence& buffers,
-      BOOST_ASIO_MOVE_ARG(ReadHandler) handler
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
-      declval<typename conditional<true, Stream&, ReadHandler>::type>()
-        .async_read_some(buffers,
-          BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))))
+        std::size_t)) ReadHandler = default_completion_token_t<executor_type>>
+  auto async_read_some(const MutableBufferSequence& buffers,
+      ReadHandler&& handler = default_completion_token_t<executor_type>())
+    -> decltype(
+      declval<conditional_t<true, Stream&, ReadHandler>>().async_read_some(
+        buffers, static_cast<ReadHandler&&>(handler)))
   {
     return next_layer_.async_read_some(buffers,
-        BOOST_ASIO_MOVE_CAST(ReadHandler)(handler));
+        static_cast<ReadHandler&&>(handler));
   }
 
   /// Peek at the incoming data on the stream. Returns the number of bytes read.

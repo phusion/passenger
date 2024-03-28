@@ -18,7 +18,6 @@
 #include <boost/asio/detail/config.hpp>
 #include <boost/asio/detail/event.hpp>
 #include <boost/asio/detail/fenced_block.hpp>
-#include <boost/asio/detail/handler_invoke_helpers.hpp>
 #include <boost/asio/detail/mutex.hpp>
 #include <boost/asio/detail/scheduler_operation.hpp>
 
@@ -92,7 +91,7 @@ public:
     {
       fenced_block b(fenced_block::half);
       BOOST_ASIO_HANDLER_INVOCATION_BEGIN(());
-      boost_asio_handler_invoke_helpers::invoke(o->handler_, o->handler_);
+      static_cast<Handler&&>(o->handler_)();
       BOOST_ASIO_HANDLER_INVOCATION_END;
     }
   }

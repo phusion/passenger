@@ -129,7 +129,7 @@ public:
             _value = x0 % modulus;
         }
         // handle negative seeds
-        if(_value <= 0 && _value != 0) {
+        if(_value < 0) {
             _value += modulus;
         }
         // adjust to the correct range

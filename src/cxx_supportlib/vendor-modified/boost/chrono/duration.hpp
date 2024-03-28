@@ -39,6 +39,7 @@ time2_demo contained this comment:
 
 #include <boost/mpl/logical.hpp>
 #include <boost/ratio/ratio.hpp>
+#include <boost/ratio/detail/is_ratio.hpp>
 #include <boost/type_traits/common_type.hpp>
 #include <boost/type_traits/is_arithmetic.hpp>
 #include <boost/type_traits/is_convertible.hpp>

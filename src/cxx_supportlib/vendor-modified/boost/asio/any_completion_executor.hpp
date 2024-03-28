@@ -76,20 +76,18 @@ public:
 #endif // !defined(GENERATING_DOCUMENTATION)
 
   /// Default constructor.
-  BOOST_ASIO_DECL any_completion_executor() BOOST_ASIO_NOEXCEPT;
+  BOOST_ASIO_DECL any_completion_executor() noexcept;
 
   /// Construct in an empty state. Equivalent effects to default constructor.
-  BOOST_ASIO_DECL any_completion_executor(nullptr_t) BOOST_ASIO_NOEXCEPT;
+  BOOST_ASIO_DECL any_completion_executor(nullptr_t) noexcept;
 
   /// Copy constructor.
   BOOST_ASIO_DECL any_completion_executor(
-      const any_completion_executor& e) BOOST_ASIO_NOEXCEPT;
+      const any_completion_executor& e) noexcept;
 
-#if defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
   /// Move constructor.
   BOOST_ASIO_DECL any_completion_executor(
-      any_completion_executor&& e) BOOST_ASIO_NOEXCEPT;
-#endif // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
+      any_completion_executor&& e) noexcept;
 
   /// Construct to point to the same target as another any_executor.
 #if defined(GENERATING_DOCUMENTATION)
@@ -99,7 +97,7 @@ public:
 #else // defined(GENERATING_DOCUMENTATION)
   template <typename OtherAnyExecutor>
   any_completion_executor(OtherAnyExecutor e,
-      typename constraint<
+      constraint_t<
         conditional<
           !is_same<OtherAnyExecutor, any_completion_executor>::value
             && is_base_of<execution::detail::any_executor_base,
@@ -109,8 +107,8 @@ public:
               is_valid_target<OtherAnyExecutor>,
           false_type
         >::type::value
-      >::type = 0)
-    : base_type(BOOST_ASIO_MOVE_CAST(OtherAnyExecutor)(e))
+      > = 0)
+    : base_type(static_cast<OtherAnyExecutor&&>(e))
   {
   }
 #endif // defined(GENERATING_DOCUMENTATION)
@@ -123,7 +121,7 @@ public:
 #else // defined(GENERATING_DOCUMENTATION)
   template <typename OtherAnyExecutor>
   any_completion_executor(std::nothrow_t, OtherAnyExecutor e,
-      typename constraint<
+      constraint_t<
         conditional<
           !is_same<OtherAnyExecutor, any_completion_executor>::value
             && is_base_of<execution::detail::any_executor_base,
@@ -133,21 +131,19 @@ public:
               is_valid_target<OtherAnyExecutor>,
           false_type
         >::type::value
-      >::type = 0) BOOST_ASIO_NOEXCEPT
-    : base_type(std::nothrow, BOOST_ASIO_MOVE_CAST(OtherAnyExecutor)(e))
+      > = 0) noexcept
+    : base_type(std::nothrow, static_cast<OtherAnyExecutor&&>(e))
   {
   }
 #endif // defined(GENERATING_DOCUMENTATION)
 
   /// Construct to point to the same target as another any_executor.
   BOOST_ASIO_DECL any_completion_executor(std::nothrow_t,
-      const any_completion_executor& e) BOOST_ASIO_NOEXCEPT;
+      const any_completion_executor& e) noexcept;
 
-#if defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
   /// Construct to point to the same target as another any_executor.
   BOOST_ASIO_DECL any_completion_executor(std::nothrow_t,
-      any_completion_executor&& e) BOOST_ASIO_NOEXCEPT;
-#endif // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
+      any_completion_executor&& e) noexcept;
 
   /// Construct a polymorphic wrapper for the specified executor.
 #if defined(GENERATING_DOCUMENTATION)
@@ -156,7 +152,7 @@ public:
 #else // defined(GENERATING_DOCUMENTATION)
   template <BOOST_ASIO_EXECUTION_EXECUTOR Executor>
   any_completion_executor(Executor e,
-      typename constraint<
+      constraint_t<
         conditional<
           !is_same<Executor, any_completion_executor>::value
             && !is_base_of<execution::detail::any_executor_base,
@@ -165,8 +161,8 @@ public:
             Executor, supportable_properties_type>,
           false_type
         >::type::value
-      >::type = 0)
-    : base_type(BOOST_ASIO_MOVE_CAST(Executor)(e))
+      > = 0)
+    : base_type(static_cast<Executor&&>(e))
   {
   }
 #endif // defined(GENERATING_DOCUMENTATION)
@@ -178,7 +174,7 @@ public:
 #else // defined(GENERATING_DOCUMENTATION)
   template <BOOST_ASIO_EXECUTION_EXECUTOR Executor>
   any_completion_executor(std::nothrow_t, Executor e,
-      typename constraint<
+      constraint_t<
         conditional<
           !is_same<Executor, any_completion_executor>::value
             && !is_base_of<execution::detail::any_executor_base,
@@ -187,21 +183,19 @@ public:
             Executor, supportable_properties_type>,
           false_type
         >::type::value
-      >::type = 0) BOOST_ASIO_NOEXCEPT
-    : base_type(std::nothrow, BOOST_ASIO_MOVE_CAST(Executor)(e))
+      > = 0) noexcept
+    : base_type(std::nothrow, static_cast<Executor&&>(e))
   {
   }
 #endif // defined(GENERATING_DOCUMENTATION)
 
   /// Assignment operator.
   BOOST_ASIO_DECL any_completion_executor& operator=(
-      const any_completion_executor& e) BOOST_ASIO_NOEXCEPT;
+      const any_completion_executor& e) noexcept;
 
-#if defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
   /// Move assignment operator.
   BOOST_ASIO_DECL any_completion_executor& operator=(
-      any_completion_executor&& e) BOOST_ASIO_NOEXCEPT;
-#endif // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
+      any_completion_executor&& e) noexcept;
 
   /// Assignment operator that sets the polymorphic wrapper to the empty state.
   BOOST_ASIO_DECL any_completion_executor& operator=(nullptr_t);
@@ -210,7 +204,7 @@ public:
   BOOST_ASIO_DECL ~any_completion_executor();
 
   /// Swap targets with another polymorphic wrapper.
-  BOOST_ASIO_DECL void swap(any_completion_executor& other) BOOST_ASIO_NOEXCEPT;
+  BOOST_ASIO_DECL void swap(any_completion_executor& other) noexcept;
 
   /// Obtain a polymorphic wrapper with the specified property.
   /**
@@ -223,9 +217,9 @@ public:
    */
   template <typename Property>
   any_completion_executor require(const Property& p,
-      typename constraint<
+      constraint_t<
         traits::require_member<const base_type&, const Property&>::is_valid
-      >::type = 0) const
+      > = 0) const
   {
     return static_cast<const base_type&>(*this).require(p);
   }
@@ -241,9 +235,9 @@ public:
    */
   template <typename Property>
   any_completion_executor prefer(const Property& p,
-      typename constraint<
+      constraint_t<
         traits::prefer_member<const base_type&, const Property&>::is_valid
-      >::type = 0) const
+      > = 0) const
   {
     return static_cast<const base_type&>(*this).prefer(p);
   }

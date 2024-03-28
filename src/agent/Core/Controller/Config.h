@@ -192,7 +192,7 @@ private:
 				"The user that PassengerDefaultUser refers to, '" +
 				config["default_user"].asString() + "', does not exist.");
 		}
-		return lookupSystemGroupnameByGid(osUser.pwd.pw_gid, P_STATIC_STRING("%d"));
+		return lookupSystemGroupnameByGid(osUser.pwd.pw_gid, true);
 	}
 
 	static void validate(const ConfigKit::Store &config,

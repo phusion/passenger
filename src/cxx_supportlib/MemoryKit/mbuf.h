@@ -108,7 +108,6 @@ struct mbuf_pool {
 #define MBUF_BLOCK_MAGIC      0xdeadbeef
 #define MBUF_BLOCK_MIN_SIZE   512
 #define MBUF_BLOCK_MAX_SIZE   16777216
-#define MBUF_BLOCK_SIZE       16384
 #define MBUF_BLOCK_HSIZE      sizeof(struct mbuf_block)
 
 #define MBUF_BLOCK_EMPTY(mbuf_block) ((mbuf_block)->pos  == (mbuf_block)->last)
@@ -120,6 +119,7 @@ size_t mbuf_pool_data_size(struct mbuf_pool *pool);
 unsigned int mbuf_pool_compact(struct mbuf_pool *pool);
 
 struct mbuf_block *mbuf_block_get(struct mbuf_pool *pool);
+struct mbuf_block *mbuf_block_new_standalone(struct mbuf_pool *pool, size_t size);
 void mbuf_block_put(struct mbuf_block *mbuf_block);
 
 void mbuf_block_ref(struct mbuf_block *mbuf_block);

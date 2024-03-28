@@ -90,7 +90,7 @@ prepareUserSwitching(const AppPoolOptions &options,
 
 		info.enabled = false;
 		info.username = userInfo->pw_name;
-		info.groupname = lookupSystemGroupnameByGid(userInfo->pw_gid, P_STATIC_STRING("%d"));
+		info.groupname = lookupSystemGroupnameByGid(userInfo->pw_gid, true);
 		info.uid = geteuid();
 		info.gid = getegid();
 		return info;
@@ -247,7 +247,7 @@ prepareUserSwitching(const AppPoolOptions &options,
 	UPDATE_TRACE_POINT();
 	info.enabled = true;
 	info.username = userInfo->pw_name;
-	info.groupname = lookupSystemGroupnameByGid(groupId, P_STATIC_STRING("%d"));
+	info.groupname = lookupSystemGroupnameByGid(groupId, true);
 	info.uid = userInfo->pw_uid;
 	info.gid = groupId;
 

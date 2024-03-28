@@ -28,15 +28,9 @@
 #include <cstring>
 #include <Constants.h>
 
-using namespace std;
+#include <MainFunctions.h>
 
-int watchdogMain(int argc, char *argv[]);
-int coreMain(int argc, char *argv[]);
-int systemMetricsMain(int argc, char *argv[]);
-int tempDirToucherMain(int argc, char *argv[]);
-int spawnEnvSetupperMain(int argc, char *argv[]);
-int execHelperMain(int argc, char *argv[]);
-int fileReadHelperMain(int argc, char *argv[]);
+using namespace std;
 
 static bool
 isHelp(const char *arg) {

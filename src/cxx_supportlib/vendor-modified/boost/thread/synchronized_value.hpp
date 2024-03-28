@@ -17,8 +17,8 @@
 #include <boost/thread/lock_algorithms.hpp>
 #include <boost/thread/lock_factories.hpp>
 #include <boost/thread/strict_lock.hpp>
-#include <boost/core/swap.hpp>
-#include <boost/utility/declval.hpp>
+#include <boost/core/invoke_swap.hpp>
+#include <boost/type_traits/declval.hpp>
 //#include <boost/type_traits.hpp>
 //#include <boost/thread/detail/is_nothrow_default_constructible.hpp>
 //#if ! defined BOOST_NO_CXX11_HDR_TYPE_TRAITS
@@ -582,7 +582,7 @@ namespace boost
       unique_lock<mutex_type> lk1(mtx_, defer_lock);
       unique_lock<mutex_type> lk2(rhs.mtx_, defer_lock);
       lock(lk1,lk2);
-      boost::swap(value_, rhs.value_);
+      boost::core::invoke_swap(value_, rhs.value_);
     }
     /**
      * Swap with the underlying value type
@@ -592,7 +592,7 @@ namespace boost
     void swap(value_type & rhs)
     {
       strict_lock<mutex_type> lk(mtx_);
-      boost::swap(value_, rhs);
+      boost::core::invoke_swap(value_, rhs);
     }
 
     /**

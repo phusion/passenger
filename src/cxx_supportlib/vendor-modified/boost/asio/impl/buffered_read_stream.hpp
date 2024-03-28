@@ -16,9 +16,7 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/associator.hpp>
-#include <boost/asio/detail/handler_alloc_helpers.hpp>
 #include <boost/asio/detail/handler_cont_helpers.hpp>
-#include <boost/asio/detail/handler_invoke_helpers.hpp>
 #include <boost/asio/detail/handler_type_requirements.hpp>
 #include <boost/asio/detail/non_const_lvalue.hpp>
 #include <boost/asio/detail/type_traits.hpp>
@@ -67,11 +65,10 @@ namespace detail
         std::size_t previous_size, ReadHandler& handler)
       : storage_(storage),
         previous_size_(previous_size),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
     buffered_fill_handler(const buffered_fill_handler& other)
       : storage_(other.storage_),
         previous_size_(other.previous_size_),
@@ -82,16 +79,15 @@ namespace detail
     buffered_fill_handler(buffered_fill_handler&& other)
       : storage_(other.storage_),
         previous_size_(other.previous_size_),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
+        handler_(static_cast<ReadHandler&&>(other.handler_))
     {
     }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
     void operator()(const boost::system::error_code& ec,
         const std::size_t bytes_transferred)
     {
       storage_.resize(previous_size_ + bytes_transferred);
-      BOOST_ASIO_MOVE_OR_LVALUE(ReadHandler)(handler_)(ec, bytes_transferred);
+      static_cast<ReadHandler&&>(handler_)(ec, bytes_transferred);
     }
 
   //private:
@@ -101,32 +97,6 @@ namespace detail
   };
 
   template <typename ReadHandler>
-  inline asio_handler_allocate_is_deprecated
-  asio_handler_allocate(std::size_t size,
-      buffered_fill_handler<ReadHandler>* this_handler)
-  {
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-    boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
-    return asio_handler_allocate_is_no_longer_used();
-#else // defined(BOOST_ASIO_NO_DEPRECATED)
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-  }
-
-  template <typename ReadHandler>
-  inline asio_handler_deallocate_is_deprecated
-  asio_handler_deallocate(void* pointer, std::size_t size,
-      buffered_fill_handler<ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-    return asio_handler_deallocate_is_no_longer_used();
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-  }
-
-  template <typename ReadHandler>
   inline bool asio_handler_is_continuation(
       buffered_fill_handler<ReadHandler>* this_handler)
   {
@@ -134,50 +104,26 @@ namespace detail
           this_handler->handler_);
   }
 
-  template <typename Function, typename ReadHandler>
-  inline asio_handler_invoke_is_deprecated
-  asio_handler_invoke(Function& function,
-      buffered_fill_handler<ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-    return asio_handler_invoke_is_no_longer_used();
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-  }
-
-  template <typename Function, typename ReadHandler>
-  inline asio_handler_invoke_is_deprecated
-  asio_handler_invoke(const Function& function,
-      buffered_fill_handler<ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-    return asio_handler_invoke_is_no_longer_used();
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-  }
-
   template <typename Stream>
   class initiate_async_buffered_fill
   {
   public:
-    typedef typename remove_reference<
-      Stream>::type::lowest_layer_type::executor_type executor_type;
+    typedef typename remove_reference_t<
+      Stream>::lowest_layer_type::executor_type executor_type;
 
     explicit initiate_async_buffered_fill(
-        typename remove_reference<Stream>::type& next_layer)
+        remove_reference_t<Stream>& next_layer)
       : next_layer_(next_layer)
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return next_layer_.lowest_layer().get_executor();
     }
 
     template <typename ReadHandler>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
+    void operator()(ReadHandler&& handler,
         buffered_stream_storage* storage) const
     {
       // If you get an error on the following line it means that your handler
@@ -191,12 +137,12 @@ namespace detail
           buffer(
             storage->data() + previous_size,
             storage->size() - previous_size),
-          buffered_fill_handler<typename decay<ReadHandler>::type>(
+          buffered_fill_handler<decay_t<ReadHandler>>(
             *storage, previous_size, handler2.value));
     }
 
   private:
-    typename remove_reference<Stream>::type& next_layer_;
+    remove_reference_t<Stream>& next_layer_;
   };
 } // namespace detail
 
@@ -209,18 +155,15 @@ struct associator<Associator,
     DefaultCandidate>
   : Associator<ReadHandler, DefaultCandidate>
 {
-  static typename Associator<ReadHandler, DefaultCandidate>::type
-  get(const detail::buffered_fill_handler<ReadHandler>& h) BOOST_ASIO_NOEXCEPT
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
+      const detail::buffered_fill_handler<ReadHandler>& h) noexcept
   {
     return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
 
-  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
-      typename Associator<ReadHandler, DefaultCandidate>::type)
-  get(const detail::buffered_fill_handler<ReadHandler>& h,
-      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
-    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
-      Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c)))
+  static auto get(const detail::buffered_fill_handler<ReadHandler>& h,
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
     return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
@@ -232,15 +175,12 @@ template <typename Stream>
 template <
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-buffered_read_stream<Stream>::async_fill(
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+inline auto buffered_read_stream<Stream>::async_fill(ReadHandler&& handler)
+  -> decltype(
     async_initiate<ReadHandler,
       void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_buffered_fill<Stream> >(),
-        handler, declval<detail::buffered_stream_storage*>())))
+        declval<detail::initiate_async_buffered_fill<Stream>>(),
+        handler, declval<detail::buffered_stream_storage*>()))
 {
   return async_initiate<ReadHandler,
     void (boost::system::error_code, std::size_t)>(
@@ -290,39 +230,37 @@ namespace detail
         const MutableBufferSequence& buffers, ReadHandler& handler)
       : storage_(storage),
         buffers_(buffers),
-        handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(handler))
+        handler_(static_cast<ReadHandler&&>(handler))
     {
     }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
-      buffered_read_some_handler(const buffered_read_some_handler& other)
-        : storage_(other.storage_),
-          buffers_(other.buffers_),
-          handler_(other.handler_)
-      {
-      }
+    buffered_read_some_handler(const buffered_read_some_handler& other)
+      : storage_(other.storage_),
+        buffers_(other.buffers_),
+        handler_(other.handler_)
+    {
+    }
 
-      buffered_read_some_handler(buffered_read_some_handler&& other)
-        : storage_(other.storage_),
-          buffers_(other.buffers_),
-          handler_(BOOST_ASIO_MOVE_CAST(ReadHandler)(other.handler_))
-      {
-      }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
+    buffered_read_some_handler(buffered_read_some_handler&& other)
+      : storage_(other.storage_),
+        buffers_(other.buffers_),
+        handler_(static_cast<ReadHandler&&>(other.handler_))
+    {
+    }
 
     void operator()(const boost::system::error_code& ec, std::size_t)
     {
       if (ec || storage_.empty())
       {
         const std::size_t length = 0;
-        BOOST_ASIO_MOVE_OR_LVALUE(ReadHandler)(handler_)(ec, length);
+        static_cast<ReadHandler&&>(handler_)(ec, length);
       }
       else
       {
         const std::size_t bytes_copied = boost::asio::buffer_copy(
             buffers_, storage_.data(), storage_.size());
         storage_.consume(bytes_copied);
-        BOOST_ASIO_MOVE_OR_LVALUE(ReadHandler)(handler_)(ec, bytes_copied);
+        static_cast<ReadHandler&&>(handler_)(ec, bytes_copied);
       }
     }
 
@@ -333,34 +271,6 @@ namespace detail
   };
 
   template <typename MutableBufferSequence, typename ReadHandler>
-  inline asio_handler_allocate_is_deprecated
-  asio_handler_allocate(std::size_t size,
-      buffered_read_some_handler<
-        MutableBufferSequence, ReadHandler>* this_handler)
-  {
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-    boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
-    return asio_handler_allocate_is_no_longer_used();
-#else // defined(BOOST_ASIO_NO_DEPRECATED)
-    return boost_asio_handler_alloc_helpers::allocate(
-        size, this_handler->handler_);
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-  }
-
-  template <typename MutableBufferSequence, typename ReadHandler>
-  inline asio_handler_deallocate_is_deprecated
-  asio_handler_deallocate(void* pointer, std::size_t size,
-      buffered_read_some_handler<
-        MutableBufferSequence, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_alloc_helpers::deallocate(
-        pointer, size, this_handler->handler_);
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-    return asio_handler_deallocate_is_no_longer_used();
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-  }
-
-  template <typename MutableBufferSequence, typename ReadHandler>
   inline bool asio_handler_is_continuation(
       buffered_read_some_handler<
         MutableBufferSequence, ReadHandler>* this_handler)
@@ -369,54 +279,26 @@ namespace detail
           this_handler->handler_);
   }
 
-  template <typename Function, typename MutableBufferSequence,
-      typename ReadHandler>
-  inline asio_handler_invoke_is_deprecated
-  asio_handler_invoke(Function& function,
-      buffered_read_some_handler<
-        MutableBufferSequence, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-    return asio_handler_invoke_is_no_longer_used();
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-  }
-
-  template <typename Function, typename MutableBufferSequence,
-      typename ReadHandler>
-  inline asio_handler_invoke_is_deprecated
-  asio_handler_invoke(const Function& function,
-      buffered_read_some_handler<
-        MutableBufferSequence, ReadHandler>* this_handler)
-  {
-    boost_asio_handler_invoke_helpers::invoke(
-        function, this_handler->handler_);
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-    return asio_handler_invoke_is_no_longer_used();
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-  }
-
   template <typename Stream>
   class initiate_async_buffered_read_some
   {
   public:
-    typedef typename remove_reference<
-      Stream>::type::lowest_layer_type::executor_type executor_type;
+    typedef typename remove_reference_t<
+      Stream>::lowest_layer_type::executor_type executor_type;
 
     explicit initiate_async_buffered_read_some(
-        typename remove_reference<Stream>::type& next_layer)
+        remove_reference_t<Stream>& next_layer)
       : next_layer_(next_layer)
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return next_layer_.lowest_layer().get_executor();
     }
 
     template <typename ReadHandler, typename MutableBufferSequence>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
+    void operator()(ReadHandler&& handler,
         buffered_stream_storage* storage,
         const MutableBufferSequence& buffers) const
     {
@@ -430,21 +312,21 @@ namespace detail
       {
         next_layer_.async_read_some(BOOST_ASIO_MUTABLE_BUFFER(0, 0),
             buffered_read_some_handler<MutableBufferSequence,
-              typename decay<ReadHandler>::type>(
+              decay_t<ReadHandler>>(
                 *storage, buffers, handler2.value));
       }
       else
       {
         initiate_async_buffered_fill<Stream>(this->next_layer_)(
             buffered_read_some_handler<MutableBufferSequence,
-              typename decay<ReadHandler>::type>(
+              decay_t<ReadHandler>>(
                 *storage, buffers, handler2.value),
             storage);
       }
     }
 
   private:
-    typename remove_reference<Stream>::type& next_layer_;
+    remove_reference_t<Stream>& next_layer_;
   };
 } // namespace detail
 
@@ -458,20 +340,18 @@ struct associator<Associator,
     DefaultCandidate>
   : Associator<ReadHandler, DefaultCandidate>
 {
-  static typename Associator<ReadHandler, DefaultCandidate>::type
-  get(const detail::buffered_read_some_handler<
-        MutableBufferSequence, ReadHandler>& h) BOOST_ASIO_NOEXCEPT
+  static typename Associator<ReadHandler, DefaultCandidate>::type get(
+      const detail::buffered_read_some_handler<
+        MutableBufferSequence, ReadHandler>& h) noexcept
   {
     return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
   }
 
-  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
-      typename Associator<ReadHandler, DefaultCandidate>::type)
-  get(const detail::buffered_read_some_handler<
+  static auto get(
+      const detail::buffered_read_some_handler<
         MutableBufferSequence, ReadHandler>& h,
-      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
-    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
-      Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c)))
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c))
   {
     return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
@@ -483,16 +363,13 @@ template <typename Stream>
 template <typename MutableBufferSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadHandler,
-    void (boost::system::error_code, std::size_t))
-buffered_read_stream<Stream>::async_read_some(
-    const MutableBufferSequence& buffers,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+inline auto buffered_read_stream<Stream>::async_read_some(
+    const MutableBufferSequence& buffers, ReadHandler&& handler)
+  -> decltype(
     async_initiate<ReadHandler,
       void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_buffered_read_some<Stream> >(),
-        handler, declval<detail::buffered_stream_storage*>(), buffers)))
+        declval<detail::initiate_async_buffered_read_some<Stream>>(),
+        handler, declval<detail::buffered_stream_storage*>(), buffers))
 {
   return async_initiate<ReadHandler,
     void (boost::system::error_code, std::size_t)>(

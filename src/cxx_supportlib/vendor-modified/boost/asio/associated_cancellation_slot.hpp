@@ -37,9 +37,8 @@ struct has_cancellation_slot_type : false_type
 };
 
 template <typename T>
-struct has_cancellation_slot_type<T,
-  typename void_type<typename T::cancellation_slot_type>::type>
-    : true_type
+struct has_cancellation_slot_type<T, void_t<typename T::cancellation_slot_type>>
+  : true_type
 {
 };
 
@@ -50,12 +49,12 @@ struct associated_cancellation_slot_impl
 
   typedef S type;
 
-  static type get(const T&) BOOST_ASIO_NOEXCEPT
+  static type get(const T&) noexcept
   {
     return type();
   }
 
-  static const type& get(const T&, const S& s) BOOST_ASIO_NOEXCEPT
+  static const type& get(const T&, const S& s) noexcept
   {
     return s;
   }
@@ -63,20 +62,18 @@ struct associated_cancellation_slot_impl
 
 template <typename T, typename S>
 struct associated_cancellation_slot_impl<T, S,
-  typename void_type<typename T::cancellation_slot_type>::type>
+  void_t<typename T::cancellation_slot_type>>
 {
   typedef typename T::cancellation_slot_type type;
 
-  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX(type) get(
-      const T& t) BOOST_ASIO_NOEXCEPT
-    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((t.get_cancellation_slot()))
+  static auto get(const T& t) noexcept
+    -> decltype(t.get_cancellation_slot())
   {
     return t.get_cancellation_slot();
   }
 
-  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX(type) get(
-      const T& t, const S&) BOOST_ASIO_NOEXCEPT
-    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((t.get_cancellation_slot()))
+  static auto get(const T& t, const S&) noexcept
+    -> decltype(t.get_cancellation_slot())
   {
     return t.get_cancellation_slot();
   }
@@ -84,12 +81,12 @@ struct associated_cancellation_slot_impl<T, S,
 
 template <typename T, typename S>
 struct associated_cancellation_slot_impl<T, S,
-  typename enable_if<
+  enable_if_t<
     !has_cancellation_slot_type<T>::value
-  >::type,
-  typename void_type<
+  >,
+  void_t<
     typename associator<associated_cancellation_slot, T, S>::type
-  >::type> : associator<associated_cancellation_slot, T, S>
+  >> : associator<associated_cancellation_slot, T, S>
 {
 };
 
@@ -130,12 +127,12 @@ struct associated_cancellation_slot
 
   /// If @c T has a nested type @c cancellation_slot_type, returns
   /// <tt>t.get_cancellation_slot()</tt>. Otherwise returns @c type().
-  static decltype(auto) get(const T& t) BOOST_ASIO_NOEXCEPT;
+  static decltype(auto) get(const T& t) noexcept;
 
   /// If @c T has a nested type @c cancellation_slot_type, returns
   /// <tt>t.get_cancellation_slot()</tt>. Otherwise returns @c s.
   static decltype(auto) get(const T& t,
-      const CancellationSlot& s) BOOST_ASIO_NOEXCEPT;
+      const CancellationSlot& s) noexcept;
 #endif // defined(GENERATING_DOCUMENTATION)
 };
 
@@ -145,7 +142,7 @@ struct associated_cancellation_slot
  */
 template <typename T>
 BOOST_ASIO_NODISCARD inline typename associated_cancellation_slot<T>::type
-get_associated_cancellation_slot(const T& t) BOOST_ASIO_NOEXCEPT
+get_associated_cancellation_slot(const T& t) noexcept
 {
   return associated_cancellation_slot<T>::get(t);
 }
@@ -156,23 +153,16 @@ get_associated_cancellation_slot(const T& t) BOOST_ASIO_NOEXCEPT
  * CancellationSlot>::get(t, st)</tt>
  */
 template <typename T, typename CancellationSlot>
-BOOST_ASIO_NODISCARD inline BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
-    typename associated_cancellation_slot<T, CancellationSlot>::type)
-get_associated_cancellation_slot(const T& t,
-    const CancellationSlot& st) BOOST_ASIO_NOEXCEPT
-  BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
-    associated_cancellation_slot<T, CancellationSlot>::get(t, st)))
+BOOST_ASIO_NODISCARD inline auto get_associated_cancellation_slot(
+    const T& t, const CancellationSlot& st) noexcept
+  -> decltype(associated_cancellation_slot<T, CancellationSlot>::get(t, st))
 {
   return associated_cancellation_slot<T, CancellationSlot>::get(t, st);
 }
 
-#if defined(BOOST_ASIO_HAS_ALIAS_TEMPLATES)
-
 template <typename T, typename CancellationSlot = cancellation_slot>
 using associated_cancellation_slot_t =
   typename associated_cancellation_slot<T, CancellationSlot>::type;
-
-#endif // defined(BOOST_ASIO_HAS_ALIAS_TEMPLATES)
 
 namespace detail {
 
@@ -183,21 +173,18 @@ struct associated_cancellation_slot_forwarding_base
 
 template <typename T, typename S>
 struct associated_cancellation_slot_forwarding_base<T, S,
-    typename enable_if<
+    enable_if_t<
       is_same<
         typename associated_cancellation_slot<T,
           S>::asio_associated_cancellation_slot_is_unspecialised,
         void
       >::value
-    >::type>
+    >>
 {
   typedef void asio_associated_cancellation_slot_is_unspecialised;
 };
 
 } // namespace detail
-
-#if defined(BOOST_ASIO_HAS_STD_REFERENCE_WRAPPER) \
-  || defined(GENERATING_DOCUMENTATION)
 
 /// Specialisation of associated_cancellation_slot for @c
 /// std::reference_wrapper.
@@ -213,24 +200,20 @@ struct associated_cancellation_slot<reference_wrapper<T>, CancellationSlot>
 
   /// Forwards the request to get the cancellation slot to the associator
   /// specialisation for the unwrapped type @c T.
-  static type get(reference_wrapper<T> t) BOOST_ASIO_NOEXCEPT
+  static type get(reference_wrapper<T> t) noexcept
   {
     return associated_cancellation_slot<T, CancellationSlot>::get(t.get());
   }
 
   /// Forwards the request to get the cancellation slot to the associator
   /// specialisation for the unwrapped type @c T.
-  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX(type) get(reference_wrapper<T> t,
-      const CancellationSlot& s) BOOST_ASIO_NOEXCEPT
-    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
-      associated_cancellation_slot<T, CancellationSlot>::get(t.get(), s)))
+  static auto get(reference_wrapper<T> t, const CancellationSlot& s) noexcept
+    -> decltype(
+      associated_cancellation_slot<T, CancellationSlot>::get(t.get(), s))
   {
     return associated_cancellation_slot<T, CancellationSlot>::get(t.get(), s);
   }
 };
-
-#endif // defined(BOOST_ASIO_HAS_STD_REFERENCE_WRAPPER)
-       //   || defined(GENERATING_DOCUMENTATION)
 
 } // namespace asio
 } // namespace boost

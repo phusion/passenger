@@ -62,7 +62,7 @@ evTimeToJson(ev_tstamp evTime, ev_tstamp evNow, unsigned long long now = 0) {
 
 	Json::Value doc;
 	unsigned long long wallClockTimeUsec = now
-		+ (evTime - evNow) * 1000000ull;
+		+ llround((evTime - evNow) * 1000000);
 	time_t wallClockTime = (time_t) (wallClockTimeUsec / 1000000ull);
 	char buf[32];
 	size_t len;
@@ -79,9 +79,9 @@ evTimeToJson(ev_tstamp evTime, ev_tstamp evNow, unsigned long long now = 0) {
 
 	doc["relative_timestamp"] = evTime - evNow;
 	if (evTime > evNow) {
-		doc["relative"] = distanceOfTimeInWords(evTime, evNow) + " from now";
+		doc["relative"] = distanceOfTimeInWords(llround(evTime), llround(evNow)) + " from now";
 	} else {
-		doc["relative"] = distanceOfTimeInWords(evTime, evNow) + " ago";
+		doc["relative"] = distanceOfTimeInWords(llround(evTime), llround(evNow)) + " ago";
 	}
 	return doc;
 }

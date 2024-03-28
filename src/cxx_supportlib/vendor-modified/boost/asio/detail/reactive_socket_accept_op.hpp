@@ -19,7 +19,6 @@
 #include <boost/asio/detail/bind_handler.hpp>
 #include <boost/asio/detail/fenced_block.hpp>
 #include <boost/asio/detail/handler_alloc_helpers.hpp>
-#include <boost/asio/detail/handler_invoke_helpers.hpp>
 #include <boost/asio/detail/handler_work.hpp>
 #include <boost/asio/detail/memory.hpp>
 #include <boost/asio/detail/reactor_op.hpp>
@@ -109,7 +108,7 @@ public:
     : reactive_socket_accept_op_base<Socket, Protocol>(
         success_ec, socket, state, peer, protocol, peer_endpoint,
         &reactive_socket_accept_op::do_complete),
-      handler_(BOOST_ASIO_MOVE_CAST(Handler)(handler)),
+      handler_(static_cast<Handler&&>(handler)),
       work_(handler_, io_ex)
   {
   }
@@ -131,7 +130,7 @@ public:
 
     // Take ownership of the operation's outstanding work.
     handler_work<Handler, IoExecutor> w(
-        BOOST_ASIO_MOVE_CAST2(handler_work<Handler, IoExecutor>)(
+        static_cast<handler_work<Handler, IoExecutor>&&>(
           o->work_));
 
     BOOST_ASIO_ERROR_LOCATION(o->ec_);
@@ -171,7 +170,7 @@ public:
 
     // Take ownership of the operation's outstanding work.
     immediate_handler_work<Handler, IoExecutor> w(
-        BOOST_ASIO_MOVE_CAST2(handler_work<Handler, IoExecutor>)(
+        static_cast<handler_work<Handler, IoExecutor>&&>(
           o->work_));
 
     BOOST_ASIO_ERROR_LOCATION(o->ec_);
@@ -197,8 +196,6 @@ private:
   handler_work<Handler, IoExecutor> work_;
 };
 
-#if defined(BOOST_ASIO_HAS_MOVE)
-
 template <typename Protocol, typename PeerIoExecutor,
     typename Handler, typename IoExecutor>
 class reactive_socket_move_accept_op :
@@ -222,7 +219,7 @@ public:
       reactive_socket_accept_op_base<peer_socket_type, Protocol>(
         success_ec, socket, state, *this, protocol, peer_endpoint,
         &reactive_socket_move_accept_op::do_complete),
-      handler_(BOOST_ASIO_MOVE_CAST(Handler)(handler)),
+      handler_(static_cast<Handler&&>(handler)),
       work_(handler_, io_ex)
   {
   }
@@ -245,7 +242,7 @@ public:
 
     // Take ownership of the operation's outstanding work.
     handler_work<Handler, IoExecutor> w(
-        BOOST_ASIO_MOVE_CAST2(handler_work<Handler, IoExecutor>)(
+        static_cast<handler_work<Handler, IoExecutor>&&>(
           o->work_));
 
     BOOST_ASIO_ERROR_LOCATION(o->ec_);
@@ -258,8 +255,8 @@ public:
     // deallocated the memory here.
     detail::move_binder2<Handler,
       boost::system::error_code, peer_socket_type>
-        handler(0, BOOST_ASIO_MOVE_CAST(Handler)(o->handler_), o->ec_,
-          BOOST_ASIO_MOVE_CAST(peer_socket_type)(*o));
+        handler(0, static_cast<Handler&&>(o->handler_), o->ec_,
+          static_cast<peer_socket_type&&>(*o));
     p.h = boost::asio::detail::addressof(handler.handler_);
     p.reset();
 
@@ -288,7 +285,7 @@ public:
 
     // Take ownership of the operation's outstanding work.
     immediate_handler_work<Handler, IoExecutor> w(
-        BOOST_ASIO_MOVE_CAST2(handler_work<Handler, IoExecutor>)(
+        static_cast<handler_work<Handler, IoExecutor>&&>(
           o->work_));
 
     BOOST_ASIO_ERROR_LOCATION(o->ec_);
@@ -301,8 +298,8 @@ public:
     // deallocated the memory here.
     detail::move_binder2<Handler,
       boost::system::error_code, peer_socket_type>
-        handler(0, BOOST_ASIO_MOVE_CAST(Handler)(o->handler_), o->ec_,
-          BOOST_ASIO_MOVE_CAST(peer_socket_type)(*o));
+        handler(0, static_cast<Handler&&>(o->handler_), o->ec_,
+          static_cast<peer_socket_type&&>(*o));
     p.h = boost::asio::detail::addressof(handler.handler_);
     p.reset();
 
@@ -318,8 +315,6 @@ private:
   Handler handler_;
   handler_work<Handler, IoExecutor> work_;
 };
-
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
 } // namespace detail
 } // namespace asio

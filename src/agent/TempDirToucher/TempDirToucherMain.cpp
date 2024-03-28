@@ -40,7 +40,9 @@
 #include <limits.h>
 #include <errno.h>
 #include <string.h>
+
 #include <Constants.h>
+#include <MainFunctions.h>
 
 #define ERROR_PREFIX "*** TempDirToucher error"
 
@@ -336,10 +338,11 @@ maybeWritePidfile() {
 
 static int
 dirExists(const char *dir) {
-	up_privilege(); // raise priv. to stat file
 	struct stat buf;
-	return stat(dir, &buf) == 0 && S_ISDIR(buf.st_mode);
+	up_privilege(); // raise priv. to stat file
+	bool retVal = stat(dir, &buf) == 0 && S_ISDIR(buf.st_mode);
 	down_privilege(); // drop priv now that unneeded
+	return retVal;
 }
 
 static void
@@ -407,7 +410,6 @@ doSleep(int sec) {
 		fprintf(stderr, ERROR_PREFIX ": cannot select(): %s (errno %d)\n",
 			strerror(e), e);
 		exit(1);
-		return -1; /* Never reached */
 	} else {
 		return ret == 0;
 	}
@@ -461,7 +463,7 @@ performCleanup(const char *dir) {
 	}
 }
 
-void
+static void
 maybeWaitForNginxToExit() {
 	// If a PID was specified, wait for kill to tell us it's gone.
 	if (nginxPid == 0) {

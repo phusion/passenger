@@ -73,7 +73,7 @@ public:
 
   // Move-construct a new socket implementation.
   BOOST_ASIO_DECL void base_move_construct(base_implementation_type& impl,
-      base_implementation_type& other_impl) BOOST_ASIO_NOEXCEPT;
+      base_implementation_type& other_impl) noexcept;
 
   // Move-assign from another socket implementation.
   BOOST_ASIO_DECL void base_move_assign(base_implementation_type& impl,
@@ -200,7 +200,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     int op_type;
@@ -290,7 +290,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -327,7 +327,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -398,7 +398,7 @@ public:
     int op_type = (flags & socket_base::message_out_of_band)
       ? io_uring_service::except_op : io_uring_service::read_op;
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -449,7 +449,7 @@ public:
       poll_flags = POLLIN;
     }
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -518,7 +518,7 @@ public:
     int op_type = (in_flags & socket_base::message_out_of_band)
       ? io_uring_service::except_op : io_uring_service::read_op;
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -567,7 +567,7 @@ public:
       poll_flags = POLLIN;
     }
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.

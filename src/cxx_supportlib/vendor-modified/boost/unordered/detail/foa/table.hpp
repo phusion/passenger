@@ -15,7 +15,9 @@
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
+#include <boost/core/serialization.hpp>
 #include <boost/unordered/detail/foa/core.hpp>
+#include <boost/unordered/detail/serialize_tracked_address.hpp>
 #include <cstddef>
 #include <iterator>
 #include <memory>
@@ -79,12 +81,17 @@ class table;
 /* internal conversion from const_iterator to iterator */
 struct const_iterator_cast_tag{}; 
 
-template<typename TypePolicy,typename Group,bool Const>
+template<typename TypePolicy,typename GroupPtr,bool Const>
 class table_iterator
 {
+  using group_pointer_traits=boost::pointer_traits<GroupPtr>;
   using type_policy=TypePolicy;
   using table_element_type=typename type_policy::element_type;
-  using group_type=Group;
+  using group_type=typename group_pointer_traits::element_type;
+  using table_element_pointer=
+    typename group_pointer_traits::template rebind<table_element_type>;
+  using char_pointer=
+    typename group_pointer_traits::template rebind<unsigned char>;
   static constexpr auto N=group_type::N;
   static constexpr auto regular_layout=group_type::regular_layout;
 
@@ -99,24 +106,24 @@ public:
   using element_type=
     typename std::conditional<Const,value_type const,value_type>::type;
 
-  table_iterator()=default;
+  table_iterator():pc_{nullptr},p_{nullptr}{};
   template<bool Const2,typename std::enable_if<!Const2>::type* =nullptr>
-  table_iterator(const table_iterator<TypePolicy,Group,Const2>& x):
-    pc{x.pc},p{x.p}{}
+  table_iterator(const table_iterator<TypePolicy,GroupPtr,Const2>& x):
+    pc_{x.pc_},p_{x.p_}{}
   table_iterator(
-    const_iterator_cast_tag, const table_iterator<TypePolicy,Group,true>& x):
-    pc{x.pc},p{x.p}{}
+    const_iterator_cast_tag, const table_iterator<TypePolicy,GroupPtr,true>& x):
+    pc_{x.pc_},p_{x.p_}{}
 
   inline reference operator*()const noexcept
-    {return type_policy::value_from(*p);}
+    {return type_policy::value_from(*p());}
   inline pointer operator->()const noexcept
-    {return std::addressof(type_policy::value_from(*p));}
+    {return std::addressof(type_policy::value_from(*p()));}
   inline table_iterator& operator++()noexcept{increment();return *this;}
   inline table_iterator operator++(int)noexcept
     {auto x=*this;increment();return x;}
   friend inline bool operator==(
     const table_iterator& x,const table_iterator& y)
-    {return x.p==y.p;}
+    {return x.p()==y.p();}
   friend inline bool operator!=(
     const table_iterator& x,const table_iterator& y)
     {return !(x==y);}
@@ -126,77 +133,106 @@ private:
   template<typename> friend class table_erase_return_type;
   template<typename,typename,typename,typename> friend class table;
 
-  table_iterator(Group* pg,std::size_t n,const table_element_type* p_):
-    pc{reinterpret_cast<unsigned char*>(const_cast<group_type*>(pg))+n},
-    p{const_cast<table_element_type*>(p_)}
-    {}
+  table_iterator(group_type* pg,std::size_t n,const table_element_type* ptet):
+    pc_{to_pointer<char_pointer>(
+      reinterpret_cast<unsigned char*>(const_cast<group_type*>(pg))+n)},
+    p_{to_pointer<table_element_pointer>(const_cast<table_element_type*>(ptet))}
+  {}
+
+  unsigned char* pc()const noexcept{return boost::to_address(pc_);}
+  table_element_type* p()const noexcept{return boost::to_address(p_);}
 
   inline void increment()noexcept
   {
-    BOOST_ASSERT(p!=nullptr);
+    BOOST_ASSERT(p()!=nullptr);
     increment(std::integral_constant<bool,regular_layout>{});
   }
 
   inline void increment(std::true_type /* regular layout */)noexcept
   {
+    using diff_type=
+      typename boost::pointer_traits<char_pointer>::difference_type;
+
     for(;;){
-      ++p;
-      if(reinterpret_cast<uintptr_t>(pc)%sizeof(group_type)==N-1){
-        pc+=sizeof(group_type)-(N-1);
+      ++p_;
+      if(reinterpret_cast<uintptr_t>(pc())%sizeof(group_type)==N-1){
+        pc_+=static_cast<diff_type>(sizeof(group_type)-(N-1));
         break;
       }
-      ++pc;
-      if(!group_type::is_occupied(pc))continue;
-      if(BOOST_UNLIKELY(group_type::is_sentinel(pc)))p=nullptr;
+      ++pc_;
+      if(!group_type::is_occupied(pc()))continue;
+      if(BOOST_UNLIKELY(group_type::is_sentinel(pc())))p_=nullptr;
       return;
     }
 
     for(;;){
-      int mask=reinterpret_cast<group_type*>(pc)->match_occupied();
+      int mask=reinterpret_cast<group_type*>(pc())->match_occupied();
       if(mask!=0){
         auto n=unchecked_countr_zero(mask);
-        if(BOOST_UNLIKELY(reinterpret_cast<group_type*>(pc)->is_sentinel(n))){
-          p=nullptr;
+        if(BOOST_UNLIKELY(reinterpret_cast<group_type*>(pc())->is_sentinel(n))){
+          p_=nullptr;
         }
         else{
-          pc+=n;
-          p+=n;
+          pc_+=static_cast<diff_type>(n);
+          p_+=static_cast<diff_type>(n);
         }
         return;
       }
-      pc+=sizeof(group_type);
-      p+=N;
+      pc_+=static_cast<diff_type>(sizeof(group_type));
+      p_+=static_cast<diff_type>(N);
     }
   }
 
   inline void increment(std::false_type /* interleaved */)noexcept
   {
-    std::size_t n0=reinterpret_cast<uintptr_t>(pc)%sizeof(group_type);
-    pc-=n0;
+    using diff_type=
+      typename boost::pointer_traits<char_pointer>::difference_type;
+
+    std::size_t n0=reinterpret_cast<uintptr_t>(pc())%sizeof(group_type);
+    pc_-=static_cast<diff_type>(n0);
 
     int mask=(
-      reinterpret_cast<group_type*>(pc)->match_occupied()>>(n0+1))<<(n0+1);
+      reinterpret_cast<group_type*>(pc())->match_occupied()>>(n0+1))<<(n0+1);
     if(!mask){
       do{
-        pc+=sizeof(group_type);
-        p+=N;
+        pc_+=sizeof(group_type);
+        p_+=N;
       }
-      while((mask=reinterpret_cast<group_type*>(pc)->match_occupied())==0);
+      while((mask=reinterpret_cast<group_type*>(pc())->match_occupied())==0);
     }
 
     auto n=unchecked_countr_zero(mask);
-    if(BOOST_UNLIKELY(reinterpret_cast<group_type*>(pc)->is_sentinel(n))){
-      p=nullptr;
+    if(BOOST_UNLIKELY(reinterpret_cast<group_type*>(pc())->is_sentinel(n))){
+      p_=nullptr;
     }
     else{
-      pc+=n;
-      p-=n0;
-      p+=n;
+      pc_+=static_cast<diff_type>(n);
+      p_-=static_cast<diff_type>(n0);
+      p_+=static_cast<diff_type>(n);
     }
   }
 
-  unsigned char      *pc=nullptr;
-  table_element_type *p=nullptr;
+  template<typename Archive>
+  friend void serialization_track(Archive& ar,const table_iterator& x)
+  {
+    if(x.p()){
+      track_address(ar,x.pc_);
+      track_address(ar,x.p_);
+    }
+  }
+
+  friend class boost::serialization::access;
+
+  template<typename Archive>
+  void serialize(Archive& ar,unsigned int)
+  {
+    if(!p())pc_=nullptr;
+    serialize_tracked_address(ar,pc_);
+    serialize_tracked_address(ar,p_);
+  }
+
+  char_pointer          pc_=nullptr;
+  table_element_pointer  p_=nullptr;
 };
 
 /* Returned by table::erase([const_]iterator) to avoid iterator increment
@@ -206,11 +242,11 @@ private:
 template<typename Iterator>
 class table_erase_return_type; 
 
-template<typename TypePolicy,typename Group,bool Const>
-class table_erase_return_type<table_iterator<TypePolicy,Group,Const>>
+template<typename TypePolicy,typename GroupPtr,bool Const>
+class table_erase_return_type<table_iterator<TypePolicy,GroupPtr,Const>>
 {
-  using iterator=table_iterator<TypePolicy,Group,Const>;
-  using const_iterator=table_iterator<TypePolicy,Group,true>;
+  using iterator=table_iterator<TypePolicy,GroupPtr,Const>;
+  using const_iterator=table_iterator<TypePolicy,GroupPtr,true>;
 
 public:
   /* can't delete it because VS in pre-C++17 mode needs to see it for RVO */
@@ -264,6 +300,9 @@ private:
  * checking is done by boost::unordered_(flat|node)_(map|set).
  */
 
+template<typename,typename,typename,typename>
+class concurrent_table; /* concurrent/non-concurrent interop */
+
 template <typename TypePolicy,typename Hash,typename Pred,typename Allocator>
 using table_core_impl=
   table_core<TypePolicy,group15<plain_integral>,table_arrays,
@@ -284,7 +323,15 @@ class table:table_core_impl<TypePolicy,Hash,Pred,Allocator>
   using group_type=typename super::group_type;
   using super::N;
   using prober=typename super::prober;
+  using arrays_type=typename super::arrays_type;
+  using size_ctrl_type=typename super::size_ctrl_type;
   using locator=typename super::locator;
+  using compatible_concurrent_table=
+    concurrent_table<TypePolicy,Hash,Pred,Allocator>;
+  using group_type_pointer=typename boost::pointer_traits<
+    typename boost::allocator_pointer<Allocator>::type
+  >::template rebind<group_type>;
+  friend compatible_concurrent_table;
 
 public:
   using key_type=typename super::key_type;
@@ -295,7 +342,6 @@ public:
 private:
   static constexpr bool has_mutable_iterator=
     !std::is_same<key_type,value_type>::value;
-
 public:
   using hasher=typename super::hasher;
   using key_equal=typename super::key_equal;
@@ -306,10 +352,10 @@ public:
   using const_reference=typename super::const_reference;
   using size_type=typename super::size_type;
   using difference_type=typename super::difference_type;
-  using const_iterator=table_iterator<type_policy,group_type,true>;
+  using const_iterator=table_iterator<type_policy,group_type_pointer,true>;
   using iterator=typename std::conditional<
     has_mutable_iterator,
-    table_iterator<type_policy,group_type,false>,
+    table_iterator<type_policy,group_type_pointer,false>,
     const_iterator>::type;
   using erase_return_type=table_erase_return_type<iterator>;
 
@@ -323,6 +369,8 @@ public:
   table(table&& x)=default;
   table(const table& x,const Allocator& al_):super{x,al_}{}
   table(table&& x,const Allocator& al_):super{std::move(x),al_}{}
+  table(compatible_concurrent_table&& x):
+    table(std::move(x),x.exclusive_access()){}
   ~table()=default;
 
   table& operator=(const table& x)=default;
@@ -332,9 +380,9 @@ public:
 
   iterator begin()noexcept
   {
-    iterator it{this->arrays.groups,0,this->arrays.elements};
-    if(this->arrays.elements&&
-       !(this->arrays.groups[0].match_occupied()&0x1))++it;
+    iterator it{this->arrays.groups(),0,this->arrays.elements()};
+    if(this->arrays.elements()&&
+       !(this->arrays.groups()[0].match_occupied()&0x1))++it;
     return it;
   }
 
@@ -400,7 +448,7 @@ public:
   BOOST_FORCEINLINE
   erase_return_type erase(const_iterator pos)noexcept
   {
-    super::erase(pos.pc,pos.p);
+    super::erase(pos.pc(),pos.p());
     return {pos};
   }
 
@@ -431,7 +479,7 @@ public:
     BOOST_ASSERT(pos!=end());
     erase_on_exit e{*this,pos};
     (void)e;
-    return std::move(*pos.p);
+    return std::move(*pos.p());
   }
 
   // TODO: should we accept different allocator too?
@@ -496,9 +544,31 @@ public:
   friend bool operator!=(const table& x,const table& y){return !(x==y);}
 
 private:
+  template<typename ArraysType>
+  table(compatible_concurrent_table&& x,arrays_holder<ArraysType,Allocator>&& ah):
+    super{
+      std::move(x.h()),std::move(x.pred()),std::move(x.al()),
+      [&x]{return arrays_type{
+        x.arrays.groups_size_index,x.arrays.groups_size_mask,
+        to_pointer<group_type_pointer>(
+          reinterpret_cast<group_type*>(x.arrays.groups())),
+        x.arrays.elements_};},
+      size_ctrl_type{x.size_ctrl.ml,x.size_ctrl.size}}
+  {
+    compatible_concurrent_table::arrays_type::delete_group_access(x.al(),x.arrays);
+    x.arrays=ah.release();
+    x.size_ctrl.ml=x.initial_max_load();
+    x.size_ctrl.size=0;
+  }
+
+  template<typename ExclusiveLockGuard>
+  table(compatible_concurrent_table&& x,ExclusiveLockGuard):
+    table(std::move(x),x.make_empty_arrays())
+  {}
+
   struct erase_on_exit
   {
-    erase_on_exit(table& x_,const_iterator it_):x{x_},it{it_}{}
+    erase_on_exit(table& x_,const_iterator it_):x(x_),it(it_){}
     ~erase_on_exit(){if(!rollback_)x.erase(it);}
 
     void rollback(){rollback_=true;}

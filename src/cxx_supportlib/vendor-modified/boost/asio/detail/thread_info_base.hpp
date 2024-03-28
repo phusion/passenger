@@ -21,12 +21,10 @@
 #include <boost/asio/detail/memory.hpp>
 #include <boost/asio/detail/noncopyable.hpp>
 
-#if defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR) \
-  && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#if !defined(BOOST_ASIO_NO_EXCEPTIONS)
 # include <exception>
 # include <boost/asio/multiple_exceptions.hpp>
-#endif // defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR)
-       // && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#endif // !defined(BOOST_ASIO_NO_EXCEPTIONS)
 
 #include <boost/asio/detail/push_options.hpp>
 
@@ -95,11 +93,9 @@ public:
   enum { max_mem_index = parallel_group_tag::end_mem_index };
 
   thread_info_base()
-#if defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR) \
-  && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#if !defined(BOOST_ASIO_NO_EXCEPTIONS)
     : has_pending_exception_(0)
-#endif // defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR)
-       // && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#endif // !defined(BOOST_ASIO_NO_EXCEPTIONS)
   {
     for (int i = 0; i < max_mem_index; ++i)
       reusable_memory_[i] = 0;
@@ -200,8 +196,7 @@ public:
 
   void capture_current_exception()
   {
-#if defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR) \
-  && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#if !defined(BOOST_ASIO_NO_EXCEPTIONS)
     switch (has_pending_exception_)
     {
     case 0:
@@ -217,24 +212,21 @@ public:
     default:
       break;
     }
-#endif // defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR)
-       // && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#endif // !defined(BOOST_ASIO_NO_EXCEPTIONS)
   }
 
   void rethrow_pending_exception()
   {
-#if defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR) \
-  && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#if !defined(BOOST_ASIO_NO_EXCEPTIONS)
     if (has_pending_exception_ > 0)
     {
       has_pending_exception_ = 0;
       std::exception_ptr ex(
-          BOOST_ASIO_MOVE_CAST(std::exception_ptr)(
+          static_cast<std::exception_ptr&&>(
             pending_exception_));
       std::rethrow_exception(ex);
     }
-#endif // defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR)
-       // && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#endif // !defined(BOOST_ASIO_NO_EXCEPTIONS)
   }
 
 private:
@@ -245,12 +237,10 @@ private:
 #endif // defined(BOOST_ASIO_HAS_IO_URING)
   void* reusable_memory_[max_mem_index];
 
-#if defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR) \
-  && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#if !defined(BOOST_ASIO_NO_EXCEPTIONS)
   int has_pending_exception_;
   std::exception_ptr pending_exception_;
-#endif // defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR)
-       // && !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#endif // !defined(BOOST_ASIO_NO_EXCEPTIONS)
 };
 
 } // namespace detail

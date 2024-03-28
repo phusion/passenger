@@ -28,7 +28,7 @@ using std::index_sequence;
 using std::index_sequence_for;
 using std::make_index_sequence;
 
-#elif defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
+#else // defined(BOOST_ASIO_HAS_STD_INDEX_SEQUENCE)
 
 template <std::size_t...>
 struct index_sequence
@@ -39,7 +39,7 @@ template <typename T, typename U>
 struct join_index_sequences;
 
 template <std::size_t... I, std::size_t... J>
-struct join_index_sequences<index_sequence<I...>, index_sequence<J...> >
+struct join_index_sequences<index_sequence<I...>, index_sequence<J...>>
 {
   using type = index_sequence<I..., J...>;
 };
@@ -76,7 +76,7 @@ using index_sequence_for = typename index_range<0, sizeof...(T)>::type;
 template <std::size_t N>
 using make_index_sequence = typename index_range<0, N>::type;
 
-#endif // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
+#endif // defined(BOOST_ASIO_HAS_STD_INDEX_SEQUENCE)
 
 } // namespace detail
 } // namespace asio

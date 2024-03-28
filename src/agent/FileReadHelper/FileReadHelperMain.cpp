@@ -53,6 +53,7 @@
 #include <unistd.h>
 
 #include <Constants.h>
+#include <MainFunctions.h>
 #include <ProcessManagement/Utils.h>
 #include <IOTools/IOUtils.h>
 #include <Utils/OptionParsing.h>
@@ -121,8 +122,14 @@ parseOptions(int argc, const char *argv[], Options &options) {
 	return true;
 }
 
+} // namespace FileReadHelper
+} // namespace Passenger
+
 int
 fileReadHelperMain(int argc, char *argv[]) {
+	using namespace Passenger;
+	using namespace Passenger::FileReadHelper;
+
 	if (argc < 3) {
 		usage();
 		exit(1);
@@ -185,14 +192,4 @@ fileReadHelperMain(int argc, char *argv[]) {
 	}
 
 	return 0;
-}
-
-
-} // namespace FileReadHelper
-} // namespace Passenger
-
-
-int
-fileReadHelperMain(int argc, char *argv[]) {
-	return Passenger::FileReadHelper::fileReadHelperMain(argc, argv);
 }

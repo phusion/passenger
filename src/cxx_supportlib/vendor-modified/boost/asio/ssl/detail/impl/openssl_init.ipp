@@ -135,7 +135,7 @@ private:
 
   // Mutexes to be used in locking callbacks.
   std::vector<boost::asio::detail::shared_ptr<
-        boost::asio::detail::mutex> > mutexes_;
+        boost::asio::detail::mutex>> mutexes_;
 #endif // (OPENSSL_VERSION_NUMBER < 0x10100000L)
 
 #if !defined(SSL_OP_NO_COMPRESSION) \

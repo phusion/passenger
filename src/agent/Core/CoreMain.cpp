@@ -78,6 +78,7 @@
 #include <Shared/ApiServerUtils.h>
 #include <Constants.h>
 #include <LoggingKit/Context.h>
+#include <MainFunctions.h>
 #include <ConfigKit/SubComponentUtils.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>

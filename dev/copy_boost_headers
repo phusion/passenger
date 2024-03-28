@@ -203,16 +203,24 @@ def prepare
 end
 
 def cleanup
-  FileUtils.rm_rf("boost/thread/win32")
-  FileUtils.rm_rf("boost/src/win32")
+  FileUtils.rm_rf("boost/asio/detail/old_win_sdk_compat.hpp")
   FileUtils.rm_rf("boost/asio/win32")
+  FileUtils.rm_rf("boost/asio/windows")
   FileUtils.rm_rf("boost/atomic/detail/caps_windows.hpp")
+  FileUtils.rm_rf("boost/atomic/detail/core_ops_windows.hpp")
+  FileUtils.rm_rf("boost/atomic/detail/fence_ops_windows.hpp")
   FileUtils.rm_rf("boost/atomic/detail/ops_windows.hpp")
-  FileUtils.rm_rf("boost/smart_ptr/detail/spinlock_w32.hpp")
-  FileUtils.rm_rf("boost/smart_ptr/detail/sp_counted_base_w32.hpp")
-  FileUtils.rm_rf("boost/smart_ptr/detail/atomic_count_win32.hpp")
-  FileUtils.rm_rf("boost/config/platform/win32.hpp")
+  FileUtils.rm_rf("boost/atomic/detail/wait_caps_windows.hpp")
+  FileUtils.rm_rf("boost/atomic/detail/wait_ops_windows.hpp")
   FileUtils.rm_rf("boost/chrono/detail/inlined/win")
+  FileUtils.rm_rf("boost/config/platform/cygwin.hpp")
+  FileUtils.rm_rf("boost/config/platform/win32.hpp")
+  FileUtils.rm_rf("boost/core/detail/sp_win32_sleep.hpp")
+  FileUtils.rm_rf("boost/smart_ptr/detail/atomic_count_win32.hpp")
+  FileUtils.rm_rf("boost/smart_ptr/detail/sp_counted_base_w32.hpp")
+  FileUtils.rm_rf("boost/smart_ptr/detail/spinlock_w32.hpp")
+  FileUtils.rm_rf("boost/src/win32")
+  FileUtils.rm_rf("boost/thread/win32")
   File.unlink("test.cpp") rescue nil
 end
 
@@ -225,6 +233,7 @@ def copy_dependencies(cflags)
     missing_headers = compiler_output.
                         split("\n").
                         grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
+                        grep_v(/\/usr\/include\/c\+\+/).
                         map do |line|
       if line =~ /error: (.*): No such file/
         file = $1

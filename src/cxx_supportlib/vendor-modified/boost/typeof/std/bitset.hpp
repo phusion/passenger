@@ -5,11 +5,9 @@
 #ifndef BOOST_TYPEOF_STD_bitset_hpp_INCLUDED
 #define BOOST_TYPEOF_STD_bitset_hpp_INCLUDED
 
+// This header is no longer useful and is only retained for compatibility
+
 #include <bitset>
 #include <boost/typeof/typeof.hpp>
-
-#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::bitset, (BOOST_TYPEOF_INTEGRAL(std::size_t)))
 
 #endif//BOOST_TYPEOF_STD_bitset_hpp_INCLUDED

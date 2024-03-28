@@ -27,22 +27,18 @@ namespace this_coro {
 /// Awaitable type that returns the executor of the current coroutine.
 struct executor_t
 {
-  BOOST_ASIO_CONSTEXPR executor_t()
+  constexpr executor_t()
   {
   }
 };
 
 /// Awaitable object that returns the executor of the current coroutine.
-#if defined(BOOST_ASIO_HAS_CONSTEXPR) || defined(GENERATING_DOCUMENTATION)
 constexpr executor_t executor;
-#elif defined(BOOST_ASIO_MSVC)
-__declspec(selectany) executor_t executor;
-#endif
 
 /// Awaitable type that returns the cancellation state of the current coroutine.
 struct cancellation_state_t
 {
-  BOOST_ASIO_CONSTEXPR cancellation_state_t()
+  constexpr cancellation_state_t()
   {
   }
 };
@@ -62,11 +58,7 @@ struct cancellation_state_t
  *     // ...
  * } @endcode
  */
-#if defined(BOOST_ASIO_HAS_CONSTEXPR) || defined(GENERATING_DOCUMENTATION)
 constexpr cancellation_state_t cancellation_state;
-#elif defined(BOOST_ASIO_MSVC)
-__declspec(selectany) cancellation_state_t cancellation_state;
-#endif
 
 #if defined(GENERATING_DOCUMENTATION)
 
@@ -89,7 +81,7 @@ __declspec(selectany) cancellation_state_t cancellation_state;
  * @note The cancellation state is shared by all coroutines in the same "thread
  * of execution" that was created using boost::asio::co_spawn.
  */
-BOOST_ASIO_NODISCARD BOOST_ASIO_CONSTEXPR unspecified
+BOOST_ASIO_NODISCARD constexpr unspecified
 reset_cancellation_state();
 
 /// Returns an awaitable object that may be used to reset the cancellation state
@@ -114,8 +106,8 @@ reset_cancellation_state();
  * of execution" that was created using boost::asio::co_spawn.
  */
 template <typename Filter>
-BOOST_ASIO_NODISCARD BOOST_ASIO_CONSTEXPR unspecified
-reset_cancellation_state(BOOST_ASIO_MOVE_ARG(Filter) filter);
+BOOST_ASIO_NODISCARD constexpr unspecified
+reset_cancellation_state(Filter&& filter);
 
 /// Returns an awaitable object that may be used to reset the cancellation state
 /// of the current coroutine.
@@ -141,10 +133,10 @@ reset_cancellation_state(BOOST_ASIO_MOVE_ARG(Filter) filter);
  * of execution" that was created using boost::asio::co_spawn.
  */
 template <typename InFilter, typename OutFilter>
-BOOST_ASIO_NODISCARD BOOST_ASIO_CONSTEXPR unspecified
+BOOST_ASIO_NODISCARD constexpr unspecified
 reset_cancellation_state(
-    BOOST_ASIO_MOVE_ARG(InFilter) in_filter,
-    BOOST_ASIO_MOVE_ARG(OutFilter) out_filter);
+    InFilter&& in_filter,
+    OutFilter&& out_filter);
 
 /// Returns an awaitable object that may be used to determine whether the
 /// coroutine throws if trying to suspend when it has been cancelled.
@@ -158,7 +150,7 @@ reset_cancellation_state(
  *   // ...
  * } @endcode
  */
-BOOST_ASIO_NODISCARD BOOST_ASIO_CONSTEXPR unspecified
+BOOST_ASIO_NODISCARD constexpr unspecified
 throw_if_cancelled();
 
 /// Returns an awaitable object that may be used to specify whether the
@@ -172,19 +164,19 @@ throw_if_cancelled();
  *   // ...
  * } @endcode
  */
-BOOST_ASIO_NODISCARD BOOST_ASIO_CONSTEXPR unspecified
+BOOST_ASIO_NODISCARD constexpr unspecified
 throw_if_cancelled(bool value);
 
 #else // defined(GENERATING_DOCUMENTATION)
 
 struct reset_cancellation_state_0_t
 {
-  BOOST_ASIO_CONSTEXPR reset_cancellation_state_0_t()
+  constexpr reset_cancellation_state_0_t()
   {
   }
 };
 
-BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONSTEXPR reset_cancellation_state_0_t
+BOOST_ASIO_NODISCARD inline constexpr reset_cancellation_state_0_t
 reset_cancellation_state()
 {
   return reset_cancellation_state_0_t();
@@ -194,9 +186,9 @@ template <typename Filter>
 struct reset_cancellation_state_1_t
 {
   template <typename F>
-  explicit BOOST_ASIO_CONSTEXPR reset_cancellation_state_1_t(
-      BOOST_ASIO_MOVE_ARG(F) filt)
-    : filter(BOOST_ASIO_MOVE_CAST(F)(filt))
+  explicit constexpr reset_cancellation_state_1_t(
+      F&& filt)
+    : filter(static_cast<F&&>(filt))
   {
   }
 
@@ -204,22 +196,22 @@ struct reset_cancellation_state_1_t
 };
 
 template <typename Filter>
-BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONSTEXPR reset_cancellation_state_1_t<
-    typename decay<Filter>::type>
-reset_cancellation_state(BOOST_ASIO_MOVE_ARG(Filter) filter)
+BOOST_ASIO_NODISCARD inline constexpr reset_cancellation_state_1_t<
+    decay_t<Filter>>
+reset_cancellation_state(Filter&& filter)
 {
-  return reset_cancellation_state_1_t<typename decay<Filter>::type>(
-      BOOST_ASIO_MOVE_CAST(Filter)(filter));
+  return reset_cancellation_state_1_t<decay_t<Filter>>(
+      static_cast<Filter&&>(filter));
 }
 
 template <typename InFilter, typename OutFilter>
 struct reset_cancellation_state_2_t
 {
   template <typename F1, typename F2>
-  BOOST_ASIO_CONSTEXPR reset_cancellation_state_2_t(
-      BOOST_ASIO_MOVE_ARG(F1) in_filt, BOOST_ASIO_MOVE_ARG(F2) out_filt)
-    : in_filter(BOOST_ASIO_MOVE_CAST(F1)(in_filt)),
-      out_filter(BOOST_ASIO_MOVE_CAST(F2)(out_filt))
+  constexpr reset_cancellation_state_2_t(
+      F1&& in_filt, F2&& out_filt)
+    : in_filter(static_cast<F1&&>(in_filt)),
+      out_filter(static_cast<F2&&>(out_filt))
   {
   }
 
@@ -228,28 +220,23 @@ struct reset_cancellation_state_2_t
 };
 
 template <typename InFilter, typename OutFilter>
-BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONSTEXPR reset_cancellation_state_2_t<
-    typename decay<InFilter>::type,
-    typename decay<OutFilter>::type>
-reset_cancellation_state(
-    BOOST_ASIO_MOVE_ARG(InFilter) in_filter,
-    BOOST_ASIO_MOVE_ARG(OutFilter) out_filter)
+BOOST_ASIO_NODISCARD inline constexpr
+reset_cancellation_state_2_t<decay_t<InFilter>, decay_t<OutFilter>>
+reset_cancellation_state(InFilter&& in_filter, OutFilter&& out_filter)
 {
-  return reset_cancellation_state_2_t<
-      typename decay<InFilter>::type,
-      typename decay<OutFilter>::type>(
-        BOOST_ASIO_MOVE_CAST(InFilter)(in_filter),
-        BOOST_ASIO_MOVE_CAST(OutFilter)(out_filter));
+  return reset_cancellation_state_2_t<decay_t<InFilter>, decay_t<OutFilter>>(
+      static_cast<InFilter&&>(in_filter),
+      static_cast<OutFilter&&>(out_filter));
 }
 
 struct throw_if_cancelled_0_t
 {
-  BOOST_ASIO_CONSTEXPR throw_if_cancelled_0_t()
+  constexpr throw_if_cancelled_0_t()
   {
   }
 };
 
-BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONSTEXPR throw_if_cancelled_0_t
+BOOST_ASIO_NODISCARD inline constexpr throw_if_cancelled_0_t
 throw_if_cancelled()
 {
   return throw_if_cancelled_0_t();
@@ -257,7 +244,7 @@ throw_if_cancelled()
 
 struct throw_if_cancelled_1_t
 {
-  explicit BOOST_ASIO_CONSTEXPR throw_if_cancelled_1_t(bool val)
+  explicit constexpr throw_if_cancelled_1_t(bool val)
     : value(val)
   {
   }
@@ -265,7 +252,7 @@ struct throw_if_cancelled_1_t
   bool value;
 };
 
-BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONSTEXPR throw_if_cancelled_1_t
+BOOST_ASIO_NODISCARD inline constexpr throw_if_cancelled_1_t
 throw_if_cancelled(bool value)
 {
   return throw_if_cancelled_1_t(value);

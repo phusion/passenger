@@ -107,7 +107,7 @@ Pool::inspectProcessList(const InspectOptions &options, stringstream &result,
 			result << "    Shutting down..." << endl;
 		}
 
-		const Socket *socket;
+		const Socket *socket = NULL;//shut up compiler
 		if (options.verbose && (socket = process->getSockets().findFirstSocketWithProtocol("http")) != NULL) {
 			result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
 			result << "    Password: " << group->getApiKey().toStaticString() << endl;

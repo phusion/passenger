@@ -24,11 +24,11 @@ namespace boost {
 namespace asio {
 namespace execution {
 
-bad_executor::bad_executor() BOOST_ASIO_NOEXCEPT
+bad_executor::bad_executor() noexcept
 {
 }
 
-const char* bad_executor::what() const BOOST_ASIO_NOEXCEPT_OR_NOTHROW
+const char* bad_executor::what() const noexcept
 {
   return "bad executor";
 }

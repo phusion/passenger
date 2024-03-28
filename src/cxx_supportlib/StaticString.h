@@ -110,7 +110,9 @@ public:
 					sizeof(unsigned long);
 
 				while (data < last_long) {
-					result = result * 33 + *((unsigned long *) data);
+					unsigned long l = 0;
+				    memcpy(&l, data, sizeof(unsigned long));
+					result = result * 33 + l;
 					data += sizeof(unsigned long);
 				}
 

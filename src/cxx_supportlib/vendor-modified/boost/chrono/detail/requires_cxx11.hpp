@@ -16,7 +16,7 @@
     defined(BOOST_NO_CXX11_HDR_CHRONO) || \
     defined(BOOST_NO_CXX11_HDR_RATIO)
 
-BOOST_PRAGMA_MESSAGE("C++03 support was deprecated in Boost.Chrono 1.82 and will be removed in Boost.Chrono 1.84.")
+BOOST_PRAGMA_MESSAGE("C++03 support was deprecated in Boost.Chrono 1.82 and was removed in Boost.Chrono 1.84.")
 
 #endif
 

@@ -310,7 +310,7 @@ private:
 			}
 		}
 
-		return now + DEFAULT_HEURISTIC_FRESHNESS;
+		return lround(now) + DEFAULT_HEURISTIC_FRESHNESS;
 	}
 
 	bool isFresh(const Entry &entry, ev_tstamp now) const {

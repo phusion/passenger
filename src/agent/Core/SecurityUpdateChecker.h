@@ -594,7 +594,7 @@ public:
 			long responseCode;
 			CURLcode code;
 
-			if (!verifyFileReadable((char *) clientCertPath.c_str())) {
+			if (!verifyFileReadable(const_cast<char *>(clientCertPath.c_str()))) {
 				logUpdateFail("File not readable: " + clientCertPath);
 				break;
 			}

@@ -1,6 +1,7 @@
-/* Fast open-addressing concurrent hash table.
+/* Fast open-addressing concurrent hashmap.
  *
  * Copyright 2023 Christian Mazakas.
+ * Copyright 2023 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -12,71 +13,20 @@
 #define BOOST_UNORDERED_CONCURRENT_FLAT_MAP_HPP
 
 #include <boost/unordered/concurrent_flat_map_fwd.hpp>
+#include <boost/unordered/detail/concurrent_static_asserts.hpp>
 #include <boost/unordered/detail/foa/concurrent_table.hpp>
 #include <boost/unordered/detail/foa/flat_map_types.hpp>
 #include <boost/unordered/detail/type_traits.hpp>
+#include <boost/unordered/unordered_flat_map_fwd.hpp>
 
 #include <boost/container_hash/hash.hpp>
 #include <boost/core/allocator_access.hpp>
-#include <boost/mp11/algorithm.hpp>
-#include <boost/mp11/list.hpp>
-#include <boost/type_traits/type_identity.hpp>
+#include <boost/core/serialization.hpp>
 
-#include <functional>
 #include <type_traits>
-#include <utility>
-
-#define BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F)                             \
-  static_assert(boost::unordered::detail::is_invocable<F, value_type&>::value, \
-    "The provided Callable must be invocable with value_type&");
-
-#define BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)                       \
-  static_assert(                                                               \
-    boost::unordered::detail::is_invocable<F, value_type const&>::value,       \
-    "The provided Callable must be invocable with value_type const&");
-
-#if BOOST_CXX_VERSION >= 202002L
-
-#define BOOST_UNORDERED_STATIC_ASSERT_EXEC_POLICY(P)                           \
-  static_assert(!std::is_base_of<std::execution::parallel_unsequenced_policy,  \
-                  ExecPolicy>::value,                                          \
-    "ExecPolicy must be sequenced.");                                          \
-  static_assert(                                                               \
-    !std::is_base_of<std::execution::unsequenced_policy, ExecPolicy>::value,   \
-    "ExecPolicy must be sequenced.");
-
-#else
-
-#define BOOST_UNORDERED_STATIC_ASSERT_EXEC_POLICY(P)                           \
-  static_assert(!std::is_base_of<std::execution::parallel_unsequenced_policy,  \
-                  ExecPolicy>::value,                                          \
-    "ExecPolicy must be sequenced.");
-#endif
-
-#define BOOST_UNORDERED_COMMA ,
-
-#define BOOST_UNORDERED_LAST_ARG(Arg, Args)                                    \
-  mp11::mp_back<mp11::mp_list<Arg BOOST_UNORDERED_COMMA Args> >
-
-#define BOOST_UNORDERED_STATIC_ASSERT_LAST_ARG_INVOCABLE(Arg, Args)            \
-  BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(BOOST_UNORDERED_LAST_ARG(Arg, Args))
-
-#define BOOST_UNORDERED_STATIC_ASSERT_LAST_ARG_CONST_INVOCABLE(Arg, Args)      \
-  BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(                               \
-    BOOST_UNORDERED_LAST_ARG(Arg, Args))
 
 namespace boost {
   namespace unordered {
-    namespace detail {
-      template <class F, class... Args>
-      struct is_invocable
-          : std::is_constructible<std::function<void(Args...)>,
-              std::reference_wrapper<typename std::remove_reference<F>::type> >
-      {
-      };
-
-    } // namespace detail
-
     template <class Key, class T, class Hash, class Pred, class Allocator>
     class concurrent_flat_map
     {
@@ -84,10 +34,16 @@ namespace boost {
       template <class Key2, class T2, class Hash2, class Pred2,
         class Allocator2>
       friend class concurrent_flat_map;
+      template <class Key2, class T2, class Hash2, class Pred2,
+        class Allocator2>
+      friend class unordered_flat_map;
 
       using type_policy = detail::foa::flat_map_types<Key, T>;
 
-      detail::foa::concurrent_table<type_policy, Hash, Pred, Allocator> table_;
+      using table_type =
+        detail::foa::concurrent_table<type_policy, Hash, Pred, Allocator>;
+
+      table_type table_;
 
       template <class K, class V, class H, class KE, class A>
       bool friend operator==(concurrent_flat_map<K, V, H, KE, A> const& lhs,
@@ -97,6 +53,11 @@ namespace boost {
       friend typename concurrent_flat_map<K, V, H, KE, A>::size_type erase_if(
         concurrent_flat_map<K, V, H, KE, A>& set, Predicate pred);
 
+      template<class Archive, class K, class V, class H, class KE, class A>
+      friend void serialize(
+        Archive& ar, concurrent_flat_map<K, V, H, KE, A>& c,
+        unsigned int version);
+
     public:
       using key_type = Key;
       using mapped_type = T;
@@ -104,14 +65,15 @@ namespace boost {
       using init_type = typename type_policy::init_type;
       using size_type = std::size_t;
       using difference_type = std::ptrdiff_t;
-      using hasher = typename boost::type_identity<Hash>::type;
-      using key_equal = typename boost::type_identity<Pred>::type;
-      using allocator_type = typename boost::type_identity<Allocator>::type;
+      using hasher = typename boost::unordered::detail::type_identity<Hash>::type;
+      using key_equal = typename boost::unordered::detail::type_identity<Pred>::type;
+      using allocator_type = typename boost::unordered::detail::type_identity<Allocator>::type;
       using reference = value_type&;
       using const_reference = value_type const&;
       using pointer = typename boost::allocator_pointer<allocator_type>::type;
       using const_pointer =
         typename boost::allocator_const_pointer<allocator_type>::type;
+      static constexpr size_type bulk_visit_size = table_type::bulk_visit_size;
 
       concurrent_flat_map()
           : concurrent_flat_map(detail::foa::default_bucket_count)
@@ -223,6 +185,13 @@ namespace boost {
       {
       }
 
+
+      concurrent_flat_map(
+        unordered_flat_map<Key, T, Hash, Pred, Allocator>&& other)
+          : table_(std::move(other.table_))
+      {
+      }
+
       ~concurrent_flat_map() = default;
 
       concurrent_flat_map& operator=(concurrent_flat_map const& rhs)
@@ -231,10 +200,8 @@ namespace boost {
         return *this;
       }
 
-      concurrent_flat_map& operator=(concurrent_flat_map&& rhs)
-        noexcept(boost::allocator_is_always_equal<Allocator>::type::value ||
-                 boost::allocator_propagate_on_container_move_assignment<
-                   Allocator>::type::value)
+      concurrent_flat_map& operator=(concurrent_flat_map&& rhs) noexcept(
+        noexcept(std::declval<table_type&>() = std::declval<table_type&&>()))
       {
         table_ = std::move(rhs.table_);
         return *this;
@@ -305,6 +272,33 @@ namespace boost {
         return table_.visit(std::forward<K>(k), f);
       }
 
+      template<class FwdIterator, class F>
+      BOOST_FORCEINLINE
+      size_t visit(FwdIterator first, FwdIterator last, F f)
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_BULK_VISIT_ITERATOR(FwdIterator)
+        BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F)
+        return table_.visit(first, last, f);
+      }
+
+      template<class FwdIterator, class F>
+      BOOST_FORCEINLINE
+      size_t visit(FwdIterator first, FwdIterator last, F f) const
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_BULK_VISIT_ITERATOR(FwdIterator)
+        BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)
+        return table_.visit(first, last, f);
+      }
+
+      template<class FwdIterator, class F>
+      BOOST_FORCEINLINE
+      size_t cvisit(FwdIterator first, FwdIterator last, F f) const
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_BULK_VISIT_ITERATOR(FwdIterator)
+        BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)
+        return table_.visit(first, last, f);
+      }
+
       template <class F> size_type visit_all(F f)
       {
         BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F)
@@ -352,6 +346,56 @@ namespace boost {
         BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)
         BOOST_UNORDERED_STATIC_ASSERT_EXEC_POLICY(ExecPolicy)
         table_.cvisit_all(p, f);
+      }
+#endif
+
+      template <class F> bool visit_while(F f)
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F)
+        return table_.visit_while(f);
+      }
+
+      template <class F> bool visit_while(F f) const
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)
+        return table_.visit_while(f);
+      }
+
+      template <class F> bool cvisit_while(F f) const
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)
+        return table_.cvisit_while(f);
+      }
+
+#if defined(BOOST_UNORDERED_PARALLEL_ALGORITHMS)
+      template <class ExecPolicy, class F>
+      typename std::enable_if<detail::is_execution_policy<ExecPolicy>::value,
+        bool>::type
+      visit_while(ExecPolicy&& p, F f)
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F)
+        BOOST_UNORDERED_STATIC_ASSERT_EXEC_POLICY(ExecPolicy)
+        return table_.visit_while(p, f);
+      }
+
+      template <class ExecPolicy, class F>
+      typename std::enable_if<detail::is_execution_policy<ExecPolicy>::value,
+        bool>::type
+      visit_while(ExecPolicy&& p, F f) const
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)
+        BOOST_UNORDERED_STATIC_ASSERT_EXEC_POLICY(ExecPolicy)
+        return table_.visit_while(p, f);
+      }
+
+      template <class ExecPolicy, class F>
+      typename std::enable_if<detail::is_execution_policy<ExecPolicy>::value,
+        bool>::type
+      cvisit_while(ExecPolicy&& p, F f) const
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)
+        BOOST_UNORDERED_STATIC_ASSERT_EXEC_POLICY(ExecPolicy)
+        return table_.cvisit_while(p, f);
       }
 #endif
 
@@ -411,6 +455,7 @@ namespace boost {
       BOOST_FORCEINLINE auto insert_or_visit(Ty&& value, F f)
         -> decltype(table_.insert_or_visit(std::forward<Ty>(value), f))
       {
+        BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F)
         return table_.insert_or_visit(std::forward<Ty>(value), f);
       }
 
@@ -465,7 +510,7 @@ namespace boost {
       void insert_or_cvisit(std::initializer_list<value_type> ilist, F f)
       {
         BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)
-        this->insert_or_visit(ilist.begin(), ilist.end(), f);
+        this->insert_or_cvisit(ilist.begin(), ilist.end(), f);
       }
 
       template <class... Args> BOOST_FORCEINLINE bool emplace(Args&&... args)
@@ -711,6 +756,13 @@ namespace boost {
       return c.table_.erase_if(pred);
     }
 
+    template<class Archive, class K, class V, class H, class KE, class A>
+    void serialize(
+      Archive& ar, concurrent_flat_map<K, V, H, KE, A>& c, unsigned int)
+    {
+      ar & core::make_nvp("table",c.table_);
+    }
+
 #if BOOST_UNORDERED_TEMPLATE_DEDUCTION_GUIDES
 
     template <class InputIterator,
@@ -720,10 +772,10 @@ namespace boost {
         std::equal_to<boost::unordered::detail::iter_key_t<InputIterator> >,
       class Allocator = std::allocator<
         boost::unordered::detail::iter_to_alloc_t<InputIterator> >,
-      class = boost::enable_if_t<detail::is_input_iterator_v<InputIterator> >,
-      class = boost::enable_if_t<detail::is_hash_v<Hash> >,
-      class = boost::enable_if_t<detail::is_pred_v<Pred> >,
-      class = boost::enable_if_t<detail::is_allocator_v<Allocator> > >
+      class = std::enable_if_t<detail::is_input_iterator_v<InputIterator> >,
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_pred_v<Pred> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     concurrent_flat_map(InputIterator, InputIterator,
       std::size_t = boost::unordered::detail::foa::default_bucket_count,
       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
@@ -733,21 +785,21 @@ namespace boost {
         Allocator>;
 
     template <class Key, class T,
-      class Hash = boost::hash<boost::remove_const_t<Key> >,
-      class Pred = std::equal_to<boost::remove_const_t<Key> >,
+      class Hash = boost::hash<std::remove_const_t<Key> >,
+      class Pred = std::equal_to<std::remove_const_t<Key> >,
       class Allocator = std::allocator<std::pair<const Key, T> >,
-      class = boost::enable_if_t<detail::is_hash_v<Hash> >,
-      class = boost::enable_if_t<detail::is_pred_v<Pred> >,
-      class = boost::enable_if_t<detail::is_allocator_v<Allocator> > >
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_pred_v<Pred> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     concurrent_flat_map(std::initializer_list<std::pair<Key, T> >,
       std::size_t = boost::unordered::detail::foa::default_bucket_count,
       Hash = Hash(), Pred = Pred(), Allocator = Allocator())
-      -> concurrent_flat_map<boost::remove_const_t<Key>, T, Hash, Pred,
+      -> concurrent_flat_map<std::remove_const_t<Key>, T, Hash, Pred,
         Allocator>;
 
     template <class InputIterator, class Allocator,
-      class = boost::enable_if_t<detail::is_input_iterator_v<InputIterator> >,
-      class = boost::enable_if_t<detail::is_allocator_v<Allocator> > >
+      class = std::enable_if_t<detail::is_input_iterator_v<InputIterator> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     concurrent_flat_map(InputIterator, InputIterator, std::size_t, Allocator)
       -> concurrent_flat_map<
         boost::unordered::detail::iter_key_t<InputIterator>,
@@ -757,8 +809,8 @@ namespace boost {
         Allocator>;
 
     template <class InputIterator, class Allocator,
-      class = boost::enable_if_t<detail::is_input_iterator_v<InputIterator> >,
-      class = boost::enable_if_t<detail::is_allocator_v<Allocator> > >
+      class = std::enable_if_t<detail::is_input_iterator_v<InputIterator> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     concurrent_flat_map(InputIterator, InputIterator, Allocator)
       -> concurrent_flat_map<
         boost::unordered::detail::iter_key_t<InputIterator>,
@@ -768,9 +820,9 @@ namespace boost {
         Allocator>;
 
     template <class InputIterator, class Hash, class Allocator,
-      class = boost::enable_if_t<detail::is_hash_v<Hash> >,
-      class = boost::enable_if_t<detail::is_input_iterator_v<InputIterator> >,
-      class = boost::enable_if_t<detail::is_allocator_v<Allocator> > >
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_input_iterator_v<InputIterator> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     concurrent_flat_map(
       InputIterator, InputIterator, std::size_t, Hash, Allocator)
       -> concurrent_flat_map<
@@ -780,39 +832,29 @@ namespace boost {
         Allocator>;
 
     template <class Key, class T, class Allocator,
-      class = boost::enable_if_t<detail::is_allocator_v<Allocator> > >
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     concurrent_flat_map(std::initializer_list<std::pair<Key, T> >, std::size_t,
-      Allocator) -> concurrent_flat_map<boost::remove_const_t<Key>, T,
-      boost::hash<boost::remove_const_t<Key> >,
-      std::equal_to<boost::remove_const_t<Key> >, Allocator>;
+      Allocator) -> concurrent_flat_map<std::remove_const_t<Key>, T,
+      boost::hash<std::remove_const_t<Key> >,
+      std::equal_to<std::remove_const_t<Key> >, Allocator>;
 
     template <class Key, class T, class Allocator,
-      class = boost::enable_if_t<detail::is_allocator_v<Allocator> > >
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     concurrent_flat_map(std::initializer_list<std::pair<Key, T> >, Allocator)
-      -> concurrent_flat_map<boost::remove_const_t<Key>, T,
-        boost::hash<boost::remove_const_t<Key> >,
-        std::equal_to<boost::remove_const_t<Key> >, Allocator>;
+      -> concurrent_flat_map<std::remove_const_t<Key>, T,
+        boost::hash<std::remove_const_t<Key> >,
+        std::equal_to<std::remove_const_t<Key> >, Allocator>;
 
     template <class Key, class T, class Hash, class Allocator,
-      class = boost::enable_if_t<detail::is_hash_v<Hash> >,
-      class = boost::enable_if_t<detail::is_allocator_v<Allocator> > >
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     concurrent_flat_map(std::initializer_list<std::pair<Key, T> >, std::size_t,
-      Hash, Allocator) -> concurrent_flat_map<boost::remove_const_t<Key>, T,
-      Hash, std::equal_to<boost::remove_const_t<Key> >, Allocator>;
+      Hash, Allocator) -> concurrent_flat_map<std::remove_const_t<Key>, T,
+      Hash, std::equal_to<std::remove_const_t<Key> >, Allocator>;
 
 #endif
 
   } // namespace unordered
-
-  using unordered::concurrent_flat_map;
 } // namespace boost
-
-#undef BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE
-#undef BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE
-#undef BOOST_UNORDERED_STATIC_ASSERT_EXEC_POLICY
-#undef BOOST_UNORDERED_COMMA
-#undef BOOST_UNORDERED_LAST_ARG
-#undef BOOST_UNORDERED_STATIC_ASSERT_LAST_ARG_INVOCABLE
-#undef BOOST_UNORDERED_STATIC_ASSERT_LAST_ARG_CONST_INVOCABLE
 
 #endif // BOOST_UNORDERED_CONCURRENT_FLAT_MAP_HPP

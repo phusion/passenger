@@ -21,68 +21,27 @@
 #include <boost/asio/detail/recycling_allocator.hpp>
 #include <boost/asio/detail/thread_info_base.hpp>
 #include <boost/asio/associated_allocator.hpp>
-#include <boost/asio/handler_alloc_hook.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
 
-// Calls to asio_handler_allocate and asio_handler_deallocate must be made from
-// a namespace that does not contain any overloads of these functions. The
-// boost_asio_handler_alloc_helpers namespace is defined here for that purpose.
-namespace boost_asio_handler_alloc_helpers {
+namespace boost {
+namespace asio {
+namespace detail {
 
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-template <typename Handler>
-inline void error_if_hooks_are_defined(Handler& h)
-{
-  using boost::asio::asio_handler_allocate;
-  // If you get an error here it is because some of your handlers still
-  // overload asio_handler_allocate, but this hook is no longer used.
-  (void)static_cast<boost::asio::asio_handler_allocate_is_no_longer_used>(
-    asio_handler_allocate(static_cast<std::size_t>(0),
-      boost::asio::detail::addressof(h)));
-
-  using boost::asio::asio_handler_deallocate;
-  // If you get an error here it is because some of your handlers still
-  // overload asio_handler_deallocate, but this hook is no longer used.
-  (void)static_cast<boost::asio::asio_handler_deallocate_is_no_longer_used>(
-    asio_handler_deallocate(static_cast<void*>(0),
-      static_cast<std::size_t>(0), boost::asio::detail::addressof(h)));
-}
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-
-template <typename Handler>
-inline void* allocate(std::size_t s, Handler& h,
+inline void* default_allocate(std::size_t s,
     std::size_t align = BOOST_ASIO_DEFAULT_ALIGN)
 {
-#if !defined(BOOST_ASIO_HAS_HANDLER_HOOKS)
-  return boost::asio::aligned_new(align, s);
-#elif defined(BOOST_ASIO_NO_DEPRECATED)
-  // The asio_handler_allocate hook is no longer used to obtain memory.
-  (void)&error_if_hooks_are_defined<Handler>;
-  (void)h;
-# if !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
+#if !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
   return boost::asio::detail::thread_info_base::allocate(
       boost::asio::detail::thread_context::top_of_thread_call_stack(),
       s, align);
-# else // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
+#else // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
   return boost::asio::aligned_new(align, s);
-# endif // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
-#else
-  (void)align;
-  using boost::asio::asio_handler_allocate;
-  return asio_handler_allocate(s, boost::asio::detail::addressof(h));
-#endif
+#endif // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
 }
 
-template <typename Handler>
-inline void deallocate(void* p, std::size_t s, Handler& h)
+inline void default_deallocate(void* p, std::size_t s)
 {
-#if !defined(BOOST_ASIO_HAS_HANDLER_HOOKS)
-  boost::asio::aligned_delete(p);
-#elif defined(BOOST_ASIO_NO_DEPRECATED)
-  // The asio_handler_allocate hook is no longer used to obtain memory.
-  (void)&error_if_hooks_are_defined<Handler>;
-  (void)h;
 #if !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
   boost::asio::detail::thread_info_base::deallocate(
       boost::asio::detail::thread_context::top_of_thread_call_stack(), p, s);
@@ -90,20 +49,10 @@ inline void deallocate(void* p, std::size_t s, Handler& h)
   (void)s;
   boost::asio::aligned_delete(p);
 #endif // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
-#else
-  using boost::asio::asio_handler_deallocate;
-  asio_handler_deallocate(p, s, boost::asio::detail::addressof(h));
-#endif
 }
 
-} // namespace boost_asio_handler_alloc_helpers
-
-namespace boost {
-namespace asio {
-namespace detail {
-
-template <typename Handler, typename T>
-class hook_allocator
+template <typename T>
+class default_allocator
 {
 public:
   typedef T value_type;
@@ -111,38 +60,31 @@ public:
   template <typename U>
   struct rebind
   {
-    typedef hook_allocator<Handler, U> other;
+    typedef default_allocator<U> other;
   };
 
-  explicit hook_allocator(Handler& h)
-    : handler_(h)
+  default_allocator() noexcept
   {
   }
 
   template <typename U>
-  hook_allocator(const hook_allocator<Handler, U>& a)
-    : handler_(a.handler_)
+  default_allocator(const default_allocator<U>&) noexcept
   {
   }
 
   T* allocate(std::size_t n)
   {
-    return static_cast<T*>(
-        boost_asio_handler_alloc_helpers::allocate(
-          sizeof(T) * n, handler_, BOOST_ASIO_ALIGNOF(T)));
+    return static_cast<T*>(default_allocate(sizeof(T) * n, alignof(T)));
   }
 
   void deallocate(T* p, std::size_t n)
   {
-    boost_asio_handler_alloc_helpers::deallocate(p, sizeof(T) * n, handler_);
+    default_deallocate(p, sizeof(T) * n);
   }
-
-//private:
-  Handler& handler_;
 };
 
-template <typename Handler>
-class hook_allocator<Handler, void>
+template <>
+class default_allocator<void>
 {
 public:
   typedef void value_type;
@@ -150,43 +92,38 @@ public:
   template <typename U>
   struct rebind
   {
-    typedef hook_allocator<Handler, U> other;
+    typedef default_allocator<U> other;
   };
 
-  explicit hook_allocator(Handler& h)
-    : handler_(h)
+  default_allocator() noexcept
   {
   }
 
   template <typename U>
-  hook_allocator(const hook_allocator<Handler, U>& a)
-    : handler_(a.handler_)
+  default_allocator(const default_allocator<U>&) noexcept
   {
   }
-
-//private:
-  Handler& handler_;
 };
 
-template <typename Handler, typename Allocator>
-struct get_hook_allocator
+template <typename Allocator>
+struct get_default_allocator
 {
   typedef Allocator type;
 
-  static type get(Handler&, const Allocator& a)
+  static type get(const Allocator& a)
   {
     return a;
   }
 };
 
-template <typename Handler, typename T>
-struct get_hook_allocator<Handler, std::allocator<T> >
+template <typename T>
+struct get_default_allocator<std::allocator<T>>
 {
-  typedef hook_allocator<Handler, T> type;
+  typedef default_allocator<T> type;
 
-  static type get(Handler& handler, const std::allocator<T>&)
+  static type get(const std::allocator<T>&)
   {
-    return type(handler);
+    return type();
   }
 };
 
@@ -208,12 +145,12 @@ struct get_hook_allocator<Handler, std::allocator<T> >
     { \
       typedef typename ::boost::asio::associated_allocator< \
         Handler>::type associated_allocator_type; \
-      typedef typename ::boost::asio::detail::get_hook_allocator< \
-        Handler, associated_allocator_type>::type hook_allocator_type; \
-      BOOST_ASIO_REBIND_ALLOC(hook_allocator_type, op) a( \
-            ::boost::asio::detail::get_hook_allocator< \
-              Handler, associated_allocator_type>::get( \
-                handler, ::boost::asio::get_associated_allocator(handler))); \
+      typedef typename ::boost::asio::detail::get_default_allocator< \
+        associated_allocator_type>::type default_allocator_type; \
+      BOOST_ASIO_REBIND_ALLOC(default_allocator_type, op) a( \
+            ::boost::asio::detail::get_default_allocator< \
+              associated_allocator_type>::get( \
+                ::boost::asio::get_associated_allocator(handler))); \
       return a.allocate(1); \
     } \
     void reset() \
@@ -227,12 +164,12 @@ struct get_hook_allocator<Handler, std::allocator<T> >
       { \
         typedef typename ::boost::asio::associated_allocator< \
           Handler>::type associated_allocator_type; \
-        typedef typename ::boost::asio::detail::get_hook_allocator< \
-          Handler, associated_allocator_type>::type hook_allocator_type; \
-        BOOST_ASIO_REBIND_ALLOC(hook_allocator_type, op) a( \
-              ::boost::asio::detail::get_hook_allocator< \
-                Handler, associated_allocator_type>::get( \
-                  *h, ::boost::asio::get_associated_allocator(*h))); \
+        typedef typename ::boost::asio::detail::get_default_allocator< \
+          associated_allocator_type>::type default_allocator_type; \
+        BOOST_ASIO_REBIND_ALLOC(default_allocator_type, op) a( \
+              ::boost::asio::detail::get_default_allocator< \
+                associated_allocator_type>::get( \
+                  ::boost::asio::get_associated_allocator(*h))); \
         a.deallocate(static_cast<op*>(v), 1); \
         v = 0; \
       } \

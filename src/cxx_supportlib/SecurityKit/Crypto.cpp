@@ -73,18 +73,6 @@ CFDictionaryRef Crypto::createQueryDict(const char *label) {
 	return NULL;
 }
 
-OSStatus Crypto::lookupKeychainItem(const char *label, SecIdentityRef *oIdentity) {
-	OSStatus status = errSecItemNotFound;
-
-	CFDictionaryRef queryDict = createQueryDict(label);
-	if (queryDict) {
-		/* Do we have a match? */
-		status = SecItemCopyMatching(queryDict, (CFTypeRef *) oIdentity);
-		CFRelease(queryDict);
-	}
-	return status;
-}
-
 SecAccessRef Crypto::createAccess(const char *cLabel) {
 	SecAccessRef access = NULL;
 	CFStringRef label = CFStringCreateWithCString(NULL, cLabel, kCFStringEncodingUTF8);
@@ -161,85 +149,6 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 	CFRelease(url);
 	return status;
 }
-
-#if PRE_HIGH_SIERRA
-void Crypto::killKey(const char *cLabel) {
-	SecIdentityRef id = NULL;
-	OSStatus status = lookupKeychainItem(cLabel, &id);
-	if (status != errSecItemNotFound) {
-
-		CFArrayRef itemList = CFArrayCreate(NULL, (const void **) &id, 1, NULL);
-		CFTypeRef keys[]   = { kSecClass,  kSecMatchItemList,  kSecMatchLimit };
-		CFTypeRef values[] = { kSecClassCertificate, itemList, kSecMatchLimitOne };
-
-		CFDictionaryRef dict = CFDictionaryCreate(NULL, keys, values, 3L, NULL, NULL);
-		OSStatus oserr = SecItemDelete(dict);
-		if (oserr) {
-			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
-			logError(string("Removing Passenger Cert from keychain failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-					". Please remove the certificate labeled " + cLabel + " in your keychain.");
-			CFRelease(str);
-		}
-		CFRelease(dict);
-		CFRelease(itemList);
-
-		if(id){
-			CFTypeRef keys2[]   = { kSecClass,  kSecAttrSubjectKeyID,  kSecMatchLimit };
-			CFTypeRef values2[] = { kSecClassKey, id, kSecMatchLimitOne };
-			dict = CFDictionaryCreate(NULL, keys2, values2, 3L, NULL, NULL);
-			oserr = SecItemDelete(dict);
-			if (oserr) {
-				CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
-				logError(string("Removing Passenger private key from keychain failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-						 ". Please remove the private key from the certificate labeled " + cLabel + " in your keychain.");
-				CFRelease(str);
-			}
-			CFRelease(dict);
-			CFRelease(id);
-			id = NULL;
-		}
-
-	} else {
-		CFStringRef str = SecCopyErrorMessageString(status, NULL);
-		logError(string("Finding Passenger Cert failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) );
-		CFRelease(str);
-	}
-}
-
-bool Crypto::preAuthKey(const char *path, const char *passwd, const char *cLabel) {
-	SecIdentityRef id = NULL;
-	if (lookupKeychainItem(cLabel, &id) == errSecItemNotFound) {
-		OSStatus oserr = SecKeychainSetUserInteractionAllowed(false);
-		if (oserr) {
-			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
-			logError(string("Disabling GUI Keychain interaction failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
-			CFRelease(str);
-		}
-		oserr = copyIdentityFromPKCS12File(path, passwd, cLabel);
-		bool success = (noErr == oserr);
-		if (!success) {
-			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
-			logError(string("Pre authorizing the Passenger client certificate failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
-			CFRelease(str);
-		}
-		oserr = SecKeychainSetUserInteractionAllowed(true);
-		if (oserr) {
-			//This is really bad, we should probably ask the user to reboot.
-			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
-			logError(string("Re-enabling GUI Keychain interaction failed with error: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-					" Please reboot as soon as possible, thanks.");
-			CFRelease(str);
-		}
-		return success;
-	} else {
-		logError(string("Passenger client certificate was found in the keychain unexpectedly, skipping security update check. Please remove the private key from the certificate labeled ") + cLabel + " in your keychain.");
-		if (id) {
-			CFRelease(id);
-		}
-		return false;
-	}
-}
-#endif
 
 bool Crypto::generateRandomChars(unsigned char *rndChars, int rndLen) {
 	FILE *fPtr = fopen("/dev/random", "r");
@@ -546,7 +455,7 @@ bool Crypto::verifySignature(string signaturePubKeyPath, char *signatureChars, i
 
 		CFDataRef signatureRef = CFDataCreateWithBytesNoCopy(NULL, (UInt8*) signatureChars, signatureLen, kCFAllocatorNull);
 
-		CFDataRef dataRef = CFDataCreateWithBytesNoCopy(NULL, (UInt8*) data.c_str(), data.length(), kCFAllocatorNull);
+		CFDataRef dataRef = CFDataCreateWithBytesNoCopy(NULL, reinterpret_cast<const UInt8*>(data.c_str()), data.length(), kCFAllocatorNull);
 
 		CFErrorRef error = NULL;
 		verifier = SecVerifyTransformCreate(rsaPubKey, signatureRef, &error);
@@ -609,7 +518,7 @@ PUBKEY_TYPE Crypto::loadPubKey(const char *filename) {
 	CFArrayRef temparray = NULL;
 	do {
 		url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
-													  (UInt8*) filename, strlen(filename), false);
+													  reinterpret_cast<const UInt8*>(filename), strlen(filename), false);
 		if (url == NULL) {
 			logError("CFURLCreateFromFileSystemRepresentation failed.");
 			break;
@@ -655,7 +564,7 @@ PUBKEY_TYPE Crypto::loadPubKey(const char *filename) {
 			CFRelease(str);
 			break;
 		}
-		pubKey = (SecKeyRef) CFArrayGetValueAtIndex(temparray, 0);
+		pubKey = reinterpret_cast<SecKeyRef>(const_cast<void*>(CFArrayGetValueAtIndex(temparray, 0)));
 		CFRetain(pubKey); //bump ref count, now we own this and need to release it eventually
 	} while (0);
 

@@ -23,7 +23,7 @@ namespace boost {
 namespace asio {
 
 inline system_context::executor_type
-system_context::get_executor() BOOST_ASIO_NOEXCEPT
+system_context::get_executor() noexcept
 {
   return system_executor();
 }

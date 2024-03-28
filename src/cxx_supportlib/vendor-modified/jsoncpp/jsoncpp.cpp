@@ -1823,22 +1823,15 @@ bool OurReader::decodeDouble(Token& token, Value& decoded) {
   }
   size_t const ulength = static_cast<size_t>(length);
 
-  // Avoid using a string constant for the format control string given to
-  // sscanf, as this can cause hard to debug crashes on OS X. See here for more
-  // info:
-  //
-  //     http://developer.apple.com/library/mac/#DOCUMENTATION/DeveloperTools/gcc-4.0.1/gcc/Incompatibilities.html
-  char format[] = "%lf";
-
   if (length <= bufferSize) {
     Char buffer[bufferSize + 1];
     memcpy(buffer, token.start_, ulength);
     buffer[length] = 0;
     fixNumericLocaleInput(buffer, buffer + length);
-    count = sscanf(buffer, format, &value);
+    count = sscanf(buffer, "%lf", &value);
   } else {
     JSONCPP_STRING buffer(token.start_, token.end_);
-    count = sscanf(buffer.c_str(), format, &value);
+    count = sscanf(buffer.c_str(), "%lf", &value);
   }
 
   if (count != 1)

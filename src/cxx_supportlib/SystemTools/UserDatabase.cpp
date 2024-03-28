@@ -136,7 +136,7 @@ lookupSystemGroupByGid(gid_t gid, OsGroup &result) {
 }
 
 string
-lookupSystemUsernameByUid(uid_t uid, const StaticString &fallbackFormat) {
+lookupSystemUsernameByUid(uid_t uid, bool fallback) {
 	OsUser user;
 	bool result;
 
@@ -149,20 +149,21 @@ lookupSystemUsernameByUid(uid_t uid, const StaticString &fallbackFormat) {
 	if (result && user.pwd.pw_name != NULL && user.pwd.pw_name[0] != '\0') {
 		return user.pwd.pw_name;
 	} else {
-		// Null terminate fallback format string
-		DynamicBuffer fallbackFormatNt(fallbackFormat.size() + 1);
-		memcpy(fallbackFormatNt.data, fallbackFormat.data(), fallbackFormat.size());
-		fallbackFormatNt.data[fallbackFormat.size()] = '\0';
-
 		char buf[512];
-		snprintf(buf, sizeof(buf), fallbackFormatNt.data, (int) uid);
+
+		if (fallback) {
+			snprintf(buf, sizeof(buf), "%d", (int) uid);
+		} else {
+			snprintf(buf, sizeof(buf), "UID %d", (int) uid);
+		}
+
 		buf[sizeof(buf) - 1] = '\0';
 		return buf;
 	}
 }
 
 string
-lookupSystemGroupnameByGid(gid_t gid, const StaticString &fallbackFormat) {
+lookupSystemGroupnameByGid(gid_t gid, bool fallback) {
 	OsGroup group;
 	bool result;
 
@@ -175,13 +176,12 @@ lookupSystemGroupnameByGid(gid_t gid, const StaticString &fallbackFormat) {
 	if (result && group.grp.gr_name != NULL && group.grp.gr_name[0] != '\0') {
 		return group.grp.gr_name;
 	} else {
-		// Null terminate fallback format string
-		DynamicBuffer fallbackFormatNt(fallbackFormat.size() + 1);
-		memcpy(fallbackFormatNt.data, fallbackFormat.data(), fallbackFormat.size());
-		fallbackFormatNt.data[fallbackFormat.size()] = '\0';
-
 		char buf[512];
-		snprintf(buf, sizeof(buf), fallbackFormatNt.data, (int) gid);
+		if (fallback) {
+			snprintf(buf, sizeof(buf), "%d", (int) gid);
+		} else {
+			snprintf(buf, sizeof(buf), "GID %d", (int) gid);
+		}
 		buf[sizeof(buf) - 1] = '\0';
 		return buf;
 	}

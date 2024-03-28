@@ -76,7 +76,7 @@ public:
 
   // Move-construct a new socket implementation.
   BOOST_ASIO_DECL void base_move_construct(base_implementation_type& impl,
-      base_implementation_type& other_impl) BOOST_ASIO_NOEXCEPT;
+      base_implementation_type& other_impl) noexcept;
 
   // Move-assign from another socket implementation.
   BOOST_ASIO_DECL void base_move_assign(base_implementation_type& impl,
@@ -203,7 +203,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -290,7 +290,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -327,7 +327,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -396,7 +396,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -438,7 +438,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -507,7 +507,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -547,7 +547,7 @@ public:
     bool is_continuation =
       boost_asio_handler_cont_helpers::is_continuation(handler);
 
-    typename associated_cancellation_slot<Handler>::type slot
+    associated_cancellation_slot_t<Handler> slot
       = boost::asio::get_associated_cancellation_slot(handler);
 
     // Allocate and construct an operation to wrap the handler.
@@ -611,7 +611,7 @@ protected:
   template <typename Op>
   void start_op(base_implementation_type& impl, int op_type, Op* op,
       bool is_continuation, bool is_non_blocking, bool noop, const void*,
-      typename enable_if<
+      enable_if_t<
         is_same<
           typename associated_immediate_executor<
             typename Op::handler_type,
@@ -619,7 +619,7 @@ protected:
           >::asio_associated_immediate_executor_is_unspecialised,
           void
         >::value
-      >::type*)
+      >*)
   {
     return do_start_op(impl, op_type, op, is_continuation, is_non_blocking,
         noop, &reactor::call_post_immediate_completion, &reactor_);
@@ -646,7 +646,7 @@ protected:
   template <typename Op>
   void start_accept_op(base_implementation_type& impl, Op* op,
       bool is_continuation, bool peer_is_open, const void*,
-      typename enable_if<
+      enable_if_t<
         is_same<
           typename associated_immediate_executor<
             typename Op::handler_type,
@@ -654,7 +654,7 @@ protected:
           >::asio_associated_immediate_executor_is_unspecialised,
           void
         >::value
-      >::type*)
+      >*)
   {
     return do_start_accept_op(impl, op, is_continuation, peer_is_open,
         &reactor::call_post_immediate_completion, &reactor_);
@@ -682,7 +682,7 @@ protected:
   template <typename Op>
   void start_connect_op(base_implementation_type& impl, Op* op,
       bool is_continuation, const void* addr, size_t addrlen, const void*,
-      typename enable_if<
+      enable_if_t<
         is_same<
           typename associated_immediate_executor<
             typename Op::handler_type,
@@ -690,7 +690,7 @@ protected:
           >::asio_associated_immediate_executor_is_unspecialised,
           void
         >::value
-      >::type*)
+      >*)
   {
     return do_start_connect_op(impl, op, is_continuation, addr,
         addrlen, &reactor::call_post_immediate_completion, &reactor_);

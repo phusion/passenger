@@ -25,14 +25,16 @@
  */
 #ifndef _PASSENGER_ANSI_COLOR_CONSTANTS_H_
 
-#define ANSI_COLOR_RESET    "\e[0m"
-#define ANSI_COLOR_BOLD     "\e[1m"
-#define ANSI_COLOR_DGRAY    "\e[90m"
-#define ANSI_COLOR_RED      "\e[31m"
-#define ANSI_COLOR_GREEN    "\e[32m"
-#define ANSI_COLOR_YELLOW   "\e[33m"
-#define ANSI_COLOR_WHITE    "\e[37m"
-#define ANSI_COLOR_BLACK_BG "\e[40m"
-#define ANSI_COLOR_BLUE_BG  "\e[44m"
+// '\033' == '\e' aka escape
+
+#define ANSI_COLOR_RESET    "\033[0m"
+#define ANSI_COLOR_BOLD     "\033[1m"
+#define ANSI_COLOR_DGRAY    "\033[90m"
+#define ANSI_COLOR_RED      "\033[31m"
+#define ANSI_COLOR_GREEN    "\033[32m"
+#define ANSI_COLOR_YELLOW   "\033[33m"
+#define ANSI_COLOR_WHITE    "\033[37m"
+#define ANSI_COLOR_BLACK_BG "\033[40m"
+#define ANSI_COLOR_BLUE_BG  "\033[44m"
 
 #endif /* _PASSENGER_ANSI_COLOR_CONSTANTS_H_ */

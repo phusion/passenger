@@ -5,13 +5,10 @@
 #ifndef BOOST_TYPEOF_STD_queue_hpp_INCLUDED
 #define BOOST_TYPEOF_STD_queue_hpp_INCLUDED
 
+// This header is no longer useful and is only retained for compatibility
+
 #include <queue>
 #include <boost/typeof/typeof.hpp>
 #include <boost/typeof/std/memory.hpp>
-
-#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::queue, 1)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::queue, 2)
 
 #endif//BOOST_TYPEOF_STD_queue_hpp_INCLUDED

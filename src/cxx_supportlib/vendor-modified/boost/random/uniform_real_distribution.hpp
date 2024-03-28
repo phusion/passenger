@@ -95,7 +95,7 @@ public:
         /**
          * Constructs the parameters of a uniform_real_distribution.
          *
-         * Requires min <= max
+         * Requires min < max
          */
         explicit param_type(RealType min_arg = RealType(0.0),
                             RealType max_arg = RealType(1.0))
@@ -148,7 +148,7 @@ public:
      * Constructs a uniform_real_distribution. @c min and @c max are
      * the parameters of the distribution.
      *
-     * Requires: min <= max
+     * Requires: min < max
      */
     explicit uniform_real_distribution(
         RealType min_arg = RealType(0.0),

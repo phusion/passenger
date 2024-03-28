@@ -29,7 +29,7 @@ namespace detail {
 class handshake_op
 {
 public:
-  static BOOST_ASIO_CONSTEXPR const char* tracking_name()
+  static constexpr const char* tracking_name()
   {
     return "ssl::stream<>::async_handshake";
   }
@@ -52,7 +52,7 @@ public:
       const boost::system::error_code& ec,
       const std::size_t&) const
   {
-    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler)(ec);
+    static_cast<Handler&&>(handler)(ec);
   }
 
 private:

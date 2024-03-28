@@ -120,17 +120,6 @@ namespace opcode {
                (v >= control_rsvb && v <= control_rsvf);
     }
 
-    /// Check if an opcode is invalid
-    /**
-     * Invalid opcodes are negative or require greater than 4 bits to store.
-     *
-     * @param v The opcode to test.
-     * @return Whether or not the opcode is invalid.
-     */
-    inline bool invalid(value v) {
-        return (v > 0xF || v < 0);
-    }
-
     /// Check if an opcode is for a control frame
     /**
      * @param v The opcode to test.

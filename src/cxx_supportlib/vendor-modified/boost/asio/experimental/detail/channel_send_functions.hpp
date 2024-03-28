@@ -36,48 +36,72 @@ class channel_send_functions<Derived, Executor, R(Args...)>
 {
 public:
   template <typename... Args2>
-  typename enable_if<
+  enable_if_t<
     is_constructible<detail::channel_message<R(Args...)>, int, Args2...>::value,
     bool
-  >::type try_send(BOOST_ASIO_MOVE_ARG(Args2)... args)
+  > try_send(Args2&&... args)
   {
     typedef typename detail::channel_message<R(Args...)> message_type;
     Derived* self = static_cast<Derived*>(this);
     return self->service_->template try_send<message_type>(
-        self->impl_, BOOST_ASIO_MOVE_CAST(Args2)(args)...);
+        self->impl_, false, static_cast<Args2&&>(args)...);
   }
 
   template <typename... Args2>
-  typename enable_if<
+  enable_if_t<
+    is_constructible<detail::channel_message<R(Args...)>, int, Args2...>::value,
+    bool
+  > try_send_via_dispatch(Args2&&... args)
+  {
+    typedef typename detail::channel_message<R(Args...)> message_type;
+    Derived* self = static_cast<Derived*>(this);
+    return self->service_->template try_send<message_type>(
+        self->impl_, true, static_cast<Args2&&>(args)...);
+  }
+
+  template <typename... Args2>
+  enable_if_t<
     is_constructible<detail::channel_message<R(Args...)>, int, Args2...>::value,
     std::size_t
-  >::type try_send_n(std::size_t count, BOOST_ASIO_MOVE_ARG(Args2)... args)
+  > try_send_n(std::size_t count, Args2&&... args)
   {
     typedef typename detail::channel_message<R(Args...)> message_type;
     Derived* self = static_cast<Derived*>(this);
     return self->service_->template try_send_n<message_type>(
-        self->impl_, count, BOOST_ASIO_MOVE_CAST(Args2)(args)...);
+        self->impl_, count, false, static_cast<Args2&&>(args)...);
+  }
+
+  template <typename... Args2>
+  enable_if_t<
+    is_constructible<detail::channel_message<R(Args...)>, int, Args2...>::value,
+    std::size_t
+  > try_send_n_via_dispatch(std::size_t count, Args2&&... args)
+  {
+    typedef typename detail::channel_message<R(Args...)> message_type;
+    Derived* self = static_cast<Derived*>(this);
+    return self->service_->template try_send_n<message_type>(
+        self->impl_, count, true, static_cast<Args2&&>(args)...);
   }
 
   template <
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code))
         CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)>
   auto async_send(Args... args,
-      BOOST_ASIO_MOVE_ARG(CompletionToken) token
+      CompletionToken&& token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor))
     -> decltype(
         async_initiate<CompletionToken, void (boost::system::error_code)>(
-          declval<typename conditional<false, CompletionToken,
-            Derived>::type::initiate_async_send>(), token,
-          declval<typename conditional<false, CompletionToken,
-            Derived>::type::payload_type>()))
+          declval<typename conditional_t<false, CompletionToken,
+            Derived>::initiate_async_send>(), token,
+          declval<typename conditional_t<false, CompletionToken,
+            Derived>::payload_type>()))
   {
     typedef typename Derived::payload_type payload_type;
     typedef typename detail::channel_message<R(Args...)> message_type;
     Derived* self = static_cast<Derived*>(this);
     return async_initiate<CompletionToken, void (boost::system::error_code)>(
         typename Derived::initiate_async_send(self), token,
-        payload_type(message_type(0, BOOST_ASIO_MOVE_CAST(Args)(args)...)));
+        payload_type(message_type(0, static_cast<Args&&>(args)...)));
   }
 };
 
@@ -91,48 +115,72 @@ public:
   using channel_send_functions<Derived, Executor, Signatures...>::async_send;
 
   template <typename... Args2>
-  typename enable_if<
+  enable_if_t<
     is_constructible<detail::channel_message<R(Args...)>, int, Args2...>::value,
     bool
-  >::type try_send(BOOST_ASIO_MOVE_ARG(Args2)... args)
+  > try_send(Args2&&... args)
   {
     typedef typename detail::channel_message<R(Args...)> message_type;
     Derived* self = static_cast<Derived*>(this);
     return self->service_->template try_send<message_type>(
-        self->impl_, BOOST_ASIO_MOVE_CAST(Args2)(args)...);
+        self->impl_, false, static_cast<Args2&&>(args)...);
   }
 
   template <typename... Args2>
-  typename enable_if<
+  enable_if_t<
+    is_constructible<detail::channel_message<R(Args...)>, int, Args2...>::value,
+    bool
+  > try_send_via_dispatch(Args2&&... args)
+  {
+    typedef typename detail::channel_message<R(Args...)> message_type;
+    Derived* self = static_cast<Derived*>(this);
+    return self->service_->template try_send<message_type>(
+        self->impl_, true, static_cast<Args2&&>(args)...);
+  }
+
+  template <typename... Args2>
+  enable_if_t<
     is_constructible<detail::channel_message<R(Args...)>, int, Args2...>::value,
     std::size_t
-  >::type try_send_n(std::size_t count, BOOST_ASIO_MOVE_ARG(Args2)... args)
+  > try_send_n(std::size_t count, Args2&&... args)
   {
     typedef typename detail::channel_message<R(Args...)> message_type;
     Derived* self = static_cast<Derived*>(this);
     return self->service_->template try_send_n<message_type>(
-        self->impl_, count, BOOST_ASIO_MOVE_CAST(Args2)(args)...);
+        self->impl_, count, false, static_cast<Args2&&>(args)...);
+  }
+
+  template <typename... Args2>
+  enable_if_t<
+    is_constructible<detail::channel_message<R(Args...)>, int, Args2...>::value,
+    std::size_t
+  > try_send_n_via_dispatch(std::size_t count, Args2&&... args)
+  {
+    typedef typename detail::channel_message<R(Args...)> message_type;
+    Derived* self = static_cast<Derived*>(this);
+    return self->service_->template try_send_n<message_type>(
+        self->impl_, count, true, static_cast<Args2&&>(args)...);
   }
 
   template <
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code))
         CompletionToken BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)>
   auto async_send(Args... args,
-      BOOST_ASIO_MOVE_ARG(CompletionToken) token
+      CompletionToken&& token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor))
     -> decltype(
         async_initiate<CompletionToken, void (boost::system::error_code)>(
-          declval<typename conditional<false, CompletionToken,
-            Derived>::type::initiate_async_send>(), token,
-          declval<typename conditional<false, CompletionToken,
-            Derived>::type::payload_type>()))
+          declval<typename conditional_t<false, CompletionToken,
+            Derived>::initiate_async_send>(), token,
+          declval<typename conditional_t<false, CompletionToken,
+            Derived>::payload_type>()))
   {
     typedef typename Derived::payload_type payload_type;
     typedef typename detail::channel_message<R(Args...)> message_type;
     Derived* self = static_cast<Derived*>(this);
     return async_initiate<CompletionToken, void (boost::system::error_code)>(
         typename Derived::initiate_async_send(self), token,
-        payload_type(message_type(0, BOOST_ASIO_MOVE_CAST(Args)(args)...)));
+        payload_type(message_type(0, static_cast<Args&&>(args)...)));
   }
 };
 

@@ -33,7 +33,7 @@ struct cancellation_filter
 {
   /// Returns <tt>type & Mask</tt>.
   cancellation_type_t operator()(
-      cancellation_type_t type) const BOOST_ASIO_NOEXCEPT
+      cancellation_type_t type) const noexcept
   {
     return type & Mask;
   }
@@ -81,7 +81,7 @@ class cancellation_state
 {
 public:
   /// Construct a disconnected cancellation state.
-  BOOST_ASIO_CONSTEXPR cancellation_state() BOOST_ASIO_NOEXCEPT
+  constexpr cancellation_state() noexcept
     : impl_(0)
   {
   }
@@ -96,8 +96,8 @@ public:
    * attached.
    */
   template <typename CancellationSlot>
-  BOOST_ASIO_CONSTEXPR explicit cancellation_state(CancellationSlot slot)
-    : impl_(slot.is_connected() ? &slot.template emplace<impl<> >() : 0)
+  constexpr explicit cancellation_state(CancellationSlot slot)
+    : impl_(slot.is_connected() ? &slot.template emplace<impl<>>() : 0)
   {
   }
 
@@ -120,9 +120,9 @@ public:
    * @li boost::asio::enable_total_cancellation
    */
   template <typename CancellationSlot, typename Filter>
-  BOOST_ASIO_CONSTEXPR cancellation_state(CancellationSlot slot, Filter filter)
+  constexpr cancellation_state(CancellationSlot slot, Filter filter)
     : impl_(slot.is_connected()
-        ? &slot.template emplace<impl<Filter, Filter> >(filter, filter)
+        ? &slot.template emplace<impl<Filter, Filter>>(filter, filter)
         : 0)
   {
   }
@@ -152,12 +152,12 @@ public:
    * @li boost::asio::enable_total_cancellation
    */
   template <typename CancellationSlot, typename InFilter, typename OutFilter>
-  BOOST_ASIO_CONSTEXPR cancellation_state(CancellationSlot slot,
+  constexpr cancellation_state(CancellationSlot slot,
       InFilter in_filter, OutFilter out_filter)
     : impl_(slot.is_connected()
-        ? &slot.template emplace<impl<InFilter, OutFilter> >(
-            BOOST_ASIO_MOVE_CAST(InFilter)(in_filter),
-            BOOST_ASIO_MOVE_CAST(OutFilter)(out_filter))
+        ? &slot.template emplace<impl<InFilter, OutFilter>>(
+            static_cast<InFilter&&>(in_filter),
+            static_cast<OutFilter&&>(out_filter))
         : 0)
   {
   }
@@ -166,20 +166,20 @@ public:
   /**
    * This sub-slot is used with the operations that are being composed.
    */
-  BOOST_ASIO_CONSTEXPR cancellation_slot slot() const BOOST_ASIO_NOEXCEPT
+  constexpr cancellation_slot slot() const noexcept
   {
     return impl_ ? impl_->signal_.slot() : cancellation_slot();
   }
 
   /// Returns the cancellation types that have been triggered.
-  cancellation_type_t cancelled() const BOOST_ASIO_NOEXCEPT
+  cancellation_type_t cancelled() const noexcept
   {
     return impl_ ? impl_->cancelled_ : cancellation_type_t();
   }
 
   /// Clears the specified cancellation types, if they have been triggered.
   void clear(cancellation_type_t mask = cancellation_type::all)
-    BOOST_ASIO_NOEXCEPT
+    noexcept
   {
     if (impl_)
       impl_->cancelled_ &= ~mask;
@@ -209,8 +209,8 @@ private:
     }
 
     impl(InFilter in_filter, OutFilter out_filter)
-      : in_filter_(BOOST_ASIO_MOVE_CAST(InFilter)(in_filter)),
-        out_filter_(BOOST_ASIO_MOVE_CAST(OutFilter)(out_filter))
+      : in_filter_(static_cast<InFilter&&>(in_filter)),
+        out_filter_(static_cast<OutFilter&&>(out_filter))
     {
     }
 

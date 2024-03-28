@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include <MainFunctions.h>
 #include <SystemTools/SystemMetricsCollector.h>
 #include <Utils.h>
 #include <StrIntTools/StrIntUtils.h>

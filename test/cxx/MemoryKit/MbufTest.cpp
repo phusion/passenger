@@ -254,10 +254,10 @@ namespace tut {
 	TEST_METHOD(23) {
 		set_test_name("mbuf_get_with_size (large)");
 		{
-			mbuf buffer(mbuf_get_with_size(&pool, mbuf_pool_data_size(&pool) + 10));
+			mbuf buffer(mbuf_get_with_size(&pool, mbuf_pool_data_size(&pool) + alignof(struct mbuf_block)));
 			ensure_equals("(1)", pool.nfree_mbuf_blockq, 0u);
 			ensure_equals("(2)", pool.nactive_mbuf_blockq, 1u);
-			ensure_equals("(3)", buffer.size(), mbuf_pool_data_size(&pool) + 10);
+			ensure_equals("(3)", buffer.size(), mbuf_pool_data_size(&pool) + alignof(struct mbuf_block));
 			memcpy(buffer.start, "hello", 6);
 			ensure_equals("(4)", string(buffer.start), "hello");
 		}

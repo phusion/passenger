@@ -161,7 +161,7 @@ private:
 
 		if (m_storageUsed + key.size() + 1 > m_storageSize) {
 			// Resize storage area when of insufficient size.
-			unsigned int newStorageSize = (m_storageSize + key.size() + 1) * 1.5;
+			unsigned int newStorageSize = ((m_storageSize + key.size() + 1) * 3) / 2;
 			char *newStorage = (char *) realloc(m_storage, newStorageSize);
 			if (OXT_UNLIKELY(newStorage == NULL)) {
 				throw std::bad_alloc();
