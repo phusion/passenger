@@ -29,30 +29,29 @@ module PhusionPassenger
 
   module PlatformInfo
     def self.pcre_extra_cflags
+      cflags = ""
       if PlatformInfo.os_name_simple == "macosx"
-        if File.exist?("/usr/local/opt/pcre/include")
+        brew_path = "#{`/usr/bin/env -P /usr/local/bin:/opt/homebrew/bin brew --prefix pcre2`.strip}/include"
+        if File.exist?(brew_path)
           # Use the one from Homebrew.
-          "-I/usr/local/opt/pcre/include"
-        elsif File.exist?("/opt/homebrew/opt/pcre/include")
-          # Use the one from Homebrew on Apple Silicon
-          "-I/opt/homebrew/opt/pcre/include"
+          cflags = "-I#{brew_path}"
         else
           # Use the one from Macports.
-          "-I/opt/local/include"
+          cflags = "-I/opt/local/include"
         end
-      else
-        ""
       end
+      return "#{cflags} -DPCRE2_CODE_UNIT_WIDTH=8"
     end
     memoize :pcre_extra_cflags
 
     def self.pcre_extra_ldflags
       if PlatformInfo.os_name_simple == "macosx"
-        if File.exist?("/usr/local/opt/pcre/include")
-          "-L/usr/local/opt/pcre/lib"
-        elsif File.exist?("/opt/homebrew/opt/pcre/include")
-          "-L/opt/homebrew/opt/pcre/include"
+        brew_path = "#{`/usr/bin/env -P /usr/local/bin:/opt/homebrew/bin brew --prefix pcre2`.strip}/lib"
+        if File.exist?(brew_path)
+          # Use the one from Homebrew.
+          "-L#{brew_path}"
         else
+          # Use the one from Macports.
           "-L/opt/local/lib"
         end
       else

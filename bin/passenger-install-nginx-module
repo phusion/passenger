@@ -268,8 +268,8 @@ private
     new_screen
     puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
 
-    url = "https://sourceforge.net/projects/pcre/files/pcre/#{PREFERRED_PCRE_VERSION}/pcre-#{PREFERRED_PCRE_VERSION}.tar.gz/download"
-    dirname = "pcre-#{PREFERRED_PCRE_VERSION}"
+    url = "https://github.com/PhilipHazel/pcre2/releases/download/pcre2-#{PREFERRED_PCRE_VERSION}/pcre2-#{PREFERRED_PCRE_VERSION}.tar.gz"
+    dirname = "pcre2-#{PREFERRED_PCRE_VERSION}"
     tarball = "#{@working_dir}/pcre.tar.gz"
 
     if download(url, tarball, DOWNLOAD_OPTION)
@@ -569,11 +569,11 @@ private
       Dir.mktmpdir do |safe_tmpdir|
         @pcre_is_installed = begin
           File.open("#{safe_tmpdir}/passenger-check.c", 'w') do |f|
-            f.puts("#include <pcre.h>")
+            f.puts("#include <pcre2.h>")
           end
           Dir.chdir("#{safe_tmpdir}") do
             # Nginx checks for PCRE in multiple places...
-            system("(gcc -I/usr/local/include -I/usr/include/pcre " <<
+            system("(gcc -I/usr/local/include -I/usr/include/pcre2 " <<
               "-I/usr/pkg/include -I/opt/local/include " <<
               "-I/opt/homebrew/include " <<
               "-c passenger-check.c) >/dev/null 2>/dev/null")
