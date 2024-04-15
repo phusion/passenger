@@ -113,8 +113,14 @@ class Apache2Controller
         '--vgdb-error=1', '--trace-children=no'] + command
     end
 
+    prev_error_log_position = error_log_position
     if !system(*command)
-      raise "Could not start an Apache server."
+      raise [
+        "Could not start an Apache server:",
+        "\t---------------- Begin logs -------------------",
+        read_error_log_starting_from(prev_error_log_position).split("\n").map{ |l| "\t#{l}" }.join("\n"),
+        "\t---------------- End logs -------------------",
+      ].join("\n")
     end
 
     begin
@@ -138,7 +144,12 @@ class Apache2Controller
         end
       end
     rescue Timeout::Error
-      raise "Could not start an Apache server."
+      raise [
+        "Could not start an Apache server:",
+        "\t---------------- Begin logs -------------------",
+        read_error_log_starting_from(prev_error_log_position).split("\n").map{ |l| "\t#{l}" }.join("\n"),
+        "\t---------------- End logs -------------------",
+      ].join("\n")
     end
     Dir["#{@server_root}/*"].each do |filename|
       if File.file?(filename)
@@ -246,6 +257,26 @@ private
     File.open("#{@server_root}/httpd.conf", 'w') do |f|
       f.write(template.result(get_binding))
     end
+  end
+
+  def error_log_position
+    if @log_file
+      File.open(@log_file, 'rb') do |f|
+        f.seek(0, IO::SEEK_END)
+        f.pos
+      end
+    end
+  rescue Errno::ENOENT
+    nil
+  end
+
+  def read_error_log_starting_from(prev_pos)
+    File.open(@log_file, 'r:utf-8') do |f|
+      f.seek(prev_pos || 0, IO::SEEK_SET)
+      f.read
+    end
+  rescue Errno::ENOENT
+    "(no log file)"
   end
 
   def modules_dir
