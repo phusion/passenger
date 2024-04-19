@@ -739,11 +739,11 @@ namespace tut {
 			"Content-Type: text/html; charset=UTF-8\r\n"));
 		ensure(endsWith(response,
 			"Connection: close\r\n"
-			"Content-Length: 42\r\n"
+			"Content-Length: 31\r\n"
 			"cache-control: no-cache, no-store, must-revalidate\r\n"
 			"\r\n"
-			"invalid character in content-length header"));
-		ensure_equals(response.size(),265u);
+			"unexpected content-length header"));
+		ensure_equals(response.size(),254u);
 	}
 
 	TEST_METHOD(17) {
