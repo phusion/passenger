@@ -395,6 +395,20 @@ module PhusionPassenger
     end
     memoize :cxx_supports_wno_missing_field_initializers_flag?, true
 
+    def self.cc_supports_wno_unknown_pragmas_flag?
+      return try_compile_with_warning_flag(
+        "Checking for C compiler '-Wno-unknown-pragmas' support",
+        :c, '', '-Wno-unknown-pragmas')
+    end
+    memoize :cc_supports_wno_unknown_pragmas_flag?, true
+
+    def self.cxx_supports_wno_unknown_pragmas_flag?
+      return try_compile_with_warning_flag(
+        "Checking for C++ compiler '-Wno-unknown-pragmas' support",
+        :cxx, '', '-Wno-unknown-pragmas')
+    end
+    memoize :cxx_supports_wno_unknown_pragmas_flag?, true
+
     def self.cxx_supports_wno_unused_local_typedefs_flag?
       return try_compile_with_warning_flag(
         "Checking for C++ compiler '-Wno-unused-local-typedefs' support",

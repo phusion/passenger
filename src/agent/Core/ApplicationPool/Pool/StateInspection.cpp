@@ -81,8 +81,15 @@ Pool::inspectProcessList(const InspectOptions &options, stringstream &result,
 
 		 if (process->metrics.isValid()) {
 			snprintf(cpubuf, sizeof(cpubuf), "%d%%", (int) process->metrics.cpu);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-truncation"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+			//don't worry about format-truncation here, no one has 9.3PB RAM
 			snprintf(membuf, sizeof(membuf), "%ldM",
 				(unsigned long) (process->metrics.realMemory() / 1024));
+#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 		} else {
 			snprintf(cpubuf, sizeof(cpubuf), "0%%");
 			snprintf(membuf, sizeof(membuf), "0M");

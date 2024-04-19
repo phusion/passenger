@@ -122,11 +122,14 @@ module PhusionPassenger
         if send("#{cc_or_cxx}_supports_wno_missing_field_initializers_flag?")
           flags << "-Wno-missing-field-initializers"
         end
+        if send("#{cc_or_cxx}_supports_wno_unknown_pragmas_flag?")
+          flags << "-Wno-unknown-pragmas"
+        end
         if requires_no_tls_direct_seg_refs? && send("#{cc_or_cxx}_supports_no_tls_direct_seg_refs_option?")
           flags << "-mno-tls-direct-seg-refs"
         end
         # Work around Clang warnings in ev++.h.
-        if send("#{cc_or_cxx}_is_clang?")
+        if send("#{cc_or_cxx}_is_clang?") && compiler_supports_wno_ambiguous_member_template?
           flags << "-Wno-ambiguous-member-template"
         end
       end
