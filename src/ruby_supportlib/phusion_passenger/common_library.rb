@@ -349,12 +349,12 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :source   => 'ServerKit/llhttp.c',
     :category => :other,
     :optimize => :very_heavy
-  define_component 'ServerKit/http.o',
-    :source   => 'ServerKit/http.c',
+  define_component 'ServerKit/llhttp_http.o',
+    :source   => 'ServerKit/llhttp_http.c',
     :category => :other,
     :optimize => :very_heavy
-  define_component 'ServerKit/api.o',
-    :source   => 'ServerKit/api.c',
+  define_component 'ServerKit/llhttp_api.o',
+    :source   => 'ServerKit/llhttp_api.c',
     :category => :other,
     :optimize => :very_heavy
   define_component 'ServerKit/Implementation.o',
