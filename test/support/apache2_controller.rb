@@ -117,7 +117,7 @@ class Apache2Controller
     prev_error_log_position = error_log_position
     if !system(*command)
       raise [
-        "Could not start an Apache server:",
+        "Could not start an Apache server: #{$?}",
         "\t---------------- Begin logs -------------------",
         read_error_log_starting_from(prev_error_log_position).split("\n").map{ |l| "\t#{l}" }.join("\n"),
         "\t---------------- End logs -------------------",
