@@ -21,7 +21,7 @@ class NginxController
       :ping_command  => [:tcp, '127.0.0.1', PORT],
       :pid_file      => @pid_file,
       :log_file      => @log_file,
-      :timeout       => 25,
+      :timeout       => 60,
       :before_start  => method(:write_nginx_config_files)
     )
 
