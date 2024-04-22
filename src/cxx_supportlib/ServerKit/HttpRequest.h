@@ -29,7 +29,7 @@
 #include <psg_sysqueue.h>
 #include <boost/cstdint.hpp>
 #include <boost/atomic.hpp>
-#include <ServerKit/http_parser.h>
+#include <ServerKit/llhttp.h>
 #include <ServerKit/Hooks.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/HeaderTable.h>
@@ -99,7 +99,7 @@ public:
 	HttpState httpState: 5;
 	BodyType bodyType: 3;
 
-	http_method method: 5;
+	llhttp_method_t method: 6;
 	bool wantKeepAlive: 1;
 	bool responseBegun: 1;
 	bool detectingNextRequestEarlyReadError: 1;
