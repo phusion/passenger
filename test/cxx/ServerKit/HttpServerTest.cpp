@@ -733,12 +733,13 @@ namespace tut {
 			"0\r\n"
 			"\r\n");
 		string response = readAll(fd, 1024).first;
-		ensure(startsWith(response,
+		ensure("Response starts with error",
+			startsWith(response,
 			"HTTP/1.0 400 Bad Request\r\n"
 			"Status: 400 Bad Request\r\n"
 			"Content-Type: text/html; charset=UTF-8\r\n"));
-		// Not sure why the error is HPE_UNEXPECTED_CONTENT_LENGTH
-		// instead of HPE_INVALID_CONTENT_LENGTH. But we already have
+		// Not sure why the error is HPE_INVALID_CONTENT_LENGTH
+		// instead of HPE_UNEXPECTED_CONTENT_LENGTH. But we already have
 		// a different test that tests Transfer-Encoding and Content-Length
 		// simultaneously are not allowed, so this is not a big deal.
 		ensure("Response ends with error",
@@ -765,17 +766,19 @@ namespace tut {
 			"0\r\n"
 			"\r\n");
 		string response = readAll(fd, 1024).first;
-		ensure(startsWith(response,
+		ensure("Response starts with error",
+			startsWith(response,
 			"HTTP/1.0 400 Bad Request\r\n"
 			"Status: 400 Bad Request\r\n"
 			"Content-Type: text/html; charset=UTF-8\r\n"));
-		ensure(endsWith(response,
+		ensure("Response ends with error",
+			endsWith(response,
 			"Connection: close\r\n"
 			"Content-Length: 27\r\n"
 			"cache-control: no-cache, no-store, must-revalidate\r\n"
 			"\r\n"
 			"invalid character in header"));
-		ensure_equals(response.size(),250u);
+		ensure_equals("Response size is correct", response.size(), 250u);
 	}
 
 	TEST_METHOD(18) {
@@ -791,7 +794,8 @@ namespace tut {
 			"\r\n"
 			);
 		string response = readAll(fd, 1024).first;
-		ensure_equals(response,
+		ensure_equals("Response is ok",
+			response,
 			"HTTP/1.1 200 OK\r\n"
 			"Status: 200 OK\r\n"
 			"Content-Type: text/plain\r\n"
