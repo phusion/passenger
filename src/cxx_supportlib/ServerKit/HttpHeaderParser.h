@@ -132,11 +132,6 @@ private:
 			goto happy_path;
 		case HPE_OK:
 		happy_path:
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wswitch"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
-#pragma GCC diagnostic ignored "-Wswitch"
 			switch (llhttp_execute(parser, data, len)) {
 			case HPE_PAUSED_H2_UPGRADE:
 			case HPE_PAUSED_UPGRADE:
@@ -145,11 +140,11 @@ private:
 				return (llhttp_get_error_pos(parser) - data);
 			case HPE_OK:
 				return len;
+			default:
+				goto error_path;
 			}
-			// no default, fallthrough to error handling instead
-#pragma GCC diagnostic pop
-#pragma clang diagnostic pop
         default:
+		error_path:
 			return (llhttp_get_error_pos(parser) - data);
 		}
 	}
