@@ -226,14 +226,19 @@ end
 
 # Compile PROGRAM_SOURCE and copy whatever missing header files the compiler needs.
 def copy_dependencies(cflags)
+  if RUBY_PLATFORM =~ /darwin/
+    openssl_path = `brew --prefix openssl`.strip
+  else
+    openssl_path = '/usr/include/openssl'
+  end
   done = false
   while !done
-    compiler_output = `c++ test.cpp -c -I. -I.. #{cflags.join(" ")} 2>&1`
+    compiler_output = `c++ test.cpp -c -I#{openssl_path}/include -I. -I.. #{cflags.join(" ")} 2>&1`
     File.unlink('test.o') if File.exist?('test.o')
     missing_headers = compiler_output.
                         split("\n").
                         grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
-                        grep_v(/\/usr\/include\/c\+\+/).
+                        reject{|s| s =~ /\/usr\/include\// }.
                         map do |line|
       if line =~ /error: (.*): No such file/
         file = $1
