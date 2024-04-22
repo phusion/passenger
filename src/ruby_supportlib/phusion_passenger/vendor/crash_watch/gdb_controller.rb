@@ -123,6 +123,10 @@ module CrashWatch
       result !~ /(No such process|Unable to access task|Operation not permitted)/
     end
 
+    def handle_signal(sig)
+      execute("handle SIGVTALRM noprint pass")
+    end
+
     def program_counter
       execute("p/x $pc").gsub(/.* = /, '')
     end

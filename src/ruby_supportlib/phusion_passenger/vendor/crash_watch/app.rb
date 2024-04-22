@@ -81,7 +81,7 @@ module CrashWatch
         gdb.debug = options[:debug]
 
         # Ruby sometimes uses SIGVTARLM for thread scheduling.
-        gdb.execute("handle SIGVTALRM noprint pass")
+        gdb.handle_signal("SIGVTALRM")
 
         if gdb.attach(argv[0])
           if options[:dump]

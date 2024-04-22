@@ -60,7 +60,7 @@ module CrashWatch
       puts "lldb write #{command_string.inspect}" if @debug
       marker = "\n#{END_OF_RESPONSE_MARKER}\n"
       @in.puts(command_string)
-      @in.puts("script print #{marker.inspect}")
+      @in.puts("script print(#{marker.inspect})")
       done = false
       result = []
       while !done
@@ -132,6 +132,10 @@ module CrashWatch
       raise ArgumentError if pid.empty?
       result = execute("attach -p #{pid}")
       result !~ /(unable to attach|cannot attach)/
+    end
+
+    def handle_signal(sig)
+      execute("process handle #{sig} noprint pass")
     end
 
     def program_counter
