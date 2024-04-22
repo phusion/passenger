@@ -1,5 +1,6 @@
 require 'erb'
 require 'fileutils'
+require 'time'
 PhusionPassenger.require_passenger_lib 'platform_info/apache'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
@@ -123,15 +124,30 @@ class Apache2Controller
       ].join("\n")
     end
 
+    # Wait until the PID file has been created.
+    wait_start_time = Time.now
     begin
-      # Wait until the PID file has been created.
       Timeout::timeout(20) do
         while !File.exist?("#{@server_root}/httpd.pid")
           sleep(0.1)
         end
       end
-      # Wait until Apache is listening on the server port.
-      Timeout::timeout(7) do
+    rescue Timeout::Error
+      end_start_time = Time.now
+      raise [
+        "Timeout waiting for an Apache server report its PID:",
+        "\t---------------- Begin logs -------------------",
+        read_error_log_starting_from(prev_error_log_position).split("\n").map{ |l| "\t#{l}" }.join("\n"),
+        "\t---------------- End logs -------------------",
+        "Started waiting at #{wait_start_time.iso8601(3)}",
+        "  Ended waiting at #{end_start_time.iso8601(3)}",
+      ].join("\n")
+    end
+
+    # Wait until Apache is listening on the server port.
+    wait_start_time = Time.now
+    begin
+      Timeout::timeout(30) do
         done = false
         while !done
           begin
@@ -144,13 +160,17 @@ class Apache2Controller
         end
       end
     rescue Timeout::Error
+      end_start_time = Time.now
       raise [
-        "Could not start an Apache server:",
+        "Timeout waiting for an Apache server to listen on port #{@port}:",
         "\t---------------- Begin logs -------------------",
         read_error_log_starting_from(prev_error_log_position).split("\n").map{ |l| "\t#{l}" }.join("\n"),
         "\t---------------- End logs -------------------",
+        "Started waiting at #{wait_start_time.iso8601(3)}",
+        "  Ended waiting at #{end_start_time.iso8601(3)}",
       ].join("\n")
     end
+
     Dir["#{@server_root}/*"].each do |filename|
       if File.file?(filename)
         File.chmod(0666, filename)
