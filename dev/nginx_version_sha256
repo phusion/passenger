@@ -30,7 +30,10 @@ require 'rubygems/version.rb'
 
 VERSION = ARGV[0]
 debug = !ENV["VERBOSE"].nil?
-Gem::Version.new(VERSION)
+if Gem::Version.new(VERSION).segments[1] % 2 != 0
+  puts "Only use LTS Nginx versions (even numbered minor versions, eg: 1.26.3)"
+  exit 1
+end
 DL_URL = "https://nginx.org/download/nginx-#{VERSION}.tar.gz"
 SIG_URL = "#{DL_URL}.asc"
 KEY_URLS = [
@@ -65,4 +68,5 @@ if valid
   puts Digest::SHA256.hexdigest(data)
 else
   puts "invalid sig, maybe you need to add a new key to the list?"
+  exit 1
 end
