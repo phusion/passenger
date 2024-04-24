@@ -1,0 +1,68 @@
+#!/usr/bin/env ruby
+#  Phusion Passenger - https://www.phusionpassenger.com/
+#  Copyright (c) 2024 Phusion Holding B.V.
+#
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+
+require 'openssl'
+require 'open-uri'
+require 'gpgme'
+require 'rubygems/version.rb'
+
+VERSION = ARGV[0]
+debug = !ENV["VERBOSE"].nil?
+Gem::Version.new(VERSION)
+DL_URL = "https://nginx.org/download/nginx-#{VERSION}.tar.gz"
+SIG_URL = "#{DL_URL}.asc"
+KEY_URLS = [
+  # https://nginx.org/en/pgp_keys.html
+  "https://nginx.org/keys/nginx_signing.key",
+  "https://nginx.org/keys/thresh.key",
+  "https://nginx.org/keys/sb.key",
+  "https://nginx.org/keys/pluknet.key",
+  "https://nginx.org/keys/arut.key",
+  "https://nginx.org/keys/maxim.key",
+]
+
+puts DL_URL if debug
+data = URI.open(DL_URL) do |f| f.read end
+File.write("./dl.tar.gz",data) if debug
+puts SIG_URL if debug
+sig = URI.open(SIG_URL) do |f| f.read end
+
+KEY_URLS.each do |key_url|
+  puts key_url if debug
+  key = URI.open(key_url) do |f| f.read end
+  GPGME::Key.import(key) #only needed if the key has not been imported previously
+end
+
+crypto = GPGME::Crypto.new
+valid = false
+crypto.verify(sig, signed_text: data) do |signature|
+  valid = signature.valid?
+end
+
+if valid
+  puts Digest::SHA256.hexdigest(data)
+else
+  puts "invalid sig, maybe you need to add a new key to the list?"
+end
