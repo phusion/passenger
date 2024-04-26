@@ -11,7 +11,6 @@ group :base do
   gem 'rake'
   gem 'rspec', '~> 3.12.0'
   gem 'rspec-collection_matchers'
-  gem 'gpgme'
 end
 
 group :future do
@@ -21,5 +20,6 @@ end
 if ENV['USER'] == 'camdennarzt'
 group :development do
   gem 'solargraph'
+  gem 'gpgme'
 end
 end
