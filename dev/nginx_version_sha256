@@ -30,7 +30,7 @@ require 'rubygems/version.rb'
 
 VERSION = ARGV[0]
 debug = !ENV["VERBOSE"].nil?
-if Gem::Version.new(VERSION).segments[1] % 2 != 0
+if Gem::Version.new(VERSION).segments[1].odd?
   puts "Only use LTS Nginx versions (even numbered minor versions, eg: 1.26.3)"
   exit 1
 end
