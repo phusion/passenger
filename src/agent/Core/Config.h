@@ -27,6 +27,7 @@
 #ifndef _PASSENGER_CORE_CONFIG_H_
 #define _PASSENGER_CORE_CONFIG_H_
 
+#include "ServerKit/llversion.h"
 #include <string>
 #include <vector>
 
@@ -366,6 +367,9 @@ private:
 
 		Json::Value updates;
 		updates["server_software"] = serverSoftware;
+		if (effectiveValues["standalone_engine"].asString()=="builtin") {
+			updates["web_server_version"] = llhttp_version();
+		}
 		return updates;
 	}
 

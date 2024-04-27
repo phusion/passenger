@@ -6,6 +6,7 @@ Release 6.0.21 (Not yet released)
  * [Nginx] Upgrades preferred Nginx to 1.26.0 from 1.24.0.
  * [Nginx] Switch to using PCRE2 instead of PCRE.
  * Fixes crash-watch hanging when lldb is used as backend.
+ * [Standalone] Fixes security update checker with builtin engine.
  * Workaround compilation error on clang on x86_64.
  * Upgrades Boost from 1.83 -> 1.84.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
