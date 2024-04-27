@@ -367,7 +367,8 @@ private:
 
 		Json::Value updates;
 		updates["server_software"] = serverSoftware;
-		if (effectiveValues["standalone_engine"].asString()=="builtin") {
+		if (effectiveValues["integration_mode"].asString() == "standalone" &&
+			effectiveValues["standalone_engine"].asString()=="builtin") {
 			updates["web_server_version"] = llhttp_version();
 		}
 		return updates;
