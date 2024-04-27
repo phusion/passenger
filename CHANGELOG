@@ -1,6 +1,7 @@
 Release 6.0.21 (Not yet released)
 -------------
  * [Python] Fix version of Python when imp module is replaced with importlib. Contributed by Grigory Ponomarenko.
+ * [Ubuntu] Replace packages for Ubuntu 23.10 "mantic", with 24.04 "noble".
  * Swaps http-parser for llhttp.
  * [Nginx] Upgrades preferred Nginx to 1.26.0 from 1.24.0.
  * [Nginx] Switch to using PCRE2 instead of PCRE.
