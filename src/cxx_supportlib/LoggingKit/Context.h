@@ -70,16 +70,7 @@ public:
 	typedef LoggingKit::ConfigChangeRequest ConfigChangeRequest;
 
 private:
-	Schema schema;
-	mutable boost::mutex syncher;
-	ConfigKit::Store config;
-	boost::atomic<ConfigRealization *> configRlz;
-
-	mutable boost::mutex gcSyncher;
-	oxt::thread *gcThread;
-	boost::condition_variable gcShuttingDownCond, gcHasShutDownCond;
-	std::queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigs;
-	bool shuttingDown;
+	friend struct ConfigRealization;
 
 	struct TimestampedLog {
 		// time at which time the log entered the core, which is unfortunately somewhat
@@ -97,7 +88,27 @@ private:
 		SimpleLogMap watchFileLog; // a separate log buffer per (watched file name)
 	};
 	typedef StringKeyTable<AppGroupLog> LogStore;
+
+	Schema schema;
+	mutable boost::mutex syncher;
+	ConfigKit::Store config;
+	boost::atomic<ConfigRealization *> configRlz;
+
+	mutable boost::mutex gcSyncher;
+	oxt::thread *gcThread;
+	boost::condition_variable gcShuttingDownCond, gcHasShutDownCond;
+	std::queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigs;
 	LogStore logStore;
+	bool shuttingDown;
+
+	pair<ConfigRealization*,MonotonicTimeUsec> peekOldConfig();
+	void pushOldConfigAndCreateGcThread(ConfigRealization *oldConfigRlz, MonotonicTimeUsec monotonicNow);
+	void gcThreadMain();
+	void popOldConfig(ConfigRealization *oldConfig);
+	bool oldConfigsExist();
+	void createGcThread();
+	void killGcThread();
+	void gcLockless(bool wait, boost::unique_lock<boost::mutex> &lock);
 
 public:
 	Context(const Json::Value &initialConfig = Json::Value(),
@@ -124,22 +135,12 @@ public:
 	const ConfigRealization *getConfigRealization() const {
 		return configRlz.load(boost::memory_order_acquire);
 	}
-
-	void pushOldConfigAndCreateGcThread(ConfigRealization *oldConfigRlz, MonotonicTimeUsec monotonicNow);
-	void gcThreadMain();
-
-private:
-	pair<ConfigRealization*,MonotonicTimeUsec> peekOldConfig();
-	void popOldConfig(ConfigRealization *oldConfig);
-	bool oldConfigsExist();
-	void createGcThread();
-	void killGcThread();
-	void gcLockless(bool wait, boost::unique_lock<boost::mutex> &lock);
 };
 
 
 void initialize(const Json::Value &initialConfig = Json::Value(),
 	const ConfigKit::Translator &translator = ConfigKit::DummyTranslator());
+void shutdown();
 
 
 } // namespace LoggingKit

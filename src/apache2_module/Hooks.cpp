@@ -1615,9 +1615,9 @@ destroy_hooks(void *arg) {
 		boost::this_thread::disable_interruption di;
 		boost::this_thread::disable_syscall_interruption dsi;
 		P_DEBUG("Shutting down Phusion Passenger...");
+		delete hooks;
 		LoggingKit::shutdown();
 		oxt::shutdown();
-		delete hooks;
 		hooks = NULL;
 	} catch (const thread_interrupted &) {
 		// Ignore interruptions, we're shutting down anyway.

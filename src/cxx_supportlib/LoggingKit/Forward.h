@@ -73,8 +73,6 @@ enum TargetType {
 
 extern Context *context;
 
-void shutdown();
-
 const char *_strdupFastStringStream(const FastStringStream<> &stream);
 bool _passesLogLevel(const Context *context, Level level, const ConfigRealization **outputConfigRlz);
 bool _shouldLogFileDescriptors(const Context *context, const ConfigRealization **outputConfigRlz);
