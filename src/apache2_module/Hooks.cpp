@@ -664,10 +664,22 @@ private:
 			bucketState = boost::make_shared<PassengerBucketState>(conn);
 			b = passenger_bucket_create(bucketState, r->connection->bucket_alloc,
 				config->getBufferResponse());
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnull-pointer-subtraction"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-pointer-subtraction"
 			APR_BRIGADE_INSERT_TAIL(bb, b);
+#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnull-pointer-subtraction"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-pointer-subtraction"
 			APR_BRIGADE_INSERT_TAIL(bb, b);
+#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 
 			/* Now read the HTTP response header, parse it and fill relevant
 			 * information in our request_rec structure. We skip the status line
@@ -1077,7 +1089,14 @@ private:
 		apr_status_t rv;
 		int done = 0;
 
-		while ((dst < dst_end) && !done && e != APR_BRIGADE_SENTINEL(bb)
+		while ((dst < dst_end) && !done && e !=
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnull-pointer-subtraction"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-pointer-subtraction"
+APR_BRIGADE_SENTINEL(bb)
+#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 			&& !APR_BUCKET_IS_EOS(e))
 		{
 			const char *bucket_data;
@@ -1180,7 +1199,14 @@ private:
 		 * it needs to learn how to properly handle APR_BLOCK_READ requests by
 		 * returning data when requested.
 		 */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnull-pointer-subtraction"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-pointer-subtraction"
+			// we have no control over how this is implemented
 		if (APR_BRIGADE_EMPTY(bb)) {
+#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 			throw RuntimeException("An error occurred while receiving HTTP upload data: "
 				"the next filter in the input filter chain has "
 				"a bug. Please contact the author who wrote this filter about "
