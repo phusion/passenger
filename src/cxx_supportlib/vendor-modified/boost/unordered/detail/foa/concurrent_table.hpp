@@ -1,6 +1,7 @@
 /* Fast open-addressing concurrent hash table.
  *
- * Copyright 2023 Joaquin M Lopez Munoz.
+ * Copyright 2023-2024 Joaquin M Lopez Munoz.
+ * Copyright 2024 Braden Ganetsky.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -28,6 +29,7 @@
 #include <boost/unordered/detail/foa/tuple_rotate_right.hpp>
 #include <boost/unordered/detail/serialization_version.hpp>
 #include <boost/unordered/detail/static_assert.hpp>
+#include <boost/unordered/detail/type_traits.hpp>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
@@ -257,6 +259,7 @@ struct concurrent_table_arrays:table_arrays<Value,Group,SizePolicy,Allocator>
     typename boost::allocator_pointer<group_access_allocator_type>::type;
 
   using super=table_arrays<Value,Group,SizePolicy,Allocator>;
+  using allocator_type=typename super::allocator_type;
 
   concurrent_table_arrays(const super& arrays,group_access_pointer pga):
     super{arrays},group_accesses_{pga}{}
@@ -265,12 +268,11 @@ struct concurrent_table_arrays:table_arrays<Value,Group,SizePolicy,Allocator>
     return boost::to_address(group_accesses_);
   }
 
-  static concurrent_table_arrays new_(
-    group_access_allocator_type al,std::size_t n)
+  static concurrent_table_arrays new_(allocator_type al,std::size_t n)
   {
     super x{super::new_(al,n)};
     BOOST_TRY{
-      return new_group_access(al,x);
+      return new_group_access(group_access_allocator_type(al),x);
     }
     BOOST_CATCH(...){
       super::delete_(al,x);
@@ -320,10 +322,9 @@ struct concurrent_table_arrays:table_arrays<Value,Group,SizePolicy,Allocator>
     return arrays;
   }
 
-  static void delete_(
-    group_access_allocator_type al,concurrent_table_arrays& arrays)noexcept
+  static void delete_(allocator_type al,concurrent_table_arrays& arrays)noexcept
   {
-    delete_group_access(al,arrays);
+    delete_group_access(group_access_allocator_type(al),arrays);
     super::delete_(al,arrays);
   }
 
@@ -680,6 +681,26 @@ public:
   BOOST_FORCEINLINE bool emplace(Args&&... args)
   {
     return construct_and_emplace(std::forward<Args>(args)...);
+  }
+
+  /* Optimization for value_type and init_type, to avoid constructing twice */
+  template<typename Value>
+  BOOST_FORCEINLINE auto emplace(Value&& x)->typename std::enable_if<
+    detail::is_similar_to_any<Value,value_type,init_type>::value,bool>::type
+  {
+    return emplace_impl(std::forward<Value>(x));
+  }
+
+  /* Optimizations for maps for (k,v) to avoid eagerly constructing value */
+  template <typename K, typename V>
+  BOOST_FORCEINLINE auto emplace(K&& k, V&& v) ->
+    typename std::enable_if<is_emplace_kv_able<concurrent_table, K>::value,
+      bool>::type
+  {
+    alloc_cted_or_fwded_key_type<type_policy, Allocator, K&&> x(
+      this->al(), std::forward<K>(k));
+    return emplace_impl(
+      try_emplace_args_t{}, x.move_or_fwd(), std::forward<V>(v));
   }
 
   BOOST_FORCEINLINE bool
@@ -1311,7 +1332,7 @@ private:
   {
     auto lck=shared_access();
 
-    auto x=alloc_make_insert_type<type_policy>(
+    alloc_cted_insert_type<type_policy,Allocator,Args...> x(
       this->al(),std::forward<Args>(args)...);
     int res=unprotected_norehash_emplace_or_visit(
       access_mode,std::forward<F>(f),type_policy::move(x.value()));

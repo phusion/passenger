@@ -120,15 +120,15 @@ class vec_iterator
                              , nat>::type                                           nonconst_iterator;
 
    public:
-   BOOST_CONTAINER_FORCEINLINE
+   inline
       const Pointer &get_ptr() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return   m_ptr;  }
 
-   BOOST_CONTAINER_FORCEINLINE
+   inline
       Pointer &get_ptr() BOOST_NOEXCEPT_OR_NOTHROW
    {  return   m_ptr;  }
 
-   BOOST_CONTAINER_FORCEINLINE explicit vec_iterator(Pointer ptr) BOOST_NOEXCEPT_OR_NOTHROW
+   inline explicit vec_iterator(Pointer ptr) BOOST_NOEXCEPT_OR_NOTHROW
       : m_ptr(ptr)
    {}
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
@@ -136,93 +136,93 @@ class vec_iterator
    public:
 
    //Constructors
-   BOOST_CONTAINER_FORCEINLINE vec_iterator() BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator() BOOST_NOEXCEPT_OR_NOTHROW
       : m_ptr()   //Value initialization to achieve "null iterators" (N3644)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE vec_iterator(const vec_iterator& other) BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator(const vec_iterator& other) BOOST_NOEXCEPT_OR_NOTHROW
       :  m_ptr(other.get_ptr())
    {}
 
-   BOOST_CONTAINER_FORCEINLINE vec_iterator(const nonconst_iterator &other) BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator(const nonconst_iterator &other) BOOST_NOEXCEPT_OR_NOTHROW
       :  m_ptr(other.get_ptr())
    {}
 
-   BOOST_CONTAINER_FORCEINLINE vec_iterator & operator=(const vec_iterator& other) BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator & operator=(const vec_iterator& other) BOOST_NOEXCEPT_OR_NOTHROW
    {  m_ptr = other.get_ptr();   return *this;  }
 
    //Pointer like operators
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       reference operator*()   const BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(!!m_ptr);  return *m_ptr;  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       pointer operator->()  const BOOST_NOEXCEPT_OR_NOTHROW
    {  return m_ptr;  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       reference operator[](difference_type off) const BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(!!m_ptr);  return m_ptr[off];  }
 
    //Increment / Decrement
-   BOOST_CONTAINER_FORCEINLINE vec_iterator& operator++() BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator& operator++() BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(!!m_ptr); ++m_ptr;  return *this; }
 
-   BOOST_CONTAINER_FORCEINLINE vec_iterator operator++(int) BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator operator++(int) BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(!!m_ptr); return vec_iterator(m_ptr++); }
 
-   BOOST_CONTAINER_FORCEINLINE vec_iterator& operator--() BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator& operator--() BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(!!m_ptr); --m_ptr; return *this;  }
 
-   BOOST_CONTAINER_FORCEINLINE vec_iterator operator--(int) BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator operator--(int) BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(!!m_ptr); return vec_iterator(m_ptr--); }
 
    //Arithmetic
-   BOOST_CONTAINER_FORCEINLINE vec_iterator& operator+=(difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator& operator+=(difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(m_ptr || !off); m_ptr += off; return *this;   }
 
-   BOOST_CONTAINER_FORCEINLINE vec_iterator& operator-=(difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
+   inline vec_iterator& operator-=(difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(m_ptr || !off); m_ptr -= off; return *this;   }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend vec_iterator operator+(const vec_iterator &x, difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(x.m_ptr || !off); return vec_iterator(x.m_ptr+off);  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend vec_iterator operator+(difference_type off, vec_iterator right) BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(right.m_ptr || !off); right.m_ptr += off;  return right; }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend vec_iterator operator-(vec_iterator left, difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
    {  BOOST_ASSERT(left.m_ptr || !off); left.m_ptr -= off;  return left; }
 
    //Difference
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend difference_type operator-(const vec_iterator &left, const vec_iterator& right) BOOST_NOEXCEPT_OR_NOTHROW
    {  return left.m_ptr - right.m_ptr;   }
 
    //Comparison operators
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator==   (const vec_iterator& l, const vec_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
    {  return l.m_ptr == r.m_ptr;  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator!=   (const vec_iterator& l, const vec_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
    {  return l.m_ptr != r.m_ptr;  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator<    (const vec_iterator& l, const vec_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
    {  return l.m_ptr < r.m_ptr;  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator<=   (const vec_iterator& l, const vec_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
    {  return l.m_ptr <= r.m_ptr;  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator>    (const vec_iterator& l, const vec_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
    {  return l.m_ptr > r.m_ptr;  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator>=   (const vec_iterator& l, const vec_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
    {  return l.m_ptr >= r.m_ptr;  }
 };
@@ -233,7 +233,7 @@ struct vector_insert_ordered_cursor
    typedef typename iterator_traits<BiDirPosConstIt>::value_type  size_type;
    typedef typename iterator_traits<BiDirValueIt>::reference      reference;
 
-   BOOST_CONTAINER_FORCEINLINE vector_insert_ordered_cursor(BiDirPosConstIt posit, BiDirValueIt valueit)
+   inline vector_insert_ordered_cursor(BiDirPosConstIt posit, BiDirValueIt valueit)
       : last_position_it(posit), last_value_it(valueit)
    {}
 
@@ -247,10 +247,10 @@ struct vector_insert_ordered_cursor
       }
    }
 
-   BOOST_CONTAINER_FORCEINLINE size_type get_pos() const
+   inline size_type get_pos() const
    {  return *last_position_it;  }
 
-   BOOST_CONTAINER_FORCEINLINE reference get_val()
+   inline reference get_val()
    {  return *last_value_it;  }
 
    BiDirPosConstIt last_position_it;
@@ -258,11 +258,11 @@ struct vector_insert_ordered_cursor
 };
 
 template<class Pointer, bool IsConst>
-BOOST_CONTAINER_FORCEINLINE const Pointer &vector_iterator_get_ptr(const vec_iterator<Pointer, IsConst> &it) BOOST_NOEXCEPT_OR_NOTHROW
+inline const Pointer &vector_iterator_get_ptr(const vec_iterator<Pointer, IsConst> &it) BOOST_NOEXCEPT_OR_NOTHROW
 {  return   it.get_ptr();  }
 
 template<class Pointer, bool IsConst>
-BOOST_CONTAINER_FORCEINLINE Pointer &get_ptr(vec_iterator<Pointer, IsConst> &it) BOOST_NOEXCEPT_OR_NOTHROW
+inline Pointer &get_ptr(vec_iterator<Pointer, IsConst> &it) BOOST_NOEXCEPT_OR_NOTHROW
 {  return  it.get_ptr();  }
 
 struct initial_capacity_t {};
@@ -351,7 +351,7 @@ struct vector_alloc_holder
 
    public:
 
-   BOOST_CONTAINER_FORCEINLINE
+   inline
       static bool is_propagable_from(const allocator_type &from_alloc, pointer p, const allocator_type &to_alloc, bool const propagate_allocator)
    {
       (void)propagate_allocator; (void)p; (void)to_alloc; (void)from_alloc;
@@ -361,7 +361,7 @@ struct vector_alloc_holder
          (propagate_allocator || allocator_traits_type::is_always_equal::value || allocator_traits_type::equal(from_alloc, to_alloc));
    }
 
-   BOOST_CONTAINER_FORCEINLINE
+   inline
       static bool are_swap_propagable(const allocator_type &l_a, pointer l_p, const allocator_type &r_a, pointer r_p, bool const propagate_allocator)
    {
       (void)propagate_allocator; (void)l_p; (void)r_p; (void)l_a; (void)r_a;
@@ -446,33 +446,33 @@ struct vector_alloc_holder
       holder.m_size = holder.m_capacity = 0;
    }
 
-   BOOST_CONTAINER_FORCEINLINE ~vector_alloc_holder() BOOST_NOEXCEPT_OR_NOTHROW
+   inline ~vector_alloc_holder() BOOST_NOEXCEPT_OR_NOTHROW
    {
       if(this->m_capacity){
          this->deallocate(this->m_start, this->m_capacity);
       }
    }
 
-   BOOST_CONTAINER_FORCEINLINE void set_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void set_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_size = static_cast<stored_size_type>(s);   }
 
-   BOOST_CONTAINER_FORCEINLINE void dec_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void dec_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_size = static_cast<stored_size_type>(this->m_size - s);   }
 
-   BOOST_CONTAINER_FORCEINLINE void inc_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void inc_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_size = static_cast<stored_size_type>(this->m_size + s);   }
 
-   BOOST_CONTAINER_FORCEINLINE void set_stored_capacity(size_type c) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void set_stored_capacity(size_type c) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_capacity = static_cast<stored_size_type>(c);  }
 
-   BOOST_CONTAINER_FORCEINLINE pointer allocation_command(boost::container::allocation_type command,
+   inline pointer allocation_command(boost::container::allocation_type command,
                                  size_type limit_size, size_type &prefer_in_recvd_out_size, pointer &reuse)
    {
       typedef typename dtl::version<allocator_type>::type alloc_version;
       return this->priv_allocation_command(alloc_version(), command, limit_size, prefer_in_recvd_out_size, reuse);
    }
 
-   BOOST_CONTAINER_FORCEINLINE pointer allocate(size_type n)
+   inline pointer allocate(size_type n)
    {
       const size_type max_alloc = allocator_traits_type::max_size(this->alloc());
       const size_type max = max_alloc <= stored_size_type(-1) ? max_alloc : stored_size_type(-1);
@@ -482,7 +482,7 @@ struct vector_alloc_holder
       return allocator_traits_type::allocate(this->alloc(), n);
    }
 
-   BOOST_CONTAINER_FORCEINLINE void deallocate(const pointer &p, size_type n)
+   inline void deallocate(const pointer &p, size_type n)
    {
       allocator_traits_type::deallocate(this->alloc(), p, n);
    }
@@ -539,22 +539,22 @@ struct vector_alloc_holder
       x.m_size = x.m_capacity = 0;
    }
 
-   BOOST_CONTAINER_FORCEINLINE allocator_type &alloc() BOOST_NOEXCEPT_OR_NOTHROW
+   inline allocator_type &alloc() BOOST_NOEXCEPT_OR_NOTHROW
    {  return *this;  }
 
-   BOOST_CONTAINER_FORCEINLINE const allocator_type &alloc() const BOOST_NOEXCEPT_OR_NOTHROW
+   inline const allocator_type &alloc() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return *this;  }
 
-   BOOST_CONTAINER_FORCEINLINE const pointer   &start() const     BOOST_NOEXCEPT_OR_NOTHROW
+   inline const pointer   &start() const     BOOST_NOEXCEPT_OR_NOTHROW
       {  return m_start;  }
-   BOOST_CONTAINER_FORCEINLINE       size_type capacity() const     BOOST_NOEXCEPT_OR_NOTHROW
+   inline       size_type capacity() const     BOOST_NOEXCEPT_OR_NOTHROW
       {  return m_capacity;  }
-   BOOST_CONTAINER_FORCEINLINE void start(const pointer &p)       BOOST_NOEXCEPT_OR_NOTHROW
+   inline void start(const pointer &p)       BOOST_NOEXCEPT_OR_NOTHROW
       {  m_start = p;  }
-   BOOST_CONTAINER_FORCEINLINE void capacity(const size_type &c)  BOOST_NOEXCEPT_OR_NOTHROW
+   inline void capacity(const size_type &c)  BOOST_NOEXCEPT_OR_NOTHROW
       {  BOOST_ASSERT( c <= stored_size_type(-1)); this->set_stored_capacity(c);  }
 
-   static BOOST_CONTAINER_FORCEINLINE void on_capacity_overflow()
+   static inline void on_capacity_overflow()
    { }
 
    private:
@@ -680,26 +680,26 @@ struct vector_alloc_holder<Allocator, StoredSizeType, version_0>
          (this->alloc(), boost::movelib::to_raw_pointer(holder.start()), n, boost::movelib::to_raw_pointer(this->start()));
    }
 
-   static BOOST_CONTAINER_FORCEINLINE void on_capacity_overflow()
+   static inline void on_capacity_overflow()
    {  allocator_type::on_capacity_overflow();  }
 
-   BOOST_CONTAINER_FORCEINLINE void set_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void set_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_size = static_cast<stored_size_type>(s);   }
 
-   BOOST_CONTAINER_FORCEINLINE void dec_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void dec_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_size = static_cast<stored_size_type>(this->m_size - s);   }
 
-   BOOST_CONTAINER_FORCEINLINE void inc_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void inc_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_size = static_cast<stored_size_type>(this->m_size + s);   }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_first_allocation(size_type cap)
+   inline void priv_first_allocation(size_type cap)
    {
       if(cap > allocator_type::internal_capacity){
          on_capacity_overflow();
       }
    }
 
-   BOOST_CONTAINER_FORCEINLINE void deep_swap(vector_alloc_holder &x)
+   inline void deep_swap(vector_alloc_holder &x)
       {  this->priv_deep_swap(x);   }
 
    template<class OtherAllocator, class OtherStoredSizeType, class OtherAllocatorVersion>
@@ -712,29 +712,29 @@ struct vector_alloc_holder<Allocator, StoredSizeType, version_0>
       this->priv_deep_swap(x);
    }
 
-   BOOST_CONTAINER_FORCEINLINE void swap_resources(vector_alloc_holder &) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void swap_resources(vector_alloc_holder &) BOOST_NOEXCEPT_OR_NOTHROW
    {  //Containers with version 0 allocators can't be moved without moving elements one by one
       on_capacity_overflow();
    }
 
-   BOOST_CONTAINER_FORCEINLINE void steal_resources(vector_alloc_holder &)
+   inline void steal_resources(vector_alloc_holder &)
    {  //Containers with version 0 allocators can't be moved without moving elements one by one
       on_capacity_overflow();
    }
 
-   BOOST_CONTAINER_FORCEINLINE allocator_type &alloc() BOOST_NOEXCEPT_OR_NOTHROW
+   inline allocator_type &alloc() BOOST_NOEXCEPT_OR_NOTHROW
    {  return *this;  }
 
-   BOOST_CONTAINER_FORCEINLINE const allocator_type &alloc() const BOOST_NOEXCEPT_OR_NOTHROW
+   inline const allocator_type &alloc() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return *this;  }
 
-   BOOST_CONTAINER_FORCEINLINE bool try_expand_fwd(size_type at_least)
+   inline bool try_expand_fwd(size_type at_least)
    {  return !at_least;  }
 
-   BOOST_CONTAINER_FORCEINLINE pointer start() const       BOOST_NOEXCEPT_OR_NOTHROW
+   inline pointer start() const       BOOST_NOEXCEPT_OR_NOTHROW
    {  return allocator_type::internal_storage();  }
    
-   BOOST_CONTAINER_FORCEINLINE size_type capacity() const BOOST_NOEXCEPT_OR_NOTHROW
+   inline size_type capacity() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return allocator_type::internal_capacity;  }
    
    stored_size_type m_size;
@@ -822,7 +822,7 @@ private:
    typedef value_less<T>                                                      value_less_t;
 
    //If provided the stored_size option must specify a type that is equal or a type that is smaller.
-   BOOST_STATIC_ASSERT( (sizeof(stored_size_type) < sizeof(alloc_size_type) ||
+   BOOST_CONTAINER_STATIC_ASSERT( (sizeof(stored_size_type) < sizeof(alloc_size_type) ||
                         dtl::is_same<stored_size_type, alloc_size_type>::value) );
 
    typedef typename dtl::version<allocator_type>::type alloc_version;
@@ -837,11 +837,11 @@ private:
 
 
    protected:
-   BOOST_CONTAINER_FORCEINLINE
+   inline
       static bool is_propagable_from(const allocator_type &from_alloc, pointer p, const allocator_type &to_alloc, bool const propagate_allocator)
    {  return alloc_holder_t::is_propagable_from(from_alloc, p, to_alloc, propagate_allocator);  }
 
-   BOOST_CONTAINER_FORCEINLINE
+   inline
       static bool are_swap_propagable( const allocator_type &l_a, pointer l_p
                                      , const allocator_type &r_a, pointer r_p, bool const propagate_allocator)
    {  return alloc_holder_t::are_swap_propagable(l_a, l_p, r_a, r_p, propagate_allocator);  }
@@ -855,23 +855,23 @@ private:
 
    protected:
 
-   BOOST_CONTAINER_FORCEINLINE void steal_resources(vector &x)
+   inline void steal_resources(vector &x)
    {  return this->m_holder.steal_resources(x.m_holder);   }
 
-   BOOST_CONTAINER_FORCEINLINE void protected_set_size(size_type n)
+   inline void protected_set_size(size_type n)
    {  this->m_holder.m_size = static_cast<stored_size_type>(n);   }
 
    template<class AllocFwd>
-   BOOST_CONTAINER_FORCEINLINE vector(initial_capacity_t, pointer initial_memory, size_type cap, BOOST_FWD_REF(AllocFwd) a)
+   inline vector(initial_capacity_t, pointer initial_memory, size_type cap, BOOST_FWD_REF(AllocFwd) a)
       : m_holder(initial_capacity_t(), initial_memory, cap, ::boost::forward<AllocFwd>(a))
    {}
 
-   BOOST_CONTAINER_FORCEINLINE vector(initial_capacity_t, pointer initial_memory, size_type cap)
+   inline vector(initial_capacity_t, pointer initial_memory, size_type cap)
       : m_holder(initial_capacity_t(), initial_memory, cap)
    {}
 
    template<class SizeType, class AllocFwd>
-   BOOST_CONTAINER_FORCEINLINE vector(maybe_initial_capacity_t, pointer p, SizeType initial_capacity, BOOST_FWD_REF(AllocFwd) a)
+   inline vector(maybe_initial_capacity_t, pointer p, SizeType initial_capacity, BOOST_FWD_REF(AllocFwd) a)
       : m_holder(maybe_initial_capacity_t(), p, initial_capacity, ::boost::forward<AllocFwd>(a))
    {
       #ifdef BOOST_CONTAINER_VECTOR_ALLOC_STATS
@@ -880,7 +880,7 @@ private:
    }
 
    template<class SizeType>
-   BOOST_CONTAINER_FORCEINLINE vector(maybe_initial_capacity_t, pointer p, SizeType initial_capacity)
+   inline vector(maybe_initial_capacity_t, pointer p, SizeType initial_capacity)
       : m_holder(maybe_initial_capacity_t(), p, initial_capacity)
    {
       #ifdef BOOST_CONTAINER_VECTOR_ALLOC_STATS
@@ -1094,7 +1094,7 @@ private:
    //! <b>Complexity</b>: Constant.
    vector(BOOST_RV_REF(vector) x) BOOST_NOEXCEPT_OR_NOTHROW
       :  m_holder(boost::move(x.m_holder))
-   {  BOOST_STATIC_ASSERT((!allocator_traits_type::is_partially_propagable::value));  }
+   {  BOOST_CONTAINER_STATIC_ASSERT((!allocator_traits_type::is_partially_propagable::value));  }
 
    #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
    //! <b>Effects</b>: Constructs a vector that will use a copy of allocator a
@@ -1202,7 +1202,7 @@ private:
    //! <b>Throws</b>: If memory allocation throws or T's copy/move constructor/assignment throws.
    //!
    //! <b>Complexity</b>: Linear to the number of elements in x.
-   BOOST_CONTAINER_FORCEINLINE vector& operator=(BOOST_COPY_ASSIGN_REF(vector) x)
+   inline vector& operator=(BOOST_COPY_ASSIGN_REF(vector) x)
    {
       if (BOOST_LIKELY(&x != this)){
          this->priv_copy_assign(x);
@@ -1214,7 +1214,7 @@ private:
    //! <b>Effects</b>: Make *this container contains elements from il.
    //!
    //! <b>Complexity</b>: Linear to the range [il.begin(), il.end()).
-   BOOST_CONTAINER_FORCEINLINE vector& operator=(std::initializer_list<value_type> il)
+   inline vector& operator=(std::initializer_list<value_type> il)
    {
       this->assign(il.begin(), il.end());
       return *this;
@@ -1232,7 +1232,7 @@ private:
    //! <b>Complexity</b>: Constant if allocator_traits_type::
    //!   propagate_on_container_move_assignment is true or
    //!   this->get>allocator() == x.get_allocator(). Linear otherwise.
-   BOOST_CONTAINER_FORCEINLINE vector& operator=(BOOST_RV_REF(vector) x)
+   inline vector& operator=(BOOST_RV_REF(vector) x)
       BOOST_NOEXCEPT_IF(allocator_traits_type::propagate_on_container_move_assignment::value
                         || allocator_traits_type::is_always_equal::value)
    {
@@ -1255,7 +1255,7 @@ private:
    //!
    //! <b>Note</b>: Non-standard extension to support static_vector
    template<class OtherA>
-   BOOST_CONTAINER_FORCEINLINE typename dtl::enable_if_and
+   inline typename dtl::enable_if_and
                            < vector&
                            , dtl::is_version<typename real_allocator<T, OtherA>::type, 0>
                            , dtl::is_different<typename real_allocator<T, OtherA>::type, allocator_type>
@@ -1277,7 +1277,7 @@ private:
    //!
    //! <b>Note</b>: Non-standard extension to support static_vector
    template<class OtherA>
-   BOOST_CONTAINER_FORCEINLINE typename dtl::enable_if_and
+   inline typename dtl::enable_if_and
                            < vector&
                            , dtl::is_version<typename real_allocator<T, OtherA>::type, 0>
                            , dtl::is_different<typename real_allocator<T, OtherA>::type, allocator_type>
@@ -1334,7 +1334,7 @@ private:
    //! <b>Throws</b>: If memory allocation throws or
    //!   T's constructor from dereferencing iniializer_list iterator throws.
    //!
-   BOOST_CONTAINER_FORCEINLINE void assign(std::initializer_list<T> il)
+   inline void assign(std::initializer_list<T> il)
    {
       this->assign(il.begin(), il.end());
    }
@@ -1405,7 +1405,7 @@ private:
    //!   T's copy/move constructor/assignment throws.
    //!
    //! <b>Complexity</b>: Linear to n.
-   BOOST_CONTAINER_FORCEINLINE void assign(size_type n, const value_type& val)
+   inline void assign(size_type n, const value_type& val)
    {  this->assign(cvalue_iterator(val, n), cvalue_iterator());   }
 
    //! <b>Effects</b>: Returns a copy of the internal allocator.
@@ -1413,7 +1413,7 @@ private:
    //! <b>Throws</b>: If allocator's copy constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE allocator_type get_allocator() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline allocator_type get_allocator() const BOOST_NOEXCEPT_OR_NOTHROW
    { return this->m_holder.alloc();  }
 
    //! <b>Effects</b>: Returns a reference to the internal allocator.
@@ -1423,7 +1423,7 @@ private:
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE 
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline 
       stored_allocator_type &get_stored_allocator() BOOST_NOEXCEPT_OR_NOTHROW
    {  return this->m_holder.alloc(); }
 
@@ -1434,7 +1434,7 @@ private:
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const stored_allocator_type &get_stored_allocator() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return this->m_holder.alloc(); }
 
@@ -1449,7 +1449,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE iterator begin() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline iterator begin() BOOST_NOEXCEPT_OR_NOTHROW
    { return iterator(this->m_holder.start()); }
 
    //! <b>Effects</b>: Returns a const_iterator to the first element contained in the vector.
@@ -1457,7 +1457,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_iterator begin() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_iterator begin() const BOOST_NOEXCEPT_OR_NOTHROW
    { return const_iterator(this->m_holder.start()); }
 
    //! <b>Effects</b>: Returns an iterator to the end of the vector.
@@ -1465,7 +1465,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE iterator end() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline iterator end() BOOST_NOEXCEPT_OR_NOTHROW
    {
       iterator it (this->m_holder.start());
       it += difference_type(this->m_holder.m_size);
@@ -1477,7 +1477,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_iterator end() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_iterator end() const BOOST_NOEXCEPT_OR_NOTHROW
    { return this->cend(); }
 
    //! <b>Effects</b>: Returns a reverse_iterator pointing to the beginning
@@ -1486,7 +1486,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE reverse_iterator rbegin() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline reverse_iterator rbegin() BOOST_NOEXCEPT_OR_NOTHROW
    { return reverse_iterator(this->end());      }
 
    //! <b>Effects</b>: Returns a const_reverse_iterator pointing to the beginning
@@ -1495,7 +1495,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_reverse_iterator rbegin() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_reverse_iterator rbegin() const BOOST_NOEXCEPT_OR_NOTHROW
    { return this->crbegin(); }
 
    //! <b>Effects</b>: Returns a reverse_iterator pointing to the end
@@ -1504,7 +1504,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE reverse_iterator rend() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline reverse_iterator rend() BOOST_NOEXCEPT_OR_NOTHROW
    { return reverse_iterator(this->begin());       }
 
    //! <b>Effects</b>: Returns a const_reverse_iterator pointing to the end
@@ -1513,7 +1513,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_reverse_iterator rend() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_reverse_iterator rend() const BOOST_NOEXCEPT_OR_NOTHROW
    { return this->crend(); }
 
    //! <b>Effects</b>: Returns a const_iterator to the first element contained in the vector.
@@ -1521,7 +1521,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_iterator cbegin() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_iterator cbegin() const BOOST_NOEXCEPT_OR_NOTHROW
    { return const_iterator(this->m_holder.start()); }
 
    //! <b>Effects</b>: Returns a const_iterator to the end of the vector.
@@ -1529,7 +1529,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_iterator cend() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_iterator cend() const BOOST_NOEXCEPT_OR_NOTHROW
    {
       const_iterator it (this->m_holder.start());
       it += difference_type(this->m_holder.m_size);
@@ -1542,7 +1542,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_reverse_iterator crbegin() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_reverse_iterator crbegin() const BOOST_NOEXCEPT_OR_NOTHROW
    { return const_reverse_iterator(this->end());}
 
    //! <b>Effects</b>: Returns a const_reverse_iterator pointing to the end
@@ -1551,7 +1551,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_reverse_iterator crend() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_reverse_iterator crend() const BOOST_NOEXCEPT_OR_NOTHROW
    { return const_reverse_iterator(this->begin()); }
 
    //////////////////////////////////////////////
@@ -1565,7 +1565,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE bool empty() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline bool empty() const BOOST_NOEXCEPT_OR_NOTHROW
    { return !this->m_holder.m_size; }
 
    //! <b>Effects</b>: Returns the number of the elements contained in the vector.
@@ -1573,7 +1573,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE size_type size() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline size_type size() const BOOST_NOEXCEPT_OR_NOTHROW
    { return this->m_holder.m_size; }
 
    //! <b>Effects</b>: Returns the largest possible size of the vector.
@@ -1581,7 +1581,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
    { return allocator_traits_type::max_size(this->m_holder.alloc()); }
 
    //! <b>Effects</b>: Inserts or erases elements at the end such that
@@ -1590,7 +1590,7 @@ private:
    //! <b>Throws</b>: If memory allocation throws, or T's copy/move or value initialization throws.
    //!
    //! <b>Complexity</b>: Linear to the difference between size() and new_size.
-   BOOST_CONTAINER_FORCEINLINE void resize(size_type new_size)
+   inline void resize(size_type new_size)
    {  this->priv_resize(new_size, value_init, alloc_version());  }
 
    //! <b>Effects</b>: Inserts or erases elements at the end such that
@@ -1601,7 +1601,7 @@ private:
    //! <b>Complexity</b>: Linear to the difference between size() and new_size.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_FORCEINLINE void resize(size_type new_size, default_init_t)
+   inline void resize(size_type new_size, default_init_t)
    {  this->priv_resize(new_size, default_init, alloc_version());  }
 
    //! <b>Effects</b>: Inserts or erases elements at the end such that
@@ -1610,7 +1610,7 @@ private:
    //! <b>Throws</b>: If memory allocation throws, or T's copy/move constructor throws.
    //!
    //! <b>Complexity</b>: Linear to the difference between size() and new_size.
-   BOOST_CONTAINER_FORCEINLINE void resize(size_type new_size, const T& x)
+   inline void resize(size_type new_size, const T& x)
    {  this->priv_resize(new_size, x, alloc_version());  }
 
    //! <b>Effects</b>: Number of elements for which memory has been allocated.
@@ -1619,7 +1619,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE size_type capacity() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline size_type capacity() const BOOST_NOEXCEPT_OR_NOTHROW
    { return this->m_holder.capacity(); }
 
    //! <b>Effects</b>: If n is less than or equal to capacity(), this call has no
@@ -1628,7 +1628,7 @@ private:
    //!   n; otherwise, capacity() is unchanged. In either case, size() is unchanged.
    //!
    //! <b>Throws</b>: If memory allocation allocation throws or T's copy/move constructor throws.
-   BOOST_CONTAINER_FORCEINLINE void reserve(size_type new_cap)
+   inline void reserve(size_type new_cap)
    {
       if (this->capacity() < new_cap){
          this->priv_move_to_new_buffer(new_cap, alloc_version());
@@ -1641,7 +1641,7 @@ private:
    //! <b>Throws</b>: If memory allocation throws, or T's copy/move constructor throws.
    //!
    //! <b>Complexity</b>: Linear to size().
-   BOOST_CONTAINER_FORCEINLINE void shrink_to_fit()
+   inline void shrink_to_fit()
    {  this->priv_shrink_to_fit(alloc_version());   }
 
    //////////////////////////////////////////////
@@ -1658,7 +1658,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE reference front() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline reference front() BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
       return *this->m_holder.start();
@@ -1672,7 +1672,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_reference front() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_reference front() const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
       return *this->m_holder.start();
@@ -1686,7 +1686,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE reference back() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline reference back() BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
       return this->m_holder.start()[difference_type(this->m_holder.m_size - 1u)];
@@ -1700,7 +1700,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_reference back()  const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_reference back()  const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
       return this->m_holder.start()[this->m_holder.m_size - 1];
@@ -1714,7 +1714,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE reference operator[](size_type n) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline reference operator[](size_type n) BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->m_holder.m_size > n);
       return this->m_holder.start()[difference_type(n)];
@@ -1728,7 +1728,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_reference operator[](size_type n) const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->m_holder.m_size > n);
@@ -1746,7 +1746,7 @@ private:
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       iterator nth(size_type n) BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->m_holder.m_size >= n);
@@ -1764,7 +1764,7 @@ private:
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_iterator nth(size_type n) const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->m_holder.m_size >= n);
@@ -1781,7 +1781,7 @@ private:
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       size_type index_of(iterator p) BOOST_NOEXCEPT_OR_NOTHROW
    {
       //Range check assert done in priv_index_of
@@ -1798,7 +1798,7 @@ private:
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       size_type index_of(const_iterator p) const BOOST_NOEXCEPT_OR_NOTHROW
    {
       //Range check assert done in priv_index_of
@@ -1813,7 +1813,7 @@ private:
    //! <b>Throws</b>: range_error if n >= size()
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE reference at(size_type n)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline reference at(size_type n)
    {
       this->priv_throw_if_out_of_range(n);
       return this->m_holder.start()[difference_type(n)];
@@ -1827,7 +1827,7 @@ private:
    //! <b>Throws</b>: range_error if n >= size()
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const_reference at(size_type n) const
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const_reference at(size_type n) const
    {
       this->priv_throw_if_out_of_range(n);
       return this->m_holder.start()[n];
@@ -1845,7 +1845,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE T* data() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline T* data() BOOST_NOEXCEPT_OR_NOTHROW
    { return this->priv_raw_begin(); }
 
    //! <b>Returns</b>: A pointer such that [data(),data() + size()) is a valid range.
@@ -1854,7 +1854,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE const T * data()  const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline const T * data()  const BOOST_NOEXCEPT_OR_NOTHROW
    { return this->priv_raw_begin(); }
 
    //////////////////////////////////////////////
@@ -1874,7 +1874,7 @@ private:
    //!
    //! <b>Complexity</b>: Amortized constant time.
    template<class ...Args>
-   BOOST_CONTAINER_FORCEINLINE reference emplace_back(BOOST_FWD_REF(Args)...args)
+   inline reference emplace_back(BOOST_FWD_REF(Args)...args)
    {
       T* const p = this->priv_raw_end();
       if (BOOST_LIKELY(this->room_enough())){
@@ -1899,7 +1899,7 @@ private:
    //!
    //! <b>Note</b>: Non-standard extension.
    template<class ...Args>
-   BOOST_CONTAINER_FORCEINLINE bool stable_emplace_back(BOOST_FWD_REF(Args)...args)
+   inline bool stable_emplace_back(BOOST_FWD_REF(Args)...args)
    {
       const bool is_room_enough = this->room_enough() || (alloc_version::value == 2 && this->m_holder.try_expand_fwd(1u));
       if (BOOST_LIKELY(is_room_enough)){
@@ -1921,7 +1921,7 @@ private:
    //! <b>Complexity</b>: If position is end(), amortized constant time
    //!   Linear time otherwise.
    template<class ...Args>
-   BOOST_CONTAINER_FORCEINLINE iterator emplace(const_iterator position, BOOST_FWD_REF(Args) ...args)
+   inline iterator emplace(const_iterator position, BOOST_FWD_REF(Args) ...args)
    {
       BOOST_ASSERT(this->priv_in_range_or_end(position));
       //Just call more general insert(pos, size, value) and return iterator
@@ -1934,7 +1934,7 @@ private:
 
    #define BOOST_CONTAINER_VECTOR_EMPLACE_CODE(N) \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE reference emplace_back(BOOST_MOVE_UREF##N)\
+   inline reference emplace_back(BOOST_MOVE_UREF##N)\
    {\
       T* const p = this->priv_raw_end();\
       if (BOOST_LIKELY(this->room_enough())){\
@@ -1951,7 +1951,7 @@ private:
    }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE bool stable_emplace_back(BOOST_MOVE_UREF##N)\
+   inline bool stable_emplace_back(BOOST_MOVE_UREF##N)\
    {\
       const bool is_room_enough = this->room_enough() || (alloc_version::value == 2 && this->m_holder.try_expand_fwd(1u));\
       if (BOOST_LIKELY(is_room_enough)){\
@@ -1963,7 +1963,7 @@ private:
    }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE iterator emplace(const_iterator pos BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
+   inline iterator emplace(const_iterator pos BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
    {\
       BOOST_ASSERT(this->priv_in_range_or_end(pos));\
       typedef dtl::insert_emplace_proxy_arg##N<allocator_type BOOST_MOVE_I##N BOOST_MOVE_TARG##N> proxy_t;\
@@ -2029,7 +2029,7 @@ private:
    //! <b>Throws</b>: If memory allocation throws or T's copy/move constructor throws.
    //!
    //! <b>Complexity</b>: Linear to n.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, size_type n, const T& x)
+   inline iterator insert(const_iterator p, size_type n, const T& x)
    {
       BOOST_ASSERT(this->priv_in_range_or_end(p));
       dtl::insert_n_copies_proxy<allocator_type> proxy(x);
@@ -2069,7 +2069,7 @@ private:
 
    #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
    template <class FwdIt>
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator pos, FwdIt first, FwdIt last
+   inline iterator insert(const_iterator pos, FwdIt first, FwdIt last
       , typename dtl::disable_if_or
          < void
          , dtl::is_convertible<FwdIt, size_type>
@@ -2106,7 +2106,7 @@ private:
    //!   a non-standard extension.
    #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
    template <class InIt>
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator pos, size_type num, InIt first, InIt last)
+   inline iterator insert(const_iterator pos, size_type num, InIt first, InIt last)
    {
       BOOST_ASSERT(this->priv_in_range_or_end(pos));
       BOOST_ASSERT(dtl::is_input_iterator<InIt>::value ||
@@ -2125,7 +2125,7 @@ private:
    //! <b>Returns</b>: an iterator to the first inserted element or position if first == last.
    //!
    //! <b>Complexity</b>: Linear to the range [il.begin(), il.end()).
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator position, std::initializer_list<value_type> il)
+   inline iterator insert(const_iterator position, std::initializer_list<value_type> il)
    {
       //Assertion done in insert()
       return this->insert(position, il.begin(), il.end());
@@ -2137,7 +2137,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant time.
-   BOOST_CONTAINER_FORCEINLINE void pop_back() BOOST_NOEXCEPT_OR_NOTHROW
+   inline void pop_back() BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
       //Destroy last element
@@ -2199,7 +2199,7 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE void swap(vector& x)
+   inline void swap(vector& x)
       BOOST_NOEXCEPT_IF( ((allocator_traits_type::propagate_on_container_swap::value
                                     || allocator_traits_type::is_always_equal::value) &&
                                     !dtl::is_version<allocator_type, 0>::value))
@@ -2217,7 +2217,7 @@ private:
    //!
    //! <b>Note</b>: Non-standard extension to support static_vector
    template<class OtherA>
-   BOOST_CONTAINER_FORCEINLINE void swap(vector<T, OtherA, Options> & x
+   inline void swap(vector<T, OtherA, Options> & x
             , typename dtl::enable_if_and
                      < void
                      , dtl::is_version<typename real_allocator<T, OtherA>::type, 0>
@@ -2233,19 +2233,19 @@ private:
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_FORCEINLINE void clear() BOOST_NOEXCEPT_OR_NOTHROW
+   inline void clear() BOOST_NOEXCEPT_OR_NOTHROW
    {  this->priv_destroy_all();  }
 
    //! <b>Effects</b>: Returns true if x and y are equal
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE friend bool operator==(const vector& x, const vector& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline friend bool operator==(const vector& x, const vector& y)
    {  return x.size() == y.size() && ::boost::container::algo_equal(x.begin(), x.end(), y.begin());  }
 
    //! <b>Effects</b>: Returns true if x and y are unequal
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE friend bool operator!=(const vector& x, const vector& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline friend bool operator!=(const vector& x, const vector& y)
    {  return !(x == y); }
 
    //! <b>Effects</b>: Returns true if x is less than y
@@ -2257,25 +2257,25 @@ private:
    //! <b>Effects</b>: Returns true if x is greater than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE friend bool operator>(const vector& x, const vector& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline friend bool operator>(const vector& x, const vector& y)
    {  return y < x;  }
 
    //! <b>Effects</b>: Returns true if x is equal or less than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE friend bool operator<=(const vector& x, const vector& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline friend bool operator<=(const vector& x, const vector& y)
    {  return !(y < x);  }
 
    //! <b>Effects</b>: Returns true if x is equal or greater than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE friend bool operator>=(const vector& x, const vector& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline friend bool operator>=(const vector& x, const vector& y)
    {  return !(x < y);  }
 
    //! <b>Effects</b>: x.swap(y)
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE friend void swap(vector& x, vector& y)
+   inline friend void swap(vector& x, vector& y)
        BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT(x.swap(y)))
    {  x.swap(y);  }
 
@@ -2297,18 +2297,18 @@ private:
 
    //Absolutely experimental. This function might change, disappear or simply crash!
    template<class BiDirPosConstIt, class BiDirValueIt>
-   BOOST_CONTAINER_FORCEINLINE void insert_ordered_at(const size_type element_count, BiDirPosConstIt last_position_it, BiDirValueIt last_value_it)
+   inline void insert_ordered_at(const size_type element_count, BiDirPosConstIt last_position_it, BiDirValueIt last_value_it)
    {
       typedef vector_insert_ordered_cursor<BiDirPosConstIt, BiDirValueIt> inserter_t;
       return this->priv_insert_ordered_at(element_count, inserter_t(last_position_it, last_value_it));
    }
 
    template<class InputIt>
-   BOOST_CONTAINER_FORCEINLINE void merge(InputIt first, InputIt last)
+   inline void merge(InputIt first, InputIt last)
    {  this->merge(first, last, value_less_t());  }
 
    template<class InputIt, class Compare>
-   BOOST_CONTAINER_FORCEINLINE void merge(InputIt first, InputIt last, Compare comp)
+   inline void merge(InputIt first, InputIt last, Compare comp)
    {
       size_type const s = this->size();
       size_type const c = this->capacity();
@@ -2329,11 +2329,11 @@ private:
    }
 
    template<class InputIt>
-   BOOST_CONTAINER_FORCEINLINE void merge_unique(InputIt first, InputIt last)
+   inline void merge_unique(InputIt first, InputIt last)
    {  this->merge_unique(first, last, value_less_t());  }
 
    template<class InputIt, class Compare>
-   BOOST_CONTAINER_FORCEINLINE void merge_unique(InputIt first, InputIt last, Compare comp)
+   inline void merge_unique(InputIt first, InputIt last, Compare comp)
    {
       size_type const old_size = this->size();
       this->priv_set_difference_back(first, last, comp);
@@ -2436,7 +2436,7 @@ private:
    }
 
    template<class FwdIt, class Compare>
-   BOOST_CONTAINER_FORCEINLINE void priv_merge_in_new_buffer(FwdIt, size_type, Compare, version_0)
+   inline void priv_merge_in_new_buffer(FwdIt, size_type, Compare, version_0)
    {
       alloc_holder_t::on_capacity_overflow();
    }
@@ -2498,13 +2498,13 @@ private:
       new_values_destroyer.release();
    }
 
-   BOOST_CONTAINER_FORCEINLINE bool room_enough() const
+   inline bool room_enough() const
    {  return this->m_holder.m_size != this->m_holder.capacity();   }
 
-   BOOST_CONTAINER_FORCEINLINE pointer back_ptr() const
+   inline pointer back_ptr() const
    {  return this->m_holder.start() + difference_type(this->m_holder.m_size);  }
 
-   BOOST_CONTAINER_FORCEINLINE size_type priv_index_of(pointer p) const
+   inline size_type priv_index_of(pointer p) const
    {
       BOOST_ASSERT(this->m_holder.start() <= p);
       BOOST_ASSERT(p <= (this->m_holder.start()+difference_type(this->size())));
@@ -2607,7 +2607,7 @@ private:
    }
 
    template<class Vector>  //Template it to avoid it in explicit instantiations
-   BOOST_CONTAINER_FORCEINLINE void priv_swap(Vector &x, dtl::true_type)   //version_0
+   inline void priv_swap(Vector &x, dtl::true_type)   //version_0
    {  this->m_holder.deep_swap(x.m_holder);  }
 
    template<class Vector>  //Template it to avoid it in explicit instantiations
@@ -2653,16 +2653,16 @@ private:
       dtl::swap_alloc(this->m_holder.alloc(), x.m_holder.alloc(), dtl::bool_<propagate_alloc>());
    }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_move_to_new_buffer(size_type, version_0)
+   inline void priv_move_to_new_buffer(size_type, version_0)
    {  alloc_holder_t::on_capacity_overflow();  }
 
-   BOOST_CONTAINER_FORCEINLINE dtl::insert_range_proxy<allocator_type, boost::move_iterator<T*> > priv_dummy_empty_proxy()
+   inline dtl::insert_range_proxy<allocator_type, boost::move_iterator<T*> > priv_dummy_empty_proxy()
    {
       return dtl::insert_range_proxy<allocator_type, boost::move_iterator<T*> >
          (::boost::make_move_iterator((T *)0));
    }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_move_to_new_buffer(size_type new_cap, version_1)
+   inline void priv_move_to_new_buffer(size_type new_cap, version_1)
    {
       //There is not enough memory, allocate a new buffer
       //Pass the hint so that allocators can take advantage of this.
@@ -2735,34 +2735,34 @@ private:
    }
 
    template<class U>
-   BOOST_CONTAINER_FORCEINLINE iterator priv_insert(const const_iterator &p, BOOST_FWD_REF(U) u)
+   inline iterator priv_insert(const const_iterator &p, BOOST_FWD_REF(U) u)
    {
       return this->emplace(p, ::boost::forward<U>(u));
    }
 
    template <class U>
-   BOOST_CONTAINER_FORCEINLINE void priv_push_back(BOOST_FWD_REF(U) u)
+   inline void priv_push_back(BOOST_FWD_REF(U) u)
    {
       this->emplace_back(::boost::forward<U>(u));
    }
 
    //Overload to support compiler errors that instantiate too much
-   BOOST_CONTAINER_FORCEINLINE void priv_push_back(::boost::move_detail::nat)
+   inline void priv_push_back(::boost::move_detail::nat)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE iterator priv_insert(const_iterator, ::boost::move_detail::nat)
+   inline iterator priv_insert(const_iterator, ::boost::move_detail::nat)
    {  return iterator();  }
 
-   BOOST_CONTAINER_FORCEINLINE dtl::insert_n_copies_proxy<allocator_type> priv_resize_proxy(const T &x)
+   inline dtl::insert_n_copies_proxy<allocator_type> priv_resize_proxy(const T &x)
    {  return dtl::insert_n_copies_proxy<allocator_type>(x);   }
 
-   BOOST_CONTAINER_FORCEINLINE dtl::insert_default_initialized_n_proxy<allocator_type> priv_resize_proxy(default_init_t)
+   inline dtl::insert_default_initialized_n_proxy<allocator_type> priv_resize_proxy(default_init_t)
    {  return dtl::insert_default_initialized_n_proxy<allocator_type>();  }
 
-   BOOST_CONTAINER_FORCEINLINE dtl::insert_value_initialized_n_proxy<allocator_type> priv_resize_proxy(value_init_t)
+   inline dtl::insert_value_initialized_n_proxy<allocator_type> priv_resize_proxy(value_init_t)
    {  return dtl::insert_value_initialized_n_proxy<allocator_type>(); }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_shrink_to_fit(version_0) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void priv_shrink_to_fit(version_0) BOOST_NOEXCEPT_OR_NOTHROW
    {}
 
    void priv_shrink_to_fit(version_1)
@@ -2808,7 +2808,7 @@ private:
    }
 
    template <class InsertionProxy>
-   BOOST_CONTAINER_FORCEINLINE iterator priv_insert_forward_range_no_capacity
+   inline iterator priv_insert_forward_range_no_capacity
       (T * const, const size_type, const InsertionProxy , version_0)
    {
       return alloc_holder_t::on_capacity_overflow(), iterator();
@@ -2879,7 +2879,7 @@ private:
    }
 
    template <class InsertionProxy>
-   BOOST_CONTAINER_FORCEINLINE iterator priv_insert_forward_range
+   inline iterator priv_insert_forward_range
       (const pointer &pos, const size_type n, const InsertionProxy insert_range_proxy)
    {
       BOOST_ASSERT(this->m_holder.capacity() >= this->m_holder.m_size);
@@ -3017,14 +3017,14 @@ private:
    }
 
    private:
-   BOOST_CONTAINER_FORCEINLINE T *priv_raw_begin() const
+   inline T *priv_raw_begin() const
    {  return boost::movelib::to_raw_pointer(m_holder.start());  }
 
-   BOOST_CONTAINER_FORCEINLINE T* priv_raw_end() const
+   inline T* priv_raw_end() const
    {  return this->priv_raw_begin() + this->m_holder.m_size;  }
 
    template <class InsertionProxy>  //inline single-element version as it is significantly smaller
-   BOOST_CONTAINER_FORCEINLINE void priv_insert_forward_range_expand_forward
+   inline void priv_insert_forward_range_expand_forward
       (T* const raw_pos, const size_type, InsertionProxy insert_range_proxy, dtl::true_type)
    {
       BOOST_ASSERT(this->room_enough());
@@ -3051,7 +3051,7 @@ private:
    }
 
    template <class InsertionProxy>
-   BOOST_CONTAINER_FORCEINLINE void priv_insert_forward_range_expand_forward
+   inline void priv_insert_forward_range_expand_forward
       (T* const raw_pos, const size_type n, InsertionProxy insert_range_proxy, dtl::false_type)
    {
       //There is enough memory
@@ -3113,12 +3113,12 @@ private:
       }
    }
 
-   BOOST_CONTAINER_FORCEINLINE bool priv_in_range(const_iterator pos) const
+   inline bool priv_in_range(const_iterator pos) const
    {
       return (this->begin() <= pos) && (pos < this->end());
    }
 
-   BOOST_CONTAINER_FORCEINLINE bool priv_in_range_or_end(const_iterator pos) const
+   inline bool priv_in_range_or_end(const_iterator pos) const
    {
       return (this->begin() <= pos) && (pos <= this->end());
    }

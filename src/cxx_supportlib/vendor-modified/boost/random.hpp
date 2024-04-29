@@ -48,6 +48,7 @@
 #include <boost/random/subtract_with_carry.hpp>
 #include <boost/random/taus88.hpp>
 #include <boost/random/xor_combine.hpp>
+#include <boost/random/splitmix64.hpp>
 
 // misc
 #include <boost/random/generate_canonical.hpp>

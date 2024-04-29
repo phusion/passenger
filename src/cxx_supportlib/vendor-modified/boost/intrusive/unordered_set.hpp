@@ -17,7 +17,6 @@
 #include <boost/intrusive/intrusive_fwd.hpp>
 #include <boost/intrusive/hashtable.hpp>
 #include <boost/move/utility_core.hpp>
-#include <boost/static_assert.hpp>
 
 #if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
@@ -121,7 +120,7 @@ class unordered_set_impl
    public:
 
    //! @copydoc ::boost::intrusive::hashtable::hashtable(const bucket_traits &,const hasher &,const key_equal &,const value_traits &)
-   BOOST_INTRUSIVE_FORCEINLINE explicit unordered_set_impl( const bucket_traits &b_traits
+   inline explicit unordered_set_impl( const bucket_traits &b_traits
                               , const hasher & hash_func = hasher()
                               , const key_equal &equal_func = key_equal()
                               , const value_traits &v_traits = value_traits())
@@ -130,7 +129,7 @@ class unordered_set_impl
 
    //! @copydoc ::boost::intrusive::hashtable::hashtable(bool,Iterator,Iterator,const bucket_traits &,const hasher &,const key_equal &,const value_traits &)
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE unordered_set_impl( Iterator b
+   inline unordered_set_impl( Iterator b
                      , Iterator e
                      , const bucket_traits &b_traits
                      , const hasher & hash_func = hasher()
@@ -140,12 +139,12 @@ class unordered_set_impl
    {}
 
    //! @copydoc ::boost::intrusive::hashtable::hashtable(hashtable&&)
-   BOOST_INTRUSIVE_FORCEINLINE unordered_set_impl(BOOST_RV_REF(unordered_set_impl) x)
+   inline unordered_set_impl(BOOST_RV_REF(unordered_set_impl) x)
       :  table_type(BOOST_MOVE_BASE(table_type, x))
    {}
 
    //! @copydoc ::boost::intrusive::hashtable::operator=(hashtable&&)
-   BOOST_INTRUSIVE_FORCEINLINE unordered_set_impl& operator=(BOOST_RV_REF(unordered_set_impl) x)
+   inline unordered_set_impl& operator=(BOOST_RV_REF(unordered_set_impl) x)
    {  return static_cast<unordered_set_impl&>(table_type::operator=(BOOST_MOVE_BASE(table_type, x))); }
 
    #ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
@@ -197,31 +196,35 @@ class unordered_set_impl
 
    //! @copydoc ::boost::intrusive::hashtable::clone_from(hashtable&&,Cloner,Disposer)
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(unordered_set_impl) src, Cloner cloner, Disposer disposer)
+   inline void clone_from(BOOST_RV_REF(unordered_set_impl) src, Cloner cloner, Disposer disposer)
    {  table_type::clone_from(BOOST_MOVE_BASE(table_type, src), cloner, disposer);  }
 
    //! @copydoc ::boost::intrusive::hashtable::insert_unique(reference)
-   BOOST_INTRUSIVE_FORCEINLINE std::pair<iterator, bool> insert(reference value)
+   inline std::pair<iterator, bool> insert(reference value)
    {  return table_type::insert_unique(value);  }
 
    //! @copydoc ::boost::intrusive::hashtable::insert_unique(Iterator,Iterator)
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE void insert(Iterator b, Iterator e)
+   inline void insert(Iterator b, Iterator e)
    {  table_type::insert_unique(b, e);  }
 
    //! @copydoc ::boost::intrusive::hashtable::insert_unique_check(const key_type&,insert_commit_data&)
-   BOOST_INTRUSIVE_FORCEINLINE std::pair<iterator, bool> insert_check(const key_type &key, insert_commit_data &commit_data)
+   inline std::pair<iterator, bool> insert_check(const key_type &key, insert_commit_data &commit_data)
    {  return table_type::insert_unique_check(key, commit_data); }
 
    //! @copydoc ::boost::intrusive::hashtable::insert_unique_check(const KeyType&,KeyHasher,KeyEqual,insert_commit_data&)
    template<class KeyType, class KeyHasher, class KeyEqual>
-   BOOST_INTRUSIVE_FORCEINLINE std::pair<iterator, bool> insert_check
+   inline std::pair<iterator, bool> insert_check
       (const KeyType &key, KeyHasher hash_func, KeyEqual key_value_equal, insert_commit_data &commit_data)
    {  return table_type::insert_unique_check(key, hash_func, key_value_equal, commit_data); }
 
    //! @copydoc ::boost::intrusive::hashtable::insert_unique_commit
-   BOOST_INTRUSIVE_FORCEINLINE iterator insert_commit(reference value, const insert_commit_data &commit_data) BOOST_NOEXCEPT
+   inline iterator insert_commit(reference value, const insert_commit_data &commit_data) BOOST_NOEXCEPT
    {  return table_type::insert_unique_commit(value, commit_data); }
+
+   //! @copydoc ::boost::intrusive::hashtable::insert_unique_fast_commit
+   inline iterator insert_fast_commit(reference value, const insert_commit_data &commit_data) BOOST_NOEXCEPT
+   {  return table_type::insert_unique_fast_commit(value, commit_data); }
 
    #ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
 
@@ -277,7 +280,7 @@ class unordered_set_impl
    template<class KeyType, class KeyHasher, class KeyEqual>
    iterator find(const KeyType& key, KeyHasher hash_func, KeyEqual equal_func);
 
-   //! @copydoc ::boost::intrusive::hashtable::count(const key_type &)const
+   //! @copydoc ::boost::intrusive::hashtable::find(const key_type &)const
    const_iterator find(const key_type &key) const;
 
    //! @copydoc ::boost::intrusive::hashtable::find(const KeyType &,KeyHasher,KeyEqual)const
@@ -488,7 +491,7 @@ class unordered_set
       >::type Base;
 
    //Assert if passed value traits are compatible with the type
-   BOOST_STATIC_ASSERT((detail::is_same<typename Base::value_traits::value_type, T>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<typename Base::value_traits::value_type, T>::value));
    BOOST_MOVABLE_BUT_NOT_COPYABLE(unordered_set)
 
    public:
@@ -501,7 +504,7 @@ class unordered_set
    typedef typename Base::hasher             hasher;
    typedef typename Base::key_equal          key_equal;
 
-   BOOST_INTRUSIVE_FORCEINLINE
+   inline
    explicit unordered_set  ( const bucket_traits &b_traits
                            , const hasher & hash_func = hasher()
                            , const key_equal &equal_func = key_equal()
@@ -510,7 +513,7 @@ class unordered_set
    {}
 
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE
+   inline
    unordered_set
                   ( Iterator b, Iterator e
                   , const bucket_traits &b_traits
@@ -520,19 +523,19 @@ class unordered_set
       :  Base(b, e, b_traits, hash_func, equal_func, v_traits)
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE unordered_set(BOOST_RV_REF(unordered_set) x)
+   inline unordered_set(BOOST_RV_REF(unordered_set) x)
       :  Base(BOOST_MOVE_BASE(Base, x))
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE unordered_set& operator=(BOOST_RV_REF(unordered_set) x)
+   inline unordered_set& operator=(BOOST_RV_REF(unordered_set) x)
    {  return static_cast<unordered_set&>(this->Base::operator=(BOOST_MOVE_BASE(Base, x)));  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(const unordered_set &src, Cloner cloner, Disposer disposer)
+   inline void clone_from(const unordered_set &src, Cloner cloner, Disposer disposer)
    {  this->Base::clone_from(src, cloner, disposer);  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(unordered_set) src, Cloner cloner, Disposer disposer)
+   inline void clone_from(BOOST_RV_REF(unordered_set) src, Cloner cloner, Disposer disposer)
    {  this->Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 };
 
@@ -622,7 +625,7 @@ class unordered_multiset_impl
    public:
 
    //! @copydoc ::boost::intrusive::hashtable::hashtable(const bucket_traits &,const hasher &,const key_equal &,const value_traits &)
-   BOOST_INTRUSIVE_FORCEINLINE explicit unordered_multiset_impl ( const bucket_traits &b_traits
+   inline explicit unordered_multiset_impl ( const bucket_traits &b_traits
                                     , const hasher & hash_func = hasher()
                                     , const key_equal &equal_func = key_equal()
                                     , const value_traits &v_traits = value_traits())
@@ -631,7 +634,7 @@ class unordered_multiset_impl
 
    //! @copydoc ::boost::intrusive::hashtable::hashtable(bool,Iterator,Iterator,const bucket_traits &,const hasher &,const key_equal &,const value_traits &)
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE unordered_multiset_impl ( Iterator b
+   inline unordered_multiset_impl ( Iterator b
                            , Iterator e
                            , const bucket_traits &b_traits
                            , const hasher & hash_func = hasher()
@@ -642,13 +645,13 @@ class unordered_multiset_impl
 
    //! <b>Effects</b>: to-do
    //!
-   BOOST_INTRUSIVE_FORCEINLINE unordered_multiset_impl(BOOST_RV_REF(unordered_multiset_impl) x)
+   inline unordered_multiset_impl(BOOST_RV_REF(unordered_multiset_impl) x)
       :  table_type(BOOST_MOVE_BASE(table_type, x))
    {}
 
    //! <b>Effects</b>: to-do
    //!
-   BOOST_INTRUSIVE_FORCEINLINE unordered_multiset_impl& operator=(BOOST_RV_REF(unordered_multiset_impl) x)
+   inline unordered_multiset_impl& operator=(BOOST_RV_REF(unordered_multiset_impl) x)
    {  return static_cast<unordered_multiset_impl&>(table_type::operator=(BOOST_MOVE_BASE(table_type, x)));  }
 
    #ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
@@ -701,16 +704,16 @@ class unordered_multiset_impl
 
    //! @copydoc ::boost::intrusive::hashtable::clone_from(hashtable&&,Cloner,Disposer)
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(unordered_multiset_impl) src, Cloner cloner, Disposer disposer)
+   inline void clone_from(BOOST_RV_REF(unordered_multiset_impl) src, Cloner cloner, Disposer disposer)
    {  table_type::clone_from(BOOST_MOVE_BASE(table_type, src), cloner, disposer);  }
 
    //! @copydoc ::boost::intrusive::hashtable::insert_equal(reference)
-   BOOST_INTRUSIVE_FORCEINLINE iterator insert(reference value)
+   inline iterator insert(reference value)
    {  return table_type::insert_equal(value);  }
 
    //! @copydoc ::boost::intrusive::hashtable::insert_equal(Iterator,Iterator)
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE void insert(Iterator b, Iterator e)
+   inline void insert(Iterator b, Iterator e)
    {  table_type::insert_equal(b, e);  }
 
    #ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
@@ -767,7 +770,7 @@ class unordered_multiset_impl
    template<class KeyType, class KeyHasher, class KeyEqual>
    iterator find(const KeyType& key, KeyHasher hash_func, KeyEqual equal_func);
 
-   //! @copydoc ::boost::intrusive::hashtable::count(const key_type &)const
+   //! @copydoc ::boost::intrusive::hashtable::find(const key_type &)const
    const_iterator find(const key_type &key) const;
 
    //! @copydoc ::boost::intrusive::hashtable::find(const KeyType &,KeyHasher,KeyEqual)const
@@ -943,7 +946,7 @@ class unordered_multiset
          #endif
       >::type   Base;
    //Assert if passed value traits are compatible with the type
-   BOOST_STATIC_ASSERT((detail::is_same<typename Base::value_traits::value_type, T>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<typename Base::value_traits::value_type, T>::value));
    BOOST_MOVABLE_BUT_NOT_COPYABLE(unordered_multiset)
 
    public:
@@ -956,7 +959,7 @@ class unordered_multiset
    typedef typename Base::hasher             hasher;
    typedef typename Base::key_equal          key_equal;
 
-   BOOST_INTRUSIVE_FORCEINLINE
+   inline
    explicit unordered_multiset( const bucket_traits &b_traits
                               , const hasher & hash_func = hasher()
                               , const key_equal &equal_func = key_equal()
@@ -965,7 +968,7 @@ class unordered_multiset
    {}
 
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE
+   inline
    unordered_multiset( Iterator b
                      , Iterator e
                      , const bucket_traits &b_traits
@@ -975,19 +978,19 @@ class unordered_multiset
       :  Base(b, e, b_traits, hash_func, equal_func, v_traits)
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE unordered_multiset(BOOST_RV_REF(unordered_multiset) x)
+   inline unordered_multiset(BOOST_RV_REF(unordered_multiset) x)
       :  Base(BOOST_MOVE_BASE(Base, x))
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE unordered_multiset& operator=(BOOST_RV_REF(unordered_multiset) x)
+   inline unordered_multiset& operator=(BOOST_RV_REF(unordered_multiset) x)
    {  return static_cast<unordered_multiset&>(this->Base::operator=(BOOST_MOVE_BASE(Base, x)));  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(const unordered_multiset &src, Cloner cloner, Disposer disposer)
+   inline void clone_from(const unordered_multiset &src, Cloner cloner, Disposer disposer)
    {  this->Base::clone_from(src, cloner, disposer);  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(unordered_multiset) src, Cloner cloner, Disposer disposer)
+   inline void clone_from(BOOST_RV_REF(unordered_multiset) src, Cloner cloner, Disposer disposer)
    {  this->Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 };
 

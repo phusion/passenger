@@ -1,4 +1,5 @@
 // Copyright (C) 2022-2023 Christian Mazakas
+// Copyright (C) 2024 Braden Ganetsky
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -47,6 +48,20 @@ namespace boost {
       };
 
       template <typename... Ts> using void_t = typename make_void<Ts...>::type;
+
+      template <class T, class = void> struct is_complete : std::false_type
+      {
+      };
+
+      template <class T>
+      struct is_complete<T, void_t<int[sizeof(T)]> > : std::true_type
+      {
+      };
+
+      template <class T>
+      using is_complete_and_move_constructible =
+        typename std::conditional<is_complete<T>::value,
+          std::is_move_constructible<T>, std::false_type>::type;
 
 #if BOOST_WORKAROUND(BOOST_LIBSTDCXX_VERSION, < 50000)
       /* std::is_trivially_default_constructible not provided */
@@ -145,6 +160,23 @@ namespace boost {
           are_transparent<Key, hash, key_equal>::value &&
           !std::is_convertible<Key, iterator>::value &&
           !std::is_convertible<Key, const_iterator>::value;
+      };
+
+      template <class T>
+      using remove_cvref_t =
+        typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+
+      template <class T, class U>
+      using is_similar = std::is_same<remove_cvref_t<T>, remove_cvref_t<U> >;
+
+      template <class, class...> struct is_similar_to_any : std::false_type
+      {
+      };
+      template <class T, class U, class... Us>
+      struct is_similar_to_any<T, U, Us...>
+          : std::conditional<is_similar<T, U>::value, is_similar<T, U>,
+              is_similar_to_any<T, Us...> >::type
+      {
       };
 
 #if BOOST_UNORDERED_TEMPLATE_DEDUCTION_GUIDES

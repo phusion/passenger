@@ -12,6 +12,9 @@
 #include <boost/config.hpp>
 #include <boost/config/assert_cxx14.hpp>
 
+#ifdef BOOST_NO_CXX17_AUTO_NONTYPE_TEMPLATE_PARAMS
+#  error "Your compiler appears not to be fully C++17 compliant.  Detected via defect macro BOOST_NO_CXX17_AUTO_NONTYPE_TEMPLATE_PARAMS."
+#endif
 #ifdef BOOST_NO_CXX17_DEDUCTION_GUIDES
 #  error "Your compiler appears not to be fully C++17 compliant.  Detected via defect macro BOOST_NO_CXX17_DEDUCTION_GUIDES."
 #endif

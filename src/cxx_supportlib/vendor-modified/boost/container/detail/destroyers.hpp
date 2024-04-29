@@ -180,23 +180,23 @@ struct scoped_destructor_n
    typedef Ptr    pointer;
    typedef typename AllocTraits::value_type value_type;
 
-   BOOST_CONTAINER_FORCEINLINE scoped_destructor_n(Ptr p, Allocator& a, std::size_t n)
+   inline scoped_destructor_n(Ptr p, Allocator& a, std::size_t n)
       : m_p(p), m_n(n), m_a(a)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void release()
+   inline void release()
    {  m_p = Ptr(); m_n = 0; }
 
-   BOOST_CONTAINER_FORCEINLINE void increment_size(std::size_t inc)
+   inline void increment_size(std::size_t inc)
    {  m_n += inc;   }
 
-   BOOST_CONTAINER_FORCEINLINE void increment_size_backwards(std::size_t inc)
+   inline void increment_size_backwards(std::size_t inc)
    {  m_n += inc;   m_p -= std::ptrdiff_t(inc);  }
 
-   BOOST_CONTAINER_FORCEINLINE void shrink_forward(std::size_t inc)
+   inline void shrink_forward(std::size_t inc)
    {  m_n -= inc;   m_p += std::ptrdiff_t(inc);  }
 
-   BOOST_CONTAINER_FORCEINLINE void set_size(std::size_t sz)
+   inline void set_size(std::size_t sz)
    {  m_n = sz;   }
 
    ~scoped_destructor_n()
@@ -225,22 +225,22 @@ struct null_scoped_destructor_n
    typedef boost::container::allocator_traits<Allocator> AllocTraits;
    typedef Ptr pointer;
 
-   BOOST_CONTAINER_FORCEINLINE null_scoped_destructor_n(Ptr, Allocator&, std::size_t)
+   inline null_scoped_destructor_n(Ptr, Allocator&, std::size_t)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void increment_size(std::size_t)
+   inline void increment_size(std::size_t)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void increment_size_backwards(std::size_t)
+   inline void increment_size_backwards(std::size_t)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void set_size(std::size_t )
+   inline void set_size(std::size_t )
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void shrink_forward(std::size_t)
+   inline void shrink_forward(std::size_t)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void release()
+   inline void release()
    {}
 };
 
@@ -254,20 +254,20 @@ struct scoped_destructor_range
    typedef typename AllocTraits::pointer    pointer;
    typedef typename AllocTraits::value_type value_type;
    
-   BOOST_CONTAINER_FORCEINLINE scoped_destructor_range(pointer p, pointer e, Allocator& a)
+   inline scoped_destructor_range(pointer p, pointer e, Allocator& a)
       : m_p(p), m_e(e), m_a(a)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void release()
+   inline void release()
    {  m_p = pointer(); m_e = pointer(); }
 
-   BOOST_CONTAINER_FORCEINLINE void set_end(pointer e)
+   inline void set_end(pointer e)
    {  m_e = e;   }
 
-   BOOST_CONTAINER_FORCEINLINE void set_begin(pointer b)
+   inline void set_begin(pointer b)
    {  m_p = b;  }
 
-   BOOST_CONTAINER_FORCEINLINE void set_range(pointer b, pointer e)
+   inline void set_range(pointer b, pointer e)
    {  m_p = b; m_e = e;   }
 
    ~scoped_destructor_range()
@@ -293,19 +293,19 @@ struct null_scoped_destructor_range
    typedef boost::container::allocator_traits<Allocator> AllocTraits;
    typedef typename AllocTraits::pointer pointer;
 
-   BOOST_CONTAINER_FORCEINLINE null_scoped_destructor_range(pointer, pointer, Allocator&)
+   inline null_scoped_destructor_range(pointer, pointer, Allocator&)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void release()
+   inline void release()
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void set_end(pointer)
+   inline void set_end(pointer)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void set_begin(pointer)
+   inline void set_begin(pointer)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void set_range(pointer, pointer)
+   inline void set_range(pointer, pointer)
    {}
 };
 
@@ -316,24 +316,24 @@ class scoped_destructor
    typedef boost::container::allocator_traits<Allocator> AllocTraits;
    public:
    typedef typename Allocator::value_type value_type;
-   BOOST_CONTAINER_FORCEINLINE scoped_destructor(Allocator &a, value_type *pv)
+   inline scoped_destructor(Allocator &a, value_type *pv)
       : pv_(pv), a_(a)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE ~scoped_destructor()
+   inline ~scoped_destructor()
    {
       if(pv_){
          AllocTraits::destroy(a_, pv_);
       }
    }
 
-   BOOST_CONTAINER_FORCEINLINE void release()
+   inline void release()
    {  pv_ = 0; }
 
 
-   BOOST_CONTAINER_FORCEINLINE void set(value_type *ptr) { pv_ = ptr; }
+   inline void set(value_type *ptr) { pv_ = ptr; }
 
-   BOOST_CONTAINER_FORCEINLINE value_type *get() const { return pv_; }
+   inline value_type *get() const { return pv_; }
 
    private:
    value_type *pv_;
@@ -346,18 +346,18 @@ class null_scoped_destructor
    typedef boost::container::allocator_traits<Allocator> AllocTraits;
    public:
    typedef typename Allocator::value_type value_type;
-   BOOST_CONTAINER_FORCEINLINE null_scoped_destructor(Allocator &, value_type *)
+   inline null_scoped_destructor(Allocator &, value_type *)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE ~null_scoped_destructor()
+   inline ~null_scoped_destructor()
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void release()
+   inline void release()
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void set(value_type *) { }
+   inline void set(value_type *) { }
 
-   BOOST_CONTAINER_FORCEINLINE value_type *get() const { return 0; }
+   inline value_type *get() const { return 0; }
 };
 
 
@@ -368,11 +368,11 @@ class value_destructor
    typedef boost::container::allocator_traits<Allocator> AllocTraits;
    public:
    typedef Value value_type;
-   BOOST_CONTAINER_FORCEINLINE value_destructor(Allocator &a, value_type &rv)
+   inline value_destructor(Allocator &a, value_type &rv)
       : rv_(rv), a_(a)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE ~value_destructor()
+   inline ~value_destructor()
    {
       AllocTraits::destroy(a_, &rv_);
    }
@@ -396,18 +396,18 @@ class allocator_node_destroyer
    Allocator & a_;
 
    private:
-   BOOST_CONTAINER_FORCEINLINE void priv_deallocate(const pointer &p, version_1)
+   inline void priv_deallocate(const pointer &p, version_1)
    {  AllocTraits::deallocate(a_,p, 1); }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_deallocate(const pointer &p, version_2)
+   inline void priv_deallocate(const pointer &p, version_2)
    {  a_.deallocate_one(p); }
 
    public:
-   BOOST_CONTAINER_FORCEINLINE explicit allocator_node_destroyer(Allocator &a)
+   inline explicit allocator_node_destroyer(Allocator &a)
       : a_(a)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void operator()(const pointer &p)
+   inline void operator()(const pointer &p)
    {
       boost::movelib::to_raw_pointer(p)->destructor(a_);
       this->priv_deallocate(p, alloc_version());
@@ -420,24 +420,24 @@ class scoped_node_destructor
    typedef boost::container::allocator_traits<Allocator> AllocTraits;
    public:
    typedef typename Allocator::value_type value_type;
-   BOOST_CONTAINER_FORCEINLINE scoped_node_destructor(Allocator &a, value_type *pv)
+   inline scoped_node_destructor(Allocator &a, value_type *pv)
       : pv_(pv), a_(a)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE ~scoped_node_destructor()
+   inline ~scoped_node_destructor()
    {
       if(pv_){
          pv_->destructor(a_);
       }
    }
 
-   BOOST_CONTAINER_FORCEINLINE void release()
+   inline void release()
    {  pv_ = 0; }
 
 
-   BOOST_CONTAINER_FORCEINLINE void set(value_type *ptr) { pv_ = ptr; }
+   inline void set(value_type *ptr) { pv_ = ptr; }
 
-   BOOST_CONTAINER_FORCEINLINE value_type *get() const { return pv_; }
+   inline value_type *get() const { return pv_; }
 
    private:
    value_type *pv_;
@@ -457,11 +457,11 @@ class allocator_node_destroyer_and_chain_builder
    multiallocation_chain &c_;
 
    public:
-   BOOST_CONTAINER_FORCEINLINE allocator_node_destroyer_and_chain_builder(Allocator &a, multiallocation_chain &c)
+   inline allocator_node_destroyer_and_chain_builder(Allocator &a, multiallocation_chain &c)
       :  a_(a), c_(c)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE void operator()(const typename Allocator::pointer &p)
+   inline void operator()(const typename Allocator::pointer &p)
    {
       boost::movelib::to_raw_pointer(p)->destructor(a_);
       c_.push_back(p);
@@ -480,14 +480,14 @@ class allocator_multialloc_chain_node_deallocator
    multiallocation_chain c_;
 
    public:
-   BOOST_CONTAINER_FORCEINLINE allocator_multialloc_chain_node_deallocator(Allocator &a)
+   inline allocator_multialloc_chain_node_deallocator(Allocator &a)
       :  a_(a), c_()
    {}
 
-   BOOST_CONTAINER_FORCEINLINE chain_builder get_chain_builder()
+   inline chain_builder get_chain_builder()
    {  return chain_builder(a_, c_);  }
 
-   BOOST_CONTAINER_FORCEINLINE ~allocator_multialloc_chain_node_deallocator()
+   inline ~allocator_multialloc_chain_node_deallocator()
    {
       a_.deallocate_individual(c_);
    }

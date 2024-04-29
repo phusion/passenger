@@ -2,7 +2,7 @@
 // bind_cancellation_slot.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2023 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -260,7 +260,10 @@ public:
    */
   template <typename U, typename OtherCancellationSlot>
   cancellation_slot_binder(
-      const cancellation_slot_binder<U, OtherCancellationSlot>& other)
+      const cancellation_slot_binder<U, OtherCancellationSlot>& other,
+      constraint_t<is_constructible<CancellationSlot,
+        OtherCancellationSlot>::value> = 0,
+      constraint_t<is_constructible<T, U>::value> = 0)
     : slot_(other.get_cancellation_slot()),
       target_(other.get())
   {
@@ -274,7 +277,8 @@ public:
    */
   template <typename U, typename OtherCancellationSlot>
   cancellation_slot_binder(const cancellation_slot_type& s,
-      const cancellation_slot_binder<U, OtherCancellationSlot>& other)
+      const cancellation_slot_binder<U, OtherCancellationSlot>& other,
+      constraint_t<is_constructible<T, U>::value> = 0)
     : slot_(s),
       target_(other.get())
   {
@@ -300,7 +304,10 @@ public:
   /// Move construct from a different cancellation slot wrapper type.
   template <typename U, typename OtherCancellationSlot>
   cancellation_slot_binder(
-      cancellation_slot_binder<U, OtherCancellationSlot>&& other)
+      cancellation_slot_binder<U, OtherCancellationSlot>&& other,
+      constraint_t<is_constructible<CancellationSlot,
+        OtherCancellationSlot>::value> = 0,
+      constraint_t<is_constructible<T, U>::value> = 0)
     : slot_(static_cast<OtherCancellationSlot&&>(
           other.get_cancellation_slot())),
       target_(static_cast<U&&>(other.get()))
@@ -311,7 +318,8 @@ public:
   /// specify a different cancellation slot.
   template <typename U, typename OtherCancellationSlot>
   cancellation_slot_binder(const cancellation_slot_type& s,
-      cancellation_slot_binder<U, OtherCancellationSlot>&& other)
+      cancellation_slot_binder<U, OtherCancellationSlot>&& other,
+      constraint_t<is_constructible<T, U>::value> = 0)
     : slot_(s),
       target_(static_cast<U&&>(other.get()))
   {
@@ -390,6 +398,9 @@ class cancellation_slot_binder_completion_handler_async_result<
     TargetAsyncResult, CancellationSlot,
     void_t<typename TargetAsyncResult::completion_handler_type>>
 {
+private:
+  TargetAsyncResult target_;
+
 public:
   typedef cancellation_slot_binder<
     typename TargetAsyncResult::completion_handler_type, CancellationSlot>
@@ -401,13 +412,10 @@ public:
   {
   }
 
-  typename TargetAsyncResult::return_type get()
+  auto get() -> decltype(target_.get())
   {
     return target_.get();
   }
-
-private:
-  TargetAsyncResult target_;
 };
 
 template <typename TargetAsyncResult, typename = void>

@@ -18,7 +18,6 @@
 #include <boost/intrusive/detail/minimal_less_equal_header.hpp>
 #include <boost/intrusive/detail/minimal_pair_header.hpp>   //std::pair
 
-#include <boost/static_assert.hpp>
 #include <boost/intrusive/bstree.hpp>
 #include <boost/intrusive/detail/tree_node.hpp>
 #include <boost/intrusive/detail/mpl.hpp>
@@ -611,48 +610,48 @@ class splaytree
    typedef typename Base::const_reverse_iterator     const_reverse_iterator;
 
    //Assert if passed value traits are compatible with the type
-   BOOST_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
 
-   BOOST_INTRUSIVE_FORCEINLINE splaytree()
+   inline splaytree()
       :  Base()
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE explicit splaytree( const key_compare &cmp, const value_traits &v_traits = value_traits())
+   inline explicit splaytree( const key_compare &cmp, const value_traits &v_traits = value_traits())
       :  Base(cmp, v_traits)
    {}
 
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE splaytree( bool unique, Iterator b, Iterator e
+   inline splaytree( bool unique, Iterator b, Iterator e
          , const key_compare &cmp = key_compare()
          , const value_traits &v_traits = value_traits())
       :  Base(unique, b, e, cmp, v_traits)
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE splaytree(BOOST_RV_REF(splaytree) x)
+   inline splaytree(BOOST_RV_REF(splaytree) x)
       :  Base(BOOST_MOVE_BASE(Base, x))
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE splaytree& operator=(BOOST_RV_REF(splaytree) x)
+   inline splaytree& operator=(BOOST_RV_REF(splaytree) x)
    {  return static_cast<splaytree &>(this->Base::operator=(BOOST_MOVE_BASE(Base, x)));  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(const splaytree &src, Cloner cloner, Disposer disposer)
+   inline void clone_from(const splaytree &src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(src, cloner, disposer);  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(splaytree) src, Cloner cloner, Disposer disposer)
+   inline void clone_from(BOOST_RV_REF(splaytree) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
-   BOOST_INTRUSIVE_FORCEINLINE static splaytree &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
+   inline static splaytree &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<splaytree &>(Base::container_from_end_iterator(end_iterator));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static const splaytree &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
+   inline static const splaytree &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const splaytree &>(Base::container_from_end_iterator(end_iterator));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static splaytree &container_from_iterator(iterator it) BOOST_NOEXCEPT
+   inline static splaytree &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<splaytree &>(Base::container_from_iterator(it));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static const splaytree &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
+   inline static const splaytree &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const splaytree &>(Base::container_from_iterator(it));   }
 };
 

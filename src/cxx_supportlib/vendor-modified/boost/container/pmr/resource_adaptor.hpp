@@ -87,7 +87,7 @@ class resource_adaptor_imp
    void static_assert_if_not_char_allocator() const
    {
       //This class can only be used with allocators type char
-      BOOST_STATIC_ASSERT((boost::container::dtl::is_same<typename Allocator::value_type, char>::value));
+      BOOST_CONTAINER_STATIC_ASSERT((boost::container::dtl::is_same<typename Allocator::value_type, char>::value));
    }
    #endif
 

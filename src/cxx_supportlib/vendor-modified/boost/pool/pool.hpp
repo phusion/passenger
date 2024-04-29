@@ -360,7 +360,7 @@ class pool: protected simple_segregated_storage < typename UserAllocator::size_t
     size_type max_chunks() const
     { //! Calculated maximum number of memory chunks that can be allocated in a single call by this Pool.
       size_type POD_size = integer::static_lcm<sizeof(size_type), sizeof(void *)>::value + sizeof(size_type);
-      return (std::numeric_limits<size_type>::max() - POD_size) / alloc_size();
+      return ((std::numeric_limits<size_type>::max)() - POD_size) / alloc_size();
     }
 
     static void * & nextof(void * const ptr)

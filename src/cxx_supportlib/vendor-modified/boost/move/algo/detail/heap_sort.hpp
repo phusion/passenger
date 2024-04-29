@@ -106,7 +106,7 @@ class heap_sort_helper
 };
 
 template <class RandomAccessIterator, class Compare>
-BOOST_MOVE_FORCEINLINE void heap_sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+inline void heap_sort(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
 {
    heap_sort_helper<RandomAccessIterator, Compare>::sort(first, last, comp);
 }

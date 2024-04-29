@@ -172,6 +172,10 @@ class treap_algorithms
       /// @endcond
    {
       /// @cond
+      inline insert_commit_data()
+         : bstree_algo::insert_commit_data(), rotations()
+      {}
+
       std::size_t rotations;
       /// @endcond
    };

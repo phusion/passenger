@@ -1,4 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
+// Copyright (C) 2024 Braden Ganetsky
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -56,12 +57,23 @@ namespace boost {
             boost::allocator_construct(al, p, std::forward<Args>(args)...);
           }
 
+          template <class A, class... Args>
+          static void construct(A& al, key_type* p, Args&&... args)
+          {
+            boost::allocator_construct(al, p, std::forward<Args>(args)...);
+          }
+
           template <class A> static void destroy(A& al, init_type* p) noexcept
           {
             boost::allocator_destroy(al, p);
           }
 
           template <class A> static void destroy(A& al, value_type* p) noexcept
+          {
+            boost::allocator_destroy(al, p);
+          }
+
+          template <class A> static void destroy(A& al, key_type* p) noexcept
           {
             boost::allocator_destroy(al, p);
           }

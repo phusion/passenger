@@ -47,10 +47,17 @@
 # if __has_builtin(__builtin_bit_cast)
 #  define BOOST_CORE_HAS_BUILTIN_BIT_CAST
 # endif
+# if __has_builtin(__builtin_bswap16)
+#  define BOOST_CORE_HAS_BUILTIN_BSWAP16
+# endif
 #endif
 
-#if defined(BOOST_MSVC) && BOOST_MSVC >= 1926
+#if !defined(BOOST_CORE_HAS_BUILTIN_BIT_CAST) && (defined(BOOST_MSVC) && BOOST_MSVC >= 1926)
 #  define BOOST_CORE_HAS_BUILTIN_BIT_CAST
+#endif
+
+#if !defined(BOOST_CORE_HAS_BUILTIN_BSWAP16) && (defined(BOOST_GCC) && BOOST_GCC >= 40800)
+#  define BOOST_CORE_HAS_BUILTIN_BSWAP16
 #endif
 
 namespace boost
@@ -825,10 +832,21 @@ BOOST_CONSTEXPR inline boost::uint8_t byteswap_impl( boost::uint8_t x ) BOOST_NO
     return x;
 }
 
+#if defined(BOOST_CORE_HAS_BUILTIN_BSWAP16)
+
+BOOST_CONSTEXPR inline boost::uint16_t byteswap_impl( boost::uint16_t x ) BOOST_NOEXCEPT
+{
+    return __builtin_bswap16( x );
+}
+
+#else
+
 BOOST_CONSTEXPR inline boost::uint16_t byteswap_impl( boost::uint16_t x ) BOOST_NOEXCEPT
 {
     return static_cast<boost::uint16_t>( x << 8 | x >> 8 );
 }
+
+#endif
 
 #if defined(__GNUC__) || defined(__clang__)
 

@@ -15,12 +15,12 @@
 #include <boost/unordered/detail/foa/node_map_types.hpp>
 #include <boost/unordered/detail/foa/table.hpp>
 #include <boost/unordered/detail/serialize_container.hpp>
+#include <boost/unordered/detail/throw_exception.hpp>
 #include <boost/unordered/detail/type_traits.hpp>
 #include <boost/unordered/unordered_node_map_fwd.hpp>
 
 #include <boost/core/allocator_access.hpp>
 #include <boost/container_hash/hash.hpp>
-#include <boost/throw_exception.hpp>
 
 #include <initializer_list>
 #include <iterator>
@@ -554,8 +554,8 @@ namespace boost {
         // TODO: someday refactor this to conditionally serialize the key and
         // include it in the error message
         //
-        boost::throw_exception(
-          std::out_of_range("key was not found in unordered_node_map"));
+        boost::unordered::detail::throw_out_of_range(
+          "key was not found in unordered_node_map");
       }
 
       mapped_type const& at(key_type const& key) const
@@ -564,8 +564,8 @@ namespace boost {
         if (pos != table_.end()) {
           return pos->second;
         }
-        boost::throw_exception(
-          std::out_of_range("key was not found in unordered_node_map"));
+        boost::unordered::detail::throw_out_of_range(
+          "key was not found in unordered_node_map");
       }
 
       template <class K>
@@ -578,8 +578,8 @@ namespace boost {
         if (pos != table_.end()) {
           return pos->second;
         }
-        boost::throw_exception(
-          std::out_of_range("key was not found in unordered_node_map"));
+        boost::unordered::detail::throw_out_of_range(
+          "key was not found in unordered_node_map");
       }
 
       template <class K>
@@ -592,8 +592,8 @@ namespace boost {
         if (pos != table_.end()) {
           return pos->second;
         }
-        boost::throw_exception(
-          std::out_of_range("key was not found in unordered_node_map"));
+        boost::unordered::detail::throw_out_of_range(
+          "key was not found in unordered_node_map");
       }
 
       BOOST_FORCEINLINE mapped_type& operator[](key_type const& key)

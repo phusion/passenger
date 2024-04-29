@@ -60,6 +60,7 @@
 #if defined(BOOST_CLANG) || (defined(BOOST_GCC) && (BOOST_GCC >= 40600))
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
 #endif
 
 #ifndef BOOST_MOVE_ADAPTIVE_SORT_STATS_LEVEL
@@ -93,26 +94,12 @@
    #define BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(L)
 #endif
 
+#if defined(BOOST_MOVE_ADAPTIVE_SORT_INVARIANTS)
+#include <boost/move/algo/detail/is_sorted.hpp>
+#endif
+
 namespace boost {
 namespace movelib {
-
-#if defined(BOOST_MOVE_ADAPTIVE_SORT_INVARIANTS)
-
-bool is_sorted(::order_perf_type *first, ::order_perf_type *last, ::order_type_less)
-{
-   if (first != last) {
-      const order_perf_type *next = first, *cur(first);
-      while (++next != last) {
-         if (!(cur->key < next->key || (cur->key == next->key && cur->val < next->val)))
-            return false;
-         cur = next;
-      }
-   }
-   return true;
-}
-
-#endif   //BOOST_MOVE_ADAPTIVE_SORT_INVARIANTS
-
 namespace detail_adaptive {
 
 static const std::size_t AdaptiveSortInsertionSortThreshold = 16;
@@ -1320,7 +1307,6 @@ void op_merge_blocks_with_buf
          //swap_and_update_key(key_next, key_range2, key_mid, first2, last2, first_min);
          buffer_end = buffer_and_update_key(key_next, key_range2, key_mid, first2, last2, first_min, buffer = buf_first, op);
          BOOST_MOVE_ADAPTIVE_SORT_PRINT_L2("   merge_blocks_w_swp: ", len);
-         BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(boost::movelib::is_sorted(first2, last2, comp));
          BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(boost::movelib::is_sorted(first_min, last_min, comp));
          first1 = first2;
          BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(boost::movelib::is_sorted(first, first1, comp));

@@ -1,7 +1,8 @@
 // Copyright (C) 2003-2004 Jeremy B. Maitin-Shepard.
 // Copyright (C) 2005-2016 Daniel James
-// Copyright (C) 2022-2023 Joaquin M Lopez Munoz.
+// Copyright (C) 2022-2024 Joaquin M Lopez Munoz.
 // Copyright (C) 2022-2023 Christian Mazakas
+// Copyright (C) 2024 Braden Ganetsky
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -14,6 +15,7 @@
 #pragma once
 #endif
 
+#include <boost/unordered/detail/allocator_constructed.hpp>
 #include <boost/unordered/detail/fca.hpp>
 #include <boost/unordered/detail/opt_storage.hpp>
 #include <boost/unordered/detail/serialize_tracked_address.hpp>
@@ -38,6 +40,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#include <tuple> // std::forward_as_tuple
 
 namespace boost {
   namespace tuples {
@@ -101,6 +104,10 @@ namespace boost {
       {
         no_key() {}
         template <class T> no_key(T const&) {}
+      };
+
+      struct converting_key
+      {
       };
 
       namespace func {
@@ -1359,14 +1366,14 @@ namespace boost {
         }
 
         table(std::size_t num_buckets, hasher const& hf, key_equal const& eq,
-          node_allocator_type const& a)
+          value_allocator const& a)
             : functions(hf, eq), size_(0), mlf_(1.0f), max_load_(0),
               buckets_(num_buckets, a)
         {
           recalculate_max_load();
         }
 
-        table(table const& x, node_allocator_type const& a)
+        table(table const& x, value_allocator const& a)
             : functions(x), size_(0), mlf_(x.mlf_), max_load_(0),
               buckets_(x.size_, a)
         {
@@ -1381,7 +1388,7 @@ namespace boost {
           x.max_load_ = 0;
         }
 
-        table(table& x, node_allocator_type const& a,
+        table(table& x, value_allocator const& a,
           boost::unordered::detail::move_tag m)
             : functions(x, m), size_(0), mlf_(x.mlf_), max_load_(0),
               buckets_(x.bucket_count(), a)
@@ -1910,6 +1917,16 @@ namespace boost {
 
             return emplace_return(iterator(p, itb), true);
           }
+        }
+
+        template <typename K, typename V>
+        emplace_return emplace_unique(converting_key, K&& k, V&& v)
+        {
+          using alloc_cted = allocator_constructed<node_allocator_type,
+            typename Types::key_type>;
+          alloc_cted key(this->node_alloc(), std::forward<K>(k));
+          return emplace_unique(
+            key.value(), std::move(key.value()), std::forward<V>(v));
         }
 
         template <typename Key> emplace_return try_emplace_unique(Key&& k)
@@ -2705,7 +2722,7 @@ namespace boost {
       inline void table<Types>::rehash_impl(std::size_t num_buckets)
       {
         bucket_array_type new_buckets(
-          num_buckets, buckets_.get_node_allocator());
+          num_buckets, buckets_.get_allocator());
 
         BOOST_TRY
         {
@@ -2834,9 +2851,13 @@ namespace boost {
         }
 
         template <class Arg1, class Arg2>
-        static no_key extract(Arg1 const&, Arg2 const&)
+        static typename std::conditional<
+          (is_similar<Arg1, key_type>::value ||
+            is_complete_and_move_constructible<key_type>::value),
+          converting_key, no_key>::type
+        extract(Arg1 const&, Arg2 const&)
         {
-          return no_key();
+          return {};
         }
 
         template <class Arg1, class Arg2, class Arg3, class... Args>

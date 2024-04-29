@@ -42,7 +42,7 @@ struct avltree_node_cloner
    typedef typename NodeTraits::node_ptr  node_ptr;
    typedef detail::ebo_functor_holder<F>  base_t;
 
-   BOOST_INTRUSIVE_FORCEINLINE avltree_node_cloner(F f)
+   inline avltree_node_cloner(F f)
       :  base_t(f)
    {}
 

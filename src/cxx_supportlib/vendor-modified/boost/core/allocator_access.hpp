@@ -43,9 +43,17 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 #if defined(_STL_DISABLE_DEPRECATED_WARNING)
 _STL_DISABLE_DEPRECATED_WARNING
 #endif
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4996)
+#if defined(__clang__) && defined(__has_warning)
+# if __has_warning("-Wdeprecated-declarations")
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
+# endif
+#elif defined(_MSC_VER)
+# pragma warning(push)
+# pragma warning(disable: 4996)
+#elif defined(BOOST_GCC) && BOOST_GCC >= 40600
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 namespace boost {
@@ -807,9 +815,15 @@ using allocator_rebind_t = typename allocator_rebind<A, T>::type;
 
 } /* boost */
 
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
+#if defined(__clang__) && defined(__has_warning)
+# if __has_warning("-Wdeprecated-declarations")
+#  pragma clang diagnostic pop
+# endif
+#elif defined(_MSC_VER)
+# pragma warning(pop)
+#elif defined(BOOST_GCC) && BOOST_GCC >= 40600
+# pragma GCC diagnostic pop
+#endif  
 #if defined(_STL_RESTORE_DEPRECATED_WARNING)
 _STL_RESTORE_DEPRECATED_WARNING
 #endif

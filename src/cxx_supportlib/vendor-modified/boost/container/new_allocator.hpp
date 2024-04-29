@@ -129,25 +129,23 @@ class new_allocator
 
    //!Default constructor
    //!Never throws
-   new_allocator() BOOST_NOEXCEPT_OR_NOTHROW
+   inline new_allocator() BOOST_NOEXCEPT_OR_NOTHROW
    {}
 
    //!Constructor from other new_allocator.
    //!Never throws
-   new_allocator(const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
+   inline new_allocator(const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
    {}
 
    //!Copy assignment operator from other new_allocator.
    //!Never throws
-   new_allocator& operator=(const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
-   {
-       return *this;
-   }
+   inline new_allocator& operator=(const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
+   {  return *this;  }
 
    //!Constructor from related new_allocator.
    //!Never throws
    template<class T2>
-   new_allocator(const new_allocator<T2> &) BOOST_NOEXCEPT_OR_NOTHROW
+   inline new_allocator(const new_allocator<T2> &) BOOST_NOEXCEPT_OR_NOTHROW
    {}
 
    //!Allocates memory for an array of count elements.
@@ -174,22 +172,22 @@ class new_allocator
 
    //!Returns the maximum number of elements that could be allocated.
    //!Never throws
-   size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
+   inline size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return std::size_t(-1)/(2*sizeof(T));   }
 
    //!Swaps two allocators, does nothing
    //!because this new_allocator is stateless
-   friend void swap(new_allocator &, new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
+   inline friend void swap(new_allocator &, new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
    {}
 
    //!An new_allocator always compares to true, as memory allocated with one
    //!instance can be deallocated by another instance
-   friend bool operator==(const new_allocator &, const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
+   inline friend bool operator==(const new_allocator &, const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return true;   }
 
    //!An new_allocator always compares to false, as memory allocated with one
    //!instance can be deallocated by another instance
-   friend bool operator!=(const new_allocator &, const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
+   inline friend bool operator!=(const new_allocator &, const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return false;   }
 };
 

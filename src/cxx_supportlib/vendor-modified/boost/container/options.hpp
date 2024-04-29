@@ -23,8 +23,8 @@
 
 #include <boost/container/detail/config_begin.hpp>
 #include <boost/container/container_fwd.hpp>
+#include <boost/container/detail/workaround.hpp>
 #include <boost/intrusive/pack_options.hpp>
-#include <boost/static_assert.hpp>
 
 namespace boost {
 namespace container {
@@ -608,7 +608,7 @@ struct deque_opt
 {
    static const std::size_t block_bytes = BlockBytes;
    static const std::size_t block_size  = BlockSize;
-   BOOST_STATIC_ASSERT_MSG(!(block_bytes && block_size), "block_bytes and block_size can't be specified at the same time");
+   BOOST_CONTAINER_STATIC_ASSERT_MSG(!(block_bytes && block_size), "block_bytes and block_size can't be specified at the same time");
 };
 
 typedef deque_opt<0u, 0u> deque_null_opt;

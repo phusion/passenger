@@ -252,7 +252,7 @@ class any_algorithms
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Nodes</b>: If node is inserted in a tree, this function corrupts the tree.
-   BOOST_INTRUSIVE_FORCEINLINE static void init(node_ptr n) BOOST_NOEXCEPT
+   inline static void init(node_ptr n) BOOST_NOEXCEPT
    {  n->node_ptr_1 = node_ptr();   };
 
    //! <b>Effects</b>: Returns true if 'n' is in the same state as if called init(node)
@@ -260,10 +260,10 @@ class any_algorithms
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static bool inited(const_node_ptr n)
+   inline static bool inited(const_node_ptr n)
    {  return !n->node_ptr_1;  };
 
-   BOOST_INTRUSIVE_FORCEINLINE static bool unique(const_node_ptr n) BOOST_NOEXCEPT
+   inline static bool unique(const_node_ptr n) BOOST_NOEXCEPT
    {  return !n->node_ptr_1; }
 
    static void unlink(node_ptr)

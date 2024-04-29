@@ -1,6 +1,7 @@
 // Copyright (C) 2003-2004 Jeremy B. Maitin-Shepard.
 // Copyright (C) 2005-2011 Daniel James.
 // Copyright (C) 2022-2023 Christian Mazakas
+// Copyright (C) 2024 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -16,6 +17,7 @@
 
 #include <boost/unordered/detail/map.hpp>
 #include <boost/unordered/detail/serialize_fca_container.hpp>
+#include <boost/unordered/detail/throw_exception.hpp>
 #include <boost/unordered/detail/type_traits.hpp>
 
 #include <boost/container_hash/hash.hpp>
@@ -157,7 +159,7 @@ namespace boost {
 
       allocator_type get_allocator() const noexcept
       {
-        return table_.node_alloc();
+        return allocator_type(table_.node_alloc());
       }
 
       //       // iterators
@@ -253,12 +255,15 @@ namespace boost {
       node_type extract(const_iterator position)
       {
         return node_type(
-          table_.extract_by_iterator_unique(position), table_.node_alloc());
+          table_.extract_by_iterator_unique(position),
+          allocator_type(table_.node_alloc()));
       }
 
       node_type extract(const key_type& k)
       {
-        return node_type(table_.extract_by_key_impl(k), table_.node_alloc());
+        return node_type(
+          table_.extract_by_key_impl(k),
+          allocator_type(table_.node_alloc()));
       }
 
       template <class Key>
@@ -267,8 +272,9 @@ namespace boost {
         node_type>::type
       extract(Key&& k)
       {
-        return node_type(table_.extract_by_key_impl(std::forward<Key>(k)),
-          table_.node_alloc());
+        return node_type(
+          table_.extract_by_key_impl(std::forward<Key>(k)),
+          allocator_type(table_.node_alloc()));
       }
 
       insert_return_type insert(node_type&& np)
@@ -805,7 +811,7 @@ namespace boost {
 
       allocator_type get_allocator() const noexcept
       {
-        return table_.node_alloc();
+        return allocator_type(table_.node_alloc());
       }
 
       // iterators
@@ -1586,8 +1592,8 @@ namespace boost {
           return p->value().second;
       }
 
-      boost::throw_exception(
-        std::out_of_range("Unable to find key in unordered_map."));
+      boost::unordered::detail::throw_out_of_range(
+        "Unable to find key in unordered_map.");
     }
 
     template <class K, class T, class H, class P, class A>
@@ -1602,8 +1608,8 @@ namespace boost {
           return p->value().second;
       }
 
-      boost::throw_exception(
-        std::out_of_range("Unable to find key in unordered_map."));
+      boost::unordered::detail::throw_out_of_range(
+        "Unable to find key in unordered_map.");
     }
 
     template <class K, class T, class H, class P, class A>
@@ -1620,8 +1626,8 @@ namespace boost {
           return p->value().second;
       }
 
-      boost::throw_exception(
-        std::out_of_range("Unable to find key in unordered_map."));
+      boost::unordered::detail::throw_out_of_range(
+        "Unable to find key in unordered_map.");
     }
 
     template <class K, class T, class H, class P, class A>
@@ -1638,8 +1644,8 @@ namespace boost {
           return p->value().second;
       }
 
-      boost::throw_exception(
-        std::out_of_range("Unable to find key in unordered_map."));
+      boost::unordered::detail::throw_out_of_range(
+        "Unable to find key in unordered_map.");
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2051,8 +2057,7 @@ namespace boost {
     unordered_multimap<K, T, H, P, A>::find(CompatibleKey const& k,
       CompatibleHash const& hash, CompatiblePredicate const& eq) const
     {
-      return const_iterator(
-        table_.find_node_impl(table::policy::apply_hash(hash, k), k, eq));
+      return table_.transparent_find(k, hash, eq);
     }
 
     template <class K, class T, class H, class P, class A>

@@ -392,7 +392,7 @@ public:
 
 #if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
 
-    basic_string_view( std::basic_string_view<Ch, std::char_traits<Ch> > const& str ) BOOST_NOEXCEPT: p_( str.data() ), n_( str.size() )
+    BOOST_CONSTEXPR basic_string_view( std::basic_string_view<Ch, std::char_traits<Ch> > const& str ) BOOST_NOEXCEPT: p_( str.data() ), n_( str.size() )
     {
     }
 

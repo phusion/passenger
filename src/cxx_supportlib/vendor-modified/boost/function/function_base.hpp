@@ -40,11 +40,8 @@
 #   pragma warning( disable : 4127 ) // "conditional expression is constant"
 #endif
 
-#if defined(__ICL) && __ICL <= 600 || defined(__MWERKS__) && __MWERKS__ < 0x2406 && !defined(BOOST_STRICT_CONFIG)
-#  define BOOST_FUNCTION_TARGET_FIX(x) x
-#else
-#  define BOOST_FUNCTION_TARGET_FIX(x)
-#endif // __ICL etc
+// retained because used in a test
+#define BOOST_FUNCTION_TARGET_FIX(x)
 
 #  define BOOST_FUNCTION_ENABLE_IF_NOT_INTEGRAL(Functor,Type)              \
       typename ::boost::enable_if_<          \
@@ -114,30 +111,6 @@ namespace boost {
 
         // To relax aliasing constraints
         mutable char data[sizeof(function_buffer_members)];
-      };
-
-      /**
-       * The unusable class is a placeholder for unused function arguments
-       * It is also completely unusable except that it constructable from
-       * anything. This helps compilers without partial specialization to
-       * handle Boost.Function objects returning void.
-       */
-      struct unusable
-      {
-        unusable() {}
-        template<typename T> unusable(const T&) {}
-      };
-
-      /* Determine the return type. This supports compilers that do not support
-       * void returns or partial specialization by silently changing the return
-       * type to "unusable".
-       */
-      template<typename T> struct function_return_type { typedef T type; };
-
-      template<>
-      struct function_return_type<void>
-      {
-        typedef unusable type;
       };
 
       // The operation type to perform on the given functor/function pointer
@@ -289,16 +262,15 @@ namespace boost {
         manage_small(const function_buffer& in_buffer, function_buffer& out_buffer,
                 functor_manager_operation_type op)
         {
-          if (op == clone_functor_tag || op == move_functor_tag) {
+          if (op == clone_functor_tag) {
             const functor_type* in_functor =
               reinterpret_cast<const functor_type*>(in_buffer.data);
             new (reinterpret_cast<void*>(out_buffer.data)) functor_type(*in_functor);
 
-            if (op == move_functor_tag) {
+          } else if (op == move_functor_tag) {
               functor_type* f = reinterpret_cast<functor_type*>(in_buffer.data);
-              (void)f; // suppress warning about the value of f not being used (MSVC)
+              new (reinterpret_cast<void*>(out_buffer.data)) functor_type(std::move(*f));
               f->~Functor();
-            }
           } else if (op == destroy_functor_tag) {
             // Some compilers (Borland, vc6, ...) are unhappy with ~functor_type.
              functor_type* f = reinterpret_cast<functor_type*>(out_buffer.data);
@@ -440,14 +412,9 @@ namespace boost {
                 functor_manager_operation_type op, false_type)
         {
           typedef functor_wrapper<Functor,Allocator> functor_wrapper_type;
-#if defined(BOOST_NO_CXX11_ALLOCATOR)
-          typedef typename Allocator::template rebind<functor_wrapper_type>::other
-            wrapper_allocator_type;
-          typedef typename wrapper_allocator_type::pointer wrapper_allocator_pointer_type;
-#else
+
           using wrapper_allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<functor_wrapper_type>;
           using wrapper_allocator_pointer_type = typename std::allocator_traits<wrapper_allocator_type>::pointer;
-#endif
 
           if (op == clone_functor_tag) {
             // Clone the functor
@@ -457,11 +424,7 @@ namespace boost {
               static_cast<const functor_wrapper_type*>(in_buffer.members.obj_ptr);
             wrapper_allocator_type wrapper_allocator(static_cast<Allocator const &>(*f));
             wrapper_allocator_pointer_type copy = wrapper_allocator.allocate(1);
-#if defined(BOOST_NO_CXX11_ALLOCATOR)
-            wrapper_allocator.construct(copy, *f);
-#else
             std::allocator_traits<wrapper_allocator_type>::construct(wrapper_allocator, copy, *f);
-#endif
 
             // Get back to the original pointer type
             functor_wrapper_type* new_f = static_cast<functor_wrapper_type*>(copy);
@@ -474,11 +437,7 @@ namespace boost {
             functor_wrapper_type* victim =
               static_cast<functor_wrapper_type*>(in_buffer.members.obj_ptr);
             wrapper_allocator_type wrapper_allocator(static_cast<Allocator const &>(*victim));
-#if defined(BOOST_NO_CXX11_ALLOCATOR)
-            wrapper_allocator.destroy(victim);
-#else
             std::allocator_traits<wrapper_allocator_type>::destroy(wrapper_allocator, victim);
-#endif
             wrapper_allocator.deallocate(victim,1);
             out_buffer.members.obj_ptr = 0;
           } else if (op == check_functor_type_tag) {
@@ -524,65 +483,6 @@ namespace boost {
 
       // A type that is only used for comparisons against zero
       struct useless_clear_type {};
-
-#ifdef BOOST_NO_SFINAE
-      // These routines perform comparisons between a Boost.Function
-      // object and an arbitrary function object (when the last
-      // parameter is false_type) or against zero (when the
-      // last parameter is true_type). They are only necessary
-      // for compilers that don't support SFINAE.
-      template<typename Function, typename Functor>
-        bool
-        compare_equal(const Function& f, const Functor&, int, true_type)
-        { return f.empty(); }
-
-      template<typename Function, typename Functor>
-        bool
-        compare_not_equal(const Function& f, const Functor&, int,
-                          true_type)
-        { return !f.empty(); }
-
-      template<typename Function, typename Functor>
-        bool
-        compare_equal(const Function& f, const Functor& g, long,
-                      false_type)
-        {
-          if (const Functor* fp = f.template target<Functor>())
-            return function_equal(*fp, g);
-          else return false;
-        }
-
-      template<typename Function, typename Functor>
-        bool
-        compare_equal(const Function& f, const reference_wrapper<Functor>& g,
-                      int, false_type)
-        {
-          if (const Functor* fp = f.template target<Functor>())
-            return fp == g.get_pointer();
-          else return false;
-        }
-
-      template<typename Function, typename Functor>
-        bool
-        compare_not_equal(const Function& f, const Functor& g, long,
-                          false_type)
-        {
-          if (const Functor* fp = f.template target<Functor>())
-            return !function_equal(*fp, g);
-          else return true;
-        }
-
-      template<typename Function, typename Functor>
-        bool
-        compare_not_equal(const Function& f,
-                          const reference_wrapper<Functor>& g, int,
-                          false_type)
-        {
-          if (const Functor* fp = f.template target<Functor>())
-            return fp != g.get_pointer();
-          else return true;
-        }
-#endif // BOOST_NO_SFINAE
 
       /**
        * Stores the "manager" portion of the vtable for a
@@ -677,29 +577,6 @@ public:
       }
     }
 
-#if defined(__GNUC__) && __GNUC__ == 3 && __GNUC_MINOR__ <= 3
-  // GCC 3.3 and newer cannot copy with the global operator==, due to
-  // problems with instantiation of function return types before it
-  // has been verified that the argument types match up.
-  template<typename Functor>
-    BOOST_FUNCTION_ENABLE_IF_NOT_INTEGRAL(Functor, bool)
-    operator==(Functor g) const
-    {
-      if (const Functor* fp = target<Functor>())
-        return function_equal(*fp, g);
-      else return false;
-    }
-
-  template<typename Functor>
-    BOOST_FUNCTION_ENABLE_IF_NOT_INTEGRAL(Functor, bool)
-    operator!=(Functor g) const
-    {
-      if (const Functor* fp = target<Functor>())
-        return !function_equal(*fp, g);
-      else return true;
-    }
-#endif
-
 public: // should be protected, but GCC 2.95.3 will fail to allow access
   detail::function::vtable_base* get_vtable() const {
     return reinterpret_cast<detail::function::vtable_base*>(
@@ -731,7 +608,6 @@ public:
 #   pragma clang diagnostic pop
 #endif
 
-#ifndef BOOST_NO_SFINAE
 inline bool operator==(const function_base& f,
                        detail::function::useless_clear_type*)
 {
@@ -755,43 +631,10 @@ inline bool operator!=(detail::function::useless_clear_type*,
 {
   return !f.empty();
 }
-#endif
 
-#ifdef BOOST_NO_SFINAE
-// Comparisons between boost::function objects and arbitrary function objects
-template<typename Functor>
-  inline bool operator==(const function_base& f, Functor g)
-  {
-    typedef integral_constant<bool, (is_integral<Functor>::value)> integral;
-    return detail::function::compare_equal(f, g, 0, integral());
-  }
-
-template<typename Functor>
-  inline bool operator==(Functor g, const function_base& f)
-  {
-    typedef integral_constant<bool, (is_integral<Functor>::value)> integral;
-    return detail::function::compare_equal(f, g, 0, integral());
-  }
-
-template<typename Functor>
-  inline bool operator!=(const function_base& f, Functor g)
-  {
-    typedef integral_constant<bool, (is_integral<Functor>::value)> integral;
-    return detail::function::compare_not_equal(f, g, 0, integral());
-  }
-
-template<typename Functor>
-  inline bool operator!=(Functor g, const function_base& f)
-  {
-    typedef integral_constant<bool, (is_integral<Functor>::value)> integral;
-    return detail::function::compare_not_equal(f, g, 0, integral());
-  }
-#else
-
-#  if !(defined(__GNUC__) && __GNUC__ == 3 && __GNUC_MINOR__ <= 3)
 // Comparisons between boost::function objects and arbitrary function
-// objects. GCC 3.3 and before has an obnoxious bug that prevents this
-// from working.
+// objects.
+
 template<typename Functor>
   BOOST_FUNCTION_ENABLE_IF_NOT_INTEGRAL(Functor, bool)
   operator==(const function_base& f, Functor g)
@@ -827,7 +670,6 @@ template<typename Functor>
       return !function_equal(g, *fp);
     else return true;
   }
-#  endif
 
 template<typename Functor>
   BOOST_FUNCTION_ENABLE_IF_NOT_INTEGRAL(Functor, bool)
@@ -864,8 +706,6 @@ template<typename Functor>
       return g.get_pointer() != fp;
     else return true;
   }
-
-#endif // Compiler supporting SFINAE
 
 namespace detail {
   namespace function {

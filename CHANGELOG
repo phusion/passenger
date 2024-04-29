@@ -8,7 +8,7 @@ Release 6.0.21 (Not yet released)
  * Fixes crash-watch hanging when lldb is used as backend.
  * [Standalone] Fixes security update checker with builtin engine.
  * Workaround compilation error on clang on x86_64.
- * Upgrades Boost from 1.83 -> 1.84.
+ * Upgrades Boost from 1.83 -> 1.85.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
    - ccache: 4.6.3 -> 4.9.1
    - cmake: 3.28.1 -> 3.29.0

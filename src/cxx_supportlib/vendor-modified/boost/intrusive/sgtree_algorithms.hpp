@@ -287,7 +287,7 @@ class sgtree_algorithms
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::insert_unique_commit(node_ptr,node_ptr,const insert_commit_data&)
    template<class H_Alpha>
-   BOOST_INTRUSIVE_FORCEINLINE static void insert_unique_commit
+   inline static void insert_unique_commit
       (node_ptr header, node_ptr new_value, const insert_commit_data &commit_data
       ,std::size_t tree_size, H_Alpha h_alpha, std::size_t &max_tree_size)
    {  return insert_commit(header, new_value, commit_data, tree_size, h_alpha, max_tree_size);  }

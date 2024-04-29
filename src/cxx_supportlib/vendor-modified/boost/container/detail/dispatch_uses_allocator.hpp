@@ -110,7 +110,7 @@ template < typename ConstructAlloc
          , typename T
          , class ...Args
          >
-BOOST_CONTAINER_FORCEINLINE typename dtl::enable_if_and
+inline typename dtl::enable_if_and
    < void
    , dtl::is_not_pair<T>
    , dtl::not_< uses_allocator<T, typename remove_cvref<ArgAlloc>::type > >
@@ -127,7 +127,7 @@ template < typename ConstructAlloc
          , typename T
          , class ...Args
          >
-BOOST_CONTAINER_FORCEINLINE typename dtl::enable_if_and
+inline typename dtl::enable_if_and
    < void
    , dtl::is_not_pair<T>
    , uses_allocator<T, typename remove_cvref<ArgAlloc>::type>
@@ -146,7 +146,7 @@ template < typename ConstructAlloc
          , typename T
          , class ...Args
          >
-BOOST_CONTAINER_FORCEINLINE typename dtl::enable_if_and
+inline typename dtl::enable_if_and
    < void
    , dtl::is_not_pair<T>
    , uses_allocator<T, typename remove_cvref<ArgAlloc>::type>
@@ -162,7 +162,7 @@ BOOST_CONTAINER_FORCEINLINE typename dtl::enable_if_and
 
 #define BOOST_CONTAINER_SCOPED_ALLOCATOR_DISPATCH_USES_ALLOCATOR_CODE(N) \
    template <typename ConstructAlloc, typename ArgAlloc, typename T BOOST_MOVE_I##N BOOST_MOVE_CLASS##N >\
-   BOOST_CONTAINER_FORCEINLINE typename dtl::enable_if_and\
+   inline typename dtl::enable_if_and\
       < void\
       , dtl::is_not_pair<T>\
       , dtl::not_<uses_allocator<T, typename remove_cvref<ArgAlloc>::type> >\
@@ -179,7 +179,7 @@ BOOST_MOVE_ITERATE_0TO9(BOOST_CONTAINER_SCOPED_ALLOCATOR_DISPATCH_USES_ALLOCATOR
 
 #define BOOST_CONTAINER_SCOPED_ALLOCATOR_DISPATCH_USES_ALLOCATOR_CODE(N) \
    template < typename ConstructAlloc, typename ArgAlloc, typename T BOOST_MOVE_I##N BOOST_MOVE_CLASS##N >\
-   BOOST_CONTAINER_FORCEINLINE typename dtl::enable_if_and\
+   inline typename dtl::enable_if_and\
       < void\
       , dtl::is_not_pair<T>\
       , uses_allocator<T, typename remove_cvref<ArgAlloc>::type>\
@@ -197,7 +197,7 @@ BOOST_MOVE_ITERATE_0TO9(BOOST_CONTAINER_SCOPED_ALLOCATOR_DISPATCH_USES_ALLOCATOR
 
 #define BOOST_CONTAINER_SCOPED_ALLOCATOR_DISPATCH_USES_ALLOCATOR_CODE(N) \
    template < typename ConstructAlloc, typename ArgAlloc, typename T BOOST_MOVE_I##N BOOST_MOVE_CLASS##N >\
-   BOOST_CONTAINER_FORCEINLINE typename dtl::enable_if_and\
+   inline typename dtl::enable_if_and\
       < void\
       , dtl::is_not_pair<T>\
       , uses_allocator<T, typename remove_cvref<ArgAlloc>::type>\

@@ -75,7 +75,7 @@ struct deque_value_traits
 template<class T, std::size_t BlockBytes, std::size_t BlockSize>
 struct deque_block_size
 {
-   BOOST_STATIC_ASSERT_MSG(!(BlockBytes && BlockSize), "BlockBytes and BlockSize can't be specified at the same time");
+   BOOST_CONTAINER_STATIC_ASSERT_MSG(!(BlockBytes && BlockSize), "BlockBytes and BlockSize can't be specified at the same time");
    static const std::size_t block_bytes = BlockBytes ? BlockBytes : 512u;
    static const std::size_t value       = BlockSize ? BlockSize : (sizeof(T) < block_bytes ? (block_bytes/sizeof(T)) : std::size_t(1));
 };
@@ -142,47 +142,47 @@ class deque_iterator
 
    public:
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE Pointer get_cur()          const  {  return m_cur;  }
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE Pointer get_first()        const  {  return m_first;  }
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE Pointer get_last()         const  {  return m_last;  }
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE index_pointer get_node()   const  {  return m_node;  }
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline Pointer get_cur()          const  {  return m_cur;  }
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline Pointer get_first()        const  {  return m_first;  }
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline Pointer get_last()         const  {  return m_last;  }
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline index_pointer get_node()   const  {  return m_node;  }
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator(val_alloc_ptr x, index_pointer y, difference_type block_size) BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator(val_alloc_ptr x, index_pointer y, difference_type block_size) BOOST_NOEXCEPT_OR_NOTHROW
       : m_cur(x), m_first(*y), m_last(*y + block_size), m_node(y)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator(val_alloc_ptr x, index_pointer y, size_type block_size) BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator(val_alloc_ptr x, index_pointer y, size_type block_size) BOOST_NOEXCEPT_OR_NOTHROW
       : m_cur(x), m_first(*y), m_last(*y + difference_type(block_size)), m_node(y)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator() BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator() BOOST_NOEXCEPT_OR_NOTHROW
       : m_cur(), m_first(), m_last(), m_node()  //Value initialization to achieve "null iterators" (N3644)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator(const deque_iterator& x) BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator(const deque_iterator& x) BOOST_NOEXCEPT_OR_NOTHROW
       : m_cur(x.get_cur()), m_first(x.get_first()), m_last(x.get_last()), m_node(x.get_node())
    {}
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator(const nonconst_iterator& x) BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator(const nonconst_iterator& x) BOOST_NOEXCEPT_OR_NOTHROW
       : m_cur(x.get_cur()), m_first(x.get_first()), m_last(x.get_last()), m_node(x.get_node())
    {}
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator(Pointer cur, Pointer first, Pointer last, index_pointer node) BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator(Pointer cur, Pointer first, Pointer last, index_pointer node) BOOST_NOEXCEPT_OR_NOTHROW
       : m_cur(cur), m_first(first), m_last(last), m_node(node)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator& operator=(const deque_iterator& x) BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator& operator=(const deque_iterator& x) BOOST_NOEXCEPT_OR_NOTHROW
    {  m_cur = x.get_cur(); m_first = x.get_first(); m_last = x.get_last(); m_node = x.get_node(); return *this; }
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator<Pointer, false> unconst() const BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator<Pointer, false> unconst() const BOOST_NOEXCEPT_OR_NOTHROW
    {
       return deque_iterator<Pointer, false>(this->get_cur(), this->get_first(), this->get_last(), this->get_node());
    }
 
-   BOOST_CONTAINER_FORCEINLINE reference operator*() const BOOST_NOEXCEPT_OR_NOTHROW
+   inline reference operator*() const BOOST_NOEXCEPT_OR_NOTHROW
       { return *this->m_cur; }
 
-   BOOST_CONTAINER_FORCEINLINE pointer operator->() const BOOST_NOEXCEPT_OR_NOTHROW
+   inline pointer operator->() const BOOST_NOEXCEPT_OR_NOTHROW
       { return this->m_cur; }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD difference_type operator-(const deque_iterator& x) const BOOST_NOEXCEPT_OR_NOTHROW
@@ -209,7 +209,7 @@ class deque_iterator
       return *this;
    }
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator operator++(int) BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator operator++(int) BOOST_NOEXCEPT_OR_NOTHROW
    {
       deque_iterator tmp(*this);
       ++*this;
@@ -229,7 +229,7 @@ class deque_iterator
       return *this;
    }
 
-   BOOST_CONTAINER_FORCEINLINE deque_iterator operator--(int) BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque_iterator operator--(int) BOOST_NOEXCEPT_OR_NOTHROW
    {
       deque_iterator tmp(*this);
       --*this;
@@ -257,55 +257,55 @@ class deque_iterator
       return *this;
    }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       deque_iterator operator+(difference_type n) const BOOST_NOEXCEPT_OR_NOTHROW
       {  deque_iterator tmp(*this); return tmp += n;  }
 
-   BOOST_CONTAINER_FORCEINLINE
+   inline
       deque_iterator& operator-=(difference_type n) BOOST_NOEXCEPT_OR_NOTHROW
       { return *this += -n; }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       deque_iterator operator-(difference_type n) const BOOST_NOEXCEPT_OR_NOTHROW
       {  deque_iterator tmp(*this); return tmp -= n;  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       reference operator[](difference_type n) const BOOST_NOEXCEPT_OR_NOTHROW
       { return *(*this + n); }
 
    //Comparisons
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator==(const deque_iterator& l, const deque_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
       { return l.m_cur == r.m_cur; }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator!=(const deque_iterator& l, const deque_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
       { return l.m_cur != r.m_cur; }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator<(const deque_iterator& l, const deque_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
       {  return (l.m_node == r.m_node) ? (l.m_cur < r.m_cur) : (l.m_node < r.m_node);  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator>(const deque_iterator& l, const deque_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
       { return r < l; }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator<=(const deque_iterator& l, const deque_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
       { return !(r < l); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator>=(const deque_iterator& l, const deque_iterator& r) BOOST_NOEXCEPT_OR_NOTHROW
       { return !(l < r); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend deque_iterator operator+(difference_type n, deque_iterator x) BOOST_NOEXCEPT_OR_NOTHROW
       {  return x += n;  }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_set_node(index_pointer new_node, size_type block_size) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void priv_set_node(index_pointer new_node, size_type block_size) BOOST_NOEXCEPT_OR_NOTHROW
    {  return this->priv_set_node(new_node, difference_type(block_size)); }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_set_node(index_pointer new_node, difference_type block_size) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void priv_set_node(index_pointer new_node, difference_type block_size) BOOST_NOEXCEPT_OR_NOTHROW
    {
       this->m_node = new_node;
       this->m_first = *new_node;
@@ -363,40 +363,40 @@ class deque_base
    typedef dtl::deque_iterator<val_alloc_ptr, false> iterator;
    typedef dtl::deque_iterator<val_alloc_ptr, true > const_iterator;
 
-   BOOST_CONSTEXPR BOOST_CONTAINER_FORCEINLINE static size_type get_block_size() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONSTEXPR inline static size_type get_block_size() BOOST_NOEXCEPT_OR_NOTHROW
       { return deque_block_size<val_alloc_val, options_type::block_bytes, options_type::block_size>::value; }
 
-   BOOST_CONSTEXPR BOOST_CONTAINER_FORCEINLINE static val_alloc_diff get_block_ssize() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONSTEXPR inline static val_alloc_diff get_block_ssize() BOOST_NOEXCEPT_OR_NOTHROW
       { return val_alloc_diff((get_block_size)()); }
 
    typedef deque_value_traits<val_alloc_val>             traits_t;
    typedef ptr_alloc_t                                   map_allocator_type;
 
-   BOOST_CONTAINER_FORCEINLINE val_alloc_ptr priv_allocate_node()
+   inline val_alloc_ptr priv_allocate_node()
       {  return this->alloc().allocate(get_block_size());  }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_deallocate_node(val_alloc_ptr p) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void priv_deallocate_node(val_alloc_ptr p) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->alloc().deallocate(p, get_block_size());  }
 
-   BOOST_CONTAINER_FORCEINLINE ptr_alloc_ptr priv_allocate_map(size_type n)
+   inline ptr_alloc_ptr priv_allocate_map(size_type n)
       { return this->ptr_alloc().allocate(n); }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_deallocate_map(ptr_alloc_ptr p, size_type n) BOOST_NOEXCEPT_OR_NOTHROW
+   inline void priv_deallocate_map(ptr_alloc_ptr p, size_type n) BOOST_NOEXCEPT_OR_NOTHROW
       { this->ptr_alloc().deallocate(p, n); }
 
-   BOOST_CONTAINER_FORCEINLINE deque_base(size_type num_elements, const allocator_type& a)
+   inline deque_base(size_type num_elements, const allocator_type& a)
       :  members_(a)
    { this->priv_initialize_map(num_elements); }
 
-   BOOST_CONTAINER_FORCEINLINE explicit deque_base(const allocator_type& a)
+   inline explicit deque_base(const allocator_type& a)
       :  members_(a)
    {}
 
-   BOOST_CONTAINER_FORCEINLINE deque_base()
+   inline deque_base()
       :  members_()
    {}
 
-   BOOST_CONTAINER_FORCEINLINE explicit deque_base(BOOST_RV_REF(deque_base) x)
+   inline explicit deque_base(BOOST_RV_REF(deque_base) x)
       :  members_( boost::move(x.ptr_alloc())
                  , boost::move(x.alloc()) )
    {}
@@ -516,16 +516,16 @@ class deque_base
       iterator        m_finish;
    } members_;
 
-   BOOST_CONTAINER_FORCEINLINE ptr_alloc_t &ptr_alloc() BOOST_NOEXCEPT_OR_NOTHROW
+   inline ptr_alloc_t &ptr_alloc() BOOST_NOEXCEPT_OR_NOTHROW
    {  return members_;  }
 
-   BOOST_CONTAINER_FORCEINLINE const ptr_alloc_t &ptr_alloc() const BOOST_NOEXCEPT_OR_NOTHROW
+   inline const ptr_alloc_t &ptr_alloc() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return members_;  }
 
-   BOOST_CONTAINER_FORCEINLINE allocator_type &alloc() BOOST_NOEXCEPT_OR_NOTHROW
+   inline allocator_type &alloc() BOOST_NOEXCEPT_OR_NOTHROW
    {  return members_;  }
 
-   BOOST_CONTAINER_FORCEINLINE const allocator_type &alloc() const BOOST_NOEXCEPT_OR_NOTHROW
+   inline const allocator_type &alloc() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return members_;  }
 };
 #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
@@ -600,7 +600,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: If allocator_type's default constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE deque()
+   inline deque()
       BOOST_NOEXCEPT_IF(dtl::is_nothrow_default_constructible<ValAllocator>::value)
       : Base()
    {}
@@ -610,7 +610,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE explicit deque(const allocator_type& a) BOOST_NOEXCEPT_OR_NOTHROW
+   inline explicit deque(const allocator_type& a) BOOST_NOEXCEPT_OR_NOTHROW
       : Base(a)
    {}
 
@@ -621,7 +621,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //!   throws or T's value initialization throws.
    //!
    //! <b>Complexity</b>: Linear to n.
-   BOOST_CONTAINER_FORCEINLINE explicit deque(size_type n)
+   inline explicit deque(size_type n)
       : Base(n, allocator_type())
    {
       dtl::insert_value_initialized_n_proxy<ValAllocator> proxy;
@@ -638,7 +638,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Complexity</b>: Linear to n.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_FORCEINLINE deque(size_type n, default_init_t)
+   inline deque(size_type n, default_init_t)
       : Base(n, allocator_type())
    {
       dtl::insert_default_initialized_n_proxy<ValAllocator> proxy;
@@ -653,7 +653,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //!   throws or T's value initialization throws.
    //!
    //! <b>Complexity</b>: Linear to n.
-   BOOST_CONTAINER_FORCEINLINE explicit deque(size_type n, const allocator_type &a)
+   inline explicit deque(size_type n, const allocator_type &a)
       : Base(n, a)
    {
       dtl::insert_value_initialized_n_proxy<ValAllocator> proxy;
@@ -670,7 +670,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Complexity</b>: Linear to n.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_FORCEINLINE deque(size_type n, default_init_t, const allocator_type &a)
+   inline deque(size_type n, default_init_t, const allocator_type &a)
       : Base(n, a)
    {
       dtl::insert_default_initialized_n_proxy<ValAllocator> proxy;
@@ -685,7 +685,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //!   throws or T's copy constructor throws.
    //!
    //! <b>Complexity</b>: Linear to n.
-   BOOST_CONTAINER_FORCEINLINE deque(size_type n, const value_type& value)
+   inline deque(size_type n, const value_type& value)
       : Base(n, allocator_type())
    { this->priv_fill_initialize(value); }
 
@@ -696,7 +696,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //!   throws or T's copy constructor throws.
    //!
    //! <b>Complexity</b>: Linear to n.
-   BOOST_CONTAINER_FORCEINLINE deque(size_type n, const value_type& value, const allocator_type& a)
+   inline deque(size_type n, const value_type& value, const allocator_type& a)
       : Base(n, a)
    { this->priv_fill_initialize(value); }
 
@@ -708,7 +708,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //!
    //! <b>Complexity</b>: Linear to the range [first, last).
    template <class InIt>
-   BOOST_CONTAINER_FORCEINLINE deque(InIt first, InIt last
+   inline deque(InIt first, InIt last
       #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
       , typename dtl::disable_if_convertible
          <InIt, size_type>::type * = 0
@@ -727,7 +727,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //!
    //! <b>Complexity</b>: Linear to the range [first, last).
    template <class InIt>
-   BOOST_CONTAINER_FORCEINLINE deque(InIt first, InIt last, const allocator_type& a
+   inline deque(InIt first, InIt last, const allocator_type& a
       #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
       , typename dtl::disable_if_convertible
          <InIt, size_type>::type * = 0
@@ -746,7 +746,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //!   throws or T's constructor taking a dereferenced std::initializer_list iterator throws.
    //!
    //! <b>Complexity</b>: Linear to the range [il.begin(), il.end()).
-   BOOST_CONTAINER_FORCEINLINE deque(std::initializer_list<value_type> il, const allocator_type& a = allocator_type())
+   inline deque(std::initializer_list<value_type> il, const allocator_type& a = allocator_type())
       : Base(a)
    {
       this->priv_range_initialize(il.begin(), il.end());
@@ -758,7 +758,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Postcondition</b>: x == *this.
    //!
    //! <b>Complexity</b>: Linear to the elements x contains.
-   BOOST_CONTAINER_FORCEINLINE deque(const deque& x)
+   inline deque(const deque& x)
       :  Base(allocator_traits_type::select_on_container_copy_construction(x.alloc()))
    {
       if(x.size()){
@@ -773,7 +773,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: If allocator_type's copy constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE deque(BOOST_RV_REF(deque) x) BOOST_NOEXCEPT_OR_NOTHROW
+   inline deque(BOOST_RV_REF(deque) x) BOOST_NOEXCEPT_OR_NOTHROW
       :  Base(BOOST_MOVE_BASE(Base, x))
    {  this->swap_members(x);   }
 
@@ -824,7 +824,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Linear to the number of elements.
-   BOOST_CONTAINER_FORCEINLINE ~deque() BOOST_NOEXCEPT_OR_NOTHROW
+   inline ~deque() BOOST_NOEXCEPT_OR_NOTHROW
    {
       this->priv_destroy_range(this->members_.m_start, this->members_.m_finish);
    }
@@ -903,7 +903,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: If memory allocation throws or T's copy constructor throws.
    //!
    //! <b>Complexity</b>: Linear to the number of elements in il.
-   BOOST_CONTAINER_FORCEINLINE deque& operator=(std::initializer_list<value_type> il)
+   inline deque& operator=(std::initializer_list<value_type> il)
    {
       this->assign(il.begin(), il.end());
       return *this;
@@ -915,7 +915,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: If memory allocation throws or T's copy constructor throws.
    //!
    //! <b>Complexity</b>: Linear to n.
-   BOOST_CONTAINER_FORCEINLINE void assign(size_type n, const T& val)
+   inline void assign(size_type n, const T& val)
    {
       this->assign(c_it(val, n), c_it());
    }
@@ -979,7 +979,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //!   T's constructor from dereferencing std::initializer_list iterator throws.
    //!
    //! <b>Complexity</b>: Linear to il.size().
-   BOOST_CONTAINER_FORCEINLINE void assign(std::initializer_list<value_type> il)
+   inline void assign(std::initializer_list<value_type> il)
    {   this->assign(il.begin(), il.end());   }
 #endif
 
@@ -988,7 +988,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: If allocator's copy constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       allocator_type get_allocator() const BOOST_NOEXCEPT_OR_NOTHROW
    { return Base::alloc(); }
 
@@ -999,7 +999,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const stored_allocator_type &get_stored_allocator() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return Base::alloc(); }
 
@@ -1016,7 +1016,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       stored_allocator_type &get_stored_allocator() BOOST_NOEXCEPT_OR_NOTHROW
    {  return Base::alloc(); }
 
@@ -1025,7 +1025,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       iterator begin() BOOST_NOEXCEPT_OR_NOTHROW
       { return this->members_.m_start; }
 
@@ -1034,7 +1034,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_iterator begin() const BOOST_NOEXCEPT_OR_NOTHROW
       { return this->members_.m_start; }
 
@@ -1043,7 +1043,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       iterator end() BOOST_NOEXCEPT_OR_NOTHROW
       { return this->members_.m_finish; }
 
@@ -1052,7 +1052,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_iterator end() const BOOST_NOEXCEPT_OR_NOTHROW
       { return this->members_.m_finish; }
 
@@ -1062,7 +1062,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       reverse_iterator rbegin() BOOST_NOEXCEPT_OR_NOTHROW
       { return reverse_iterator(this->members_.m_finish); }
 
@@ -1072,7 +1072,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_reverse_iterator rbegin() const BOOST_NOEXCEPT_OR_NOTHROW
       { return const_reverse_iterator(this->members_.m_finish); }
 
@@ -1082,7 +1082,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       reverse_iterator rend() BOOST_NOEXCEPT_OR_NOTHROW
       { return reverse_iterator(this->members_.m_start); }
 
@@ -1092,7 +1092,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_reverse_iterator rend() const BOOST_NOEXCEPT_OR_NOTHROW
       { return const_reverse_iterator(this->members_.m_start); }
 
@@ -1101,7 +1101,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_iterator cbegin() const BOOST_NOEXCEPT_OR_NOTHROW
       { return this->members_.m_start; }
 
@@ -1110,7 +1110,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_iterator cend() const BOOST_NOEXCEPT_OR_NOTHROW
       { return this->members_.m_finish; }
 
@@ -1120,7 +1120,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_reverse_iterator crbegin() const BOOST_NOEXCEPT_OR_NOTHROW
       { return const_reverse_iterator(this->members_.m_finish); }
 
@@ -1130,7 +1130,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_reverse_iterator crend() const BOOST_NOEXCEPT_OR_NOTHROW
       { return const_reverse_iterator(this->members_.m_start); }
 
@@ -1145,7 +1145,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       bool empty() const BOOST_NOEXCEPT_OR_NOTHROW
    { return this->members_.m_finish == this->members_.m_start; }
 
@@ -1154,7 +1154,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       size_type size() const BOOST_NOEXCEPT_OR_NOTHROW
       { return size_type(this->members_.m_finish - this->members_.m_start); }
 
@@ -1163,7 +1163,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
       { return allocator_traits_type::max_size(this->alloc()); }
 
@@ -1251,7 +1251,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       reference front() BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
@@ -1266,7 +1266,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_reference front() const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
@@ -1281,7 +1281,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       reference back() BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
@@ -1296,7 +1296,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_reference back() const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
@@ -1311,7 +1311,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       reference operator[](size_type n) BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->size() > n);
@@ -1326,7 +1326,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_reference operator[](size_type n) const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->size() > n);
@@ -1344,7 +1344,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       iterator nth(size_type n) BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->size() >= n);
@@ -1362,7 +1362,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_iterator nth(size_type n) const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->size() >= n);
@@ -1379,7 +1379,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       size_type index_of(iterator p) BOOST_NOEXCEPT_OR_NOTHROW
    {
       //Range checked priv_index_of
@@ -1396,7 +1396,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       size_type index_of(const_iterator p) const BOOST_NOEXCEPT_OR_NOTHROW
    {
       //Range checked priv_index_of
@@ -1411,7 +1411,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: range_error if n >= size()
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       reference at(size_type n)
    {
       this->priv_throw_if_out_of_range(n);
@@ -1426,7 +1426,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: range_error if n >= size()
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       const_reference at(size_type n) const
    {
       this->priv_throw_if_out_of_range(n);
@@ -1659,7 +1659,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: If memory allocation throws or T's copy constructor throws.
    //!
    //! <b>Complexity</b>: Linear to n.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator pos, size_type n, const value_type& x)
+   inline iterator insert(const_iterator pos, size_type n, const value_type& x)
    {
       //Range check of p is done by insert()
       return this->insert(pos, c_it(x, n), c_it());
@@ -1708,7 +1708,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //!   dereferenced std::initializer_list throws or T's copy constructor throws.
    //!
    //! <b>Complexity</b>: Linear to distance [il.begin(), il.end()).
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator pos, std::initializer_list<value_type> il)
+   inline iterator insert(const_iterator pos, std::initializer_list<value_type> il)
    {
       //Range check os pos is done in insert()
       return insert(pos, il.begin(), il.end());
@@ -1717,7 +1717,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
 
    #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
    template <class FwdIt>
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, FwdIt first, FwdIt last
+   inline iterator insert(const_iterator p, FwdIt first, FwdIt last
       #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
       , typename dtl::disable_if_or
          < void
@@ -1838,7 +1838,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE void swap(deque &x)
+   inline void swap(deque &x)
       BOOST_NOEXCEPT_IF(allocator_traits_type::propagate_on_container_swap::value
                                || allocator_traits_type::is_always_equal::value)
    {
@@ -1879,56 +1879,56 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    //! <b>Effects</b>: Returns true if x and y are equal
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator==(const deque& x, const deque& y)
    {  return x.size() == y.size() && ::boost::container::algo_equal(x.begin(), x.end(), y.begin());  }
 
    //! <b>Effects</b>: Returns true if x and y are unequal
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator!=(const deque& x, const deque& y)
    {  return !(x == y); }
 
    //! <b>Effects</b>: Returns true if x is less than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator<(const deque& x, const deque& y)
    {  return ::boost::container::algo_lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());  }
 
    //! <b>Effects</b>: Returns true if x is greater than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator>(const deque& x, const deque& y)
    {  return y < x;  }
 
    //! <b>Effects</b>: Returns true if x is equal or less than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator<=(const deque& x, const deque& y)
    {  return !(y < x);  }
 
    //! <b>Effects</b>: Returns true if x is equal or greater than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       friend bool operator>=(const deque& x, const deque& y)
    {  return !(x < y);  }
 
    //! <b>Effects</b>: x.swap(y)
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE friend void swap(deque& x, deque& y)
+   inline friend void swap(deque& x, deque& y)
        BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT(x.swap(y)))
    {  x.swap(y);  }
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    private:
 
-   BOOST_CONTAINER_FORCEINLINE size_type priv_index_of(const_iterator p) const
+   inline size_type priv_index_of(const_iterator p) const
    {
       BOOST_ASSERT(this->cbegin() <= p);
       BOOST_ASSERT(p <= this->cend());
@@ -1954,12 +1954,12 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
          throw_out_of_range("deque::at out of range");
    }
 
-   BOOST_CONTAINER_FORCEINLINE bool priv_in_range(const_iterator pos) const
+   inline bool priv_in_range(const_iterator pos) const
    {
       return (this->begin() <= pos) && (pos < this->end());
    }
 
-   BOOST_CONTAINER_FORCEINLINE bool priv_in_range_or_end(const_iterator pos) const
+   inline bool priv_in_range_or_end(const_iterator pos) const
    {
       return (this->begin() <= pos) && (pos <= this->end());
    }
@@ -2013,32 +2013,32 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
       }
    }
 
-   BOOST_CONTAINER_FORCEINLINE bool priv_push_back_simple_available() const
+   inline bool priv_push_back_simple_available() const
    {
       return this->members_.m_map &&
          (this->members_.m_finish.m_cur != (this->members_.m_finish.m_last - 1));
    }
 
-   BOOST_CONTAINER_FORCEINLINE T *priv_push_back_simple_pos() const
+   inline T *priv_push_back_simple_pos() const
    {
       return boost::movelib::to_raw_pointer(this->members_.m_finish.m_cur);
    }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_push_back_simple_commit()
+   inline void priv_push_back_simple_commit()
    {
       ++this->members_.m_finish.m_cur;
    }
 
-   BOOST_CONTAINER_FORCEINLINE bool priv_push_front_simple_available() const
+   inline bool priv_push_front_simple_available() const
    {
       return this->members_.m_map &&
          (this->members_.m_start.m_cur != this->members_.m_start.m_first);
    }
 
-   BOOST_CONTAINER_FORCEINLINE T *priv_push_front_simple_pos() const
+   inline T *priv_push_front_simple_pos() const
    {  return boost::movelib::to_raw_pointer(this->members_.m_start.m_cur) - 1;  }
 
-   BOOST_CONTAINER_FORCEINLINE void priv_push_front_simple_commit()
+   inline void priv_push_front_simple_commit()
    {  --this->members_.m_start.m_cur;   }
 
    void priv_destroy_range(iterator p, iterator p2)
@@ -2165,7 +2165,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
       return new_start;
    }
 
-   BOOST_CONTAINER_FORCEINLINE iterator priv_fill_insert(const_iterator pos, size_type n, const value_type& x)
+   inline iterator priv_fill_insert(const_iterator pos, size_type n, const value_type& x)
    {
       return this->insert(pos, c_it(x, n), c_it());
    }

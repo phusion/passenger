@@ -1,7 +1,8 @@
 /* Common base for Boost.Unordered open-addressing tables.
  *
- * Copyright 2022-2023 Joaquin M Lopez Munoz.
+ * Copyright 2022-2024 Joaquin M Lopez Munoz.
  * Copyright 2023 Christian Mazakas.
+ * Copyright 2024 Braden Ganetsky.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -22,6 +23,7 @@
 #include <boost/core/pointer_traits.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/predef.h>
+#include <boost/unordered/detail/allocator_constructed.hpp>
 #include <boost/unordered/detail/narrow_cast.hpp>
 #include <boost/unordered/detail/mulx.hpp>
 #include <boost/unordered/detail/static_assert.hpp>
@@ -975,7 +977,12 @@ struct arrays_holder
   arrays_holder(arrays_holder const&);
   arrays_holder& operator=(arrays_holder const&)=delete;
 
-  ~arrays_holder(){if(!released_)arrays_.delete_(al_,arrays_);}
+  ~arrays_holder()
+  {
+    if(!released_){
+      arrays_.delete_(typename Arrays::allocator_type(al_),arrays_);
+    }
+  }
 
   const Arrays& release()
   {
@@ -1220,22 +1227,15 @@ class alloc_cted_insert_type
     emplace_type,typename TypePolicy::element_type
   >::type;
 
-  alignas(insert_type) unsigned char storage[sizeof(insert_type)];
-  Allocator                          al;
+  using alloc_cted = allocator_constructed<Allocator, insert_type, TypePolicy>;
+  alloc_cted val;
 
 public:
-  alloc_cted_insert_type(const Allocator& al_,Args&&... args):al{al_}
+  alloc_cted_insert_type(const Allocator& al_,Args&&... args):val{al_,std::forward<Args>(args)...}
   {
-    TypePolicy::construct(al,data(),std::forward<Args>(args)...);
   }
 
-  ~alloc_cted_insert_type()
-  {
-    TypePolicy::destroy(al,data());
-  }
-
-  insert_type* data(){return reinterpret_cast<insert_type*>(&storage);}
-  insert_type& value(){return *data();}
+  insert_type& value(){return val.value();}
 };
 
 template<typename TypePolicy,typename Allocator,typename... Args>
@@ -1244,6 +1244,51 @@ alloc_make_insert_type(const Allocator& al,Args&&... args)
 {
   return {al,std::forward<Args>(args)...};
 }
+
+template <typename TypePolicy, typename Allocator, typename KFwdRef,
+  typename = void>
+class alloc_cted_or_fwded_key_type
+{
+  using key_type = typename TypePolicy::key_type;
+  allocator_constructed<Allocator, key_type, TypePolicy> val;
+
+public:
+  alloc_cted_or_fwded_key_type(const Allocator& al_, KFwdRef k)
+      : val(al_, std::forward<KFwdRef>(k))
+  {
+  }
+
+  key_type&& move_or_fwd() { return std::move(val.value()); }
+};
+
+template <typename TypePolicy, typename Allocator, typename KFwdRef>
+class alloc_cted_or_fwded_key_type<TypePolicy, Allocator, KFwdRef,
+  typename std::enable_if<
+    is_similar<KFwdRef, typename TypePolicy::key_type>::value>::type>
+{
+  // This specialization acts as a forwarding-reference wrapper
+  BOOST_UNORDERED_STATIC_ASSERT(std::is_reference<KFwdRef>::value);
+  KFwdRef ref;
+
+public:
+  alloc_cted_or_fwded_key_type(const Allocator&, KFwdRef k)
+      : ref(std::forward<KFwdRef>(k))
+  {
+  }
+
+  KFwdRef move_or_fwd() { return std::forward<KFwdRef>(ref); }
+};
+
+template <typename Container>
+using is_map =
+  std::integral_constant<bool, !std::is_same<typename Container::key_type,
+                                 typename Container::value_type>::value>;
+
+template <typename Container, typename K>
+using is_emplace_kv_able = std::integral_constant<bool,
+  is_map<Container>::value &&
+    (is_similar<K, typename Container::key_type>::value ||
+      is_complete_and_move_constructible<typename Container::key_type>::value)>;
 
 /* table_core. The TypePolicy template parameter is used to generate
  * instantiations suitable for either maps or sets, and introduces non-standard
@@ -1262,7 +1307,7 @@ alloc_make_insert_type(const Allocator& al,Args&&... args)
  *
  *   - TypePolicy::construct and TypePolicy::destroy are used for the
  *     construction and destruction of the internal types: value_type,
- *     init_type and element_type.
+ *     init_type, element_type, and key_type.
  * 
  *   - TypePolicy::move is used to provide move semantics for the internal
  *     types used by the container during rehashing and emplace. These types
@@ -1934,7 +1979,7 @@ private:
 
   arrays_type new_arrays(std::size_t n)const
   {
-    return arrays_type::new_(al(),n);
+    return arrays_type::new_(typename arrays_type::allocator_type(al()),n);
   }
 
   arrays_type new_arrays_for_growth()const
@@ -1955,7 +2000,7 @@ private:
 
   void delete_arrays(arrays_type& arrays_)noexcept
   {
-    arrays_type::delete_(al(),arrays_);
+    arrays_type::delete_(typename arrays_type::allocator_type(al()),arrays_);
   }
 
   arrays_holder_type make_arrays(std::size_t n)const

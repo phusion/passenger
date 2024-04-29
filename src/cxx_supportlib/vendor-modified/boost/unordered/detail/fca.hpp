@@ -1,4 +1,4 @@
-// Copyright (C) 2022-2023 Joaquin M Lopez Munoz.
+// Copyright (C) 2022-2024 Joaquin M Lopez Munoz.
 // Copyright (C) 2022 Christian Mazakas
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -518,7 +518,8 @@ namespace boost {
         }
 
         grouped_bucket_array(size_type n, const Allocator& al)
-            : empty_value<node_allocator_type>(empty_init_t(), al),
+            : empty_value<node_allocator_type>(
+                empty_init_t(), node_allocator_type(al)),
               size_index_(0), size_(0), buckets(), groups()
         {
           if (n == 0) {
@@ -678,12 +679,17 @@ namespace boost {
 
         bucket_allocator_type get_bucket_allocator() const
         {
-          return this->get_node_allocator();
+          return bucket_allocator_type(this->get_node_allocator());
         }
 
         group_allocator_type get_group_allocator() const
         {
-          return this->get_node_allocator();
+          return group_allocator_type(this->get_node_allocator());
+        }
+
+        Allocator get_allocator() const
+        {
+          return Allocator(this->get_node_allocator());
         }
 
         size_type buckets_len() const noexcept { return size_ + 1; }

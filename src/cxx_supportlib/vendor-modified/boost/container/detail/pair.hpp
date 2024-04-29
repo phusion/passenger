@@ -25,7 +25,6 @@
 #include <boost/container/container_fwd.hpp>
 #include <boost/container/detail/workaround.hpp>
 
-#include <boost/static_assert.hpp>
 #include <boost/container/detail/mpl.hpp>
 #include <boost/container/detail/type_traits.hpp>
 #include <boost/container/detail/mpl.hpp>
@@ -166,35 +165,35 @@ struct pair
    pair()
       : first(), second()
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    //pair copy assignment
    pair(const pair& x)
       : first(x.first), second(x.second)
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    //pair move constructor
    pair(BOOST_RV_REF(pair) p)
       : first(::boost::move(BOOST_MOVE_TO_LV(p).first)), second(::boost::move(BOOST_MOVE_TO_LV(p).second))
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    template <class D, class S>
    pair(const pair<D, S> &p)
       : first(p.first), second(p.second)
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    template <class D, class S>
    pair(BOOST_RV_REF_BEG pair<D, S> BOOST_RV_REF_END p)
       : first(::boost::move(BOOST_MOVE_TO_LV(p).first)), second(::boost::move(BOOST_MOVE_TO_LV(p).second))
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    //pair from two values
@@ -202,7 +201,7 @@ struct pair
       : first(t1)
       , second(t2)
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    template<class U, class V>
@@ -210,34 +209,34 @@ struct pair
       : first(::boost::forward<U>(u))
       , second(::boost::forward<V>(v))
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    //And now compatibility with std::pair
    pair(const std::pair<T1, T2>& x)
       : first(x.first), second(x.second)
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    template <class D, class S>
    pair(const std::pair<D, S>& p)
       : first(p.first), second(p.second)
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    pair(BOOST_RV_REF_BEG std::pair<T1, T2> BOOST_RV_REF_END p)
       : first(::boost::move(BOOST_MOVE_TO_LV(p).first)), second(::boost::move(BOOST_MOVE_TO_LV(p).second))
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    template <class D, class S>
    pair(BOOST_RV_REF_BEG std::pair<D, S> BOOST_RV_REF_END p)
       : first(::boost::move(BOOST_MOVE_TO_LV(p).first)), second(::boost::move(BOOST_MOVE_TO_LV(p).second))
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
 
    #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
@@ -245,7 +244,7 @@ struct pair
    pair(try_emplace_t, BOOST_FWD_REF(KeyType) k, Args && ...args)
       : first(boost::forward<KeyType>(k)), second(::boost::forward<Args>(args)...)\
    {
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
    }
    #else
 
@@ -255,7 +254,7 @@ struct pair
    pair( try_emplace_t, BOOST_FWD_REF(KeyType) k BOOST_MOVE_I##N BOOST_MOVE_UREF##N )\
       : first(boost::forward<KeyType>(k)), second(BOOST_MOVE_FWD##N)\
    {\
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));\
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));\
    }\
    //
    BOOST_MOVE_ITERATE_0TO9(BOOST_PAIR_TRY_EMPLACE_CONSTRUCT_CODE)
@@ -277,7 +276,7 @@ struct pair
        )\
       : first(BOOST_MOVE_TMPL_GET##N), second(BOOST_MOVE_TMPL_GETQ##M)\
    { (void)p; (void)q;\
-      BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));\
+      BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));\
    }\
    //
    BOOST_MOVE_ITER2D_0TOMAX(9, BOOST_PAIR_PIECEWISE_CONSTRUCT_BOOST_TUPLE_CODE)
@@ -299,7 +298,7 @@ struct pair
       pair(piecewise_construct_t, Tuple<Args1...> t1, Tuple<Args2...> t2)
          : pair(t1, t2, typename build_number_seq<sizeof...(Args1)>::type(), typename build_number_seq<sizeof...(Args2)>::type())
       {
-         BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+         BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
       }
    #  else
       //piecewise construction from variadic tuple (suboptimal, without delegating constructors)
@@ -319,7 +318,7 @@ struct pair
          : first  (build_from_args<first_type> (::boost::move(t1)))
          , second (build_from_args<second_type>(::boost::move(t2)))
       {
-         BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
+         BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));
       }
    #  endif   //BOOST_NO_CXX11_VARIADIC_TEMPLATES
    #elif defined(BOOST_MSVC) && (_CPPLIB_VER == 520)
@@ -332,7 +331,7 @@ struct pair
           , StdTuple<BOOST_MOVE_TARGQ##M BOOST_MOVE_I##M BOOST_MOVE_REPEAT(BOOST_MOVE_SUB(10,M),::std::tr1::_Nil)> q)\
          : first(BOOST_MOVE_GET_IDX##N), second(BOOST_MOVE_GET_IDXQ##M)\
       { (void)p; (void)q;\
-         BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));\
+         BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));\
       }\
       //
       BOOST_MOVE_ITER2D_0TOMAX(9, BOOST_PAIR_PIECEWISE_CONSTRUCT_MSVC2010_TUPLE_CODE)
@@ -353,7 +352,7 @@ struct pair
           , StdTuple<BOOST_MOVE_TARGQ##M BOOST_MOVE_I##M BOOST_MOVE_REPEAT(BOOST_MOVE_SUB(BOOST_MOVE_ADD(_VARIADIC_MAX, 3),M),::std::_Nil) > q)\
          : first(BOOST_MOVE_GET_IDX##N), second(BOOST_MOVE_GET_IDXQ##M)\
       { (void)p; (void)q;\
-         BOOST_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));\
+         BOOST_CONTAINER_STATIC_ASSERT((sizeof(std::pair<T1, T2>) == sizeof(pair<T1, T2>)));\
       }\
       //
       BOOST_MOVE_ITER2D_0TOMAX(BOOST_PAIR_PIECEWISE_CONSTRUCT_MSVC2012_TUPLE_MAX_IT, BOOST_PAIR_PIECEWISE_CONSTRUCT_MSVC2012_TUPLE_CODE)

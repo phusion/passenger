@@ -21,7 +21,6 @@
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <boost/intrusive/intrusive_fwd.hpp>
 #include <boost/intrusive/detail/assert.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/intrusive/bs_set_hook.hpp>
 #include <boost/intrusive/bstree.hpp>
 #include <boost/intrusive/detail/tree_node.hpp>
@@ -275,7 +274,7 @@ class sgtree_impl
    typedef typename alpha_traits::multiply_by_alpha_t       multiply_by_alpha_t;
 
    BOOST_MOVABLE_BUT_NOT_COPYABLE(sgtree_impl)
-   BOOST_STATIC_ASSERT(((int)value_traits::link_mode != (int)auto_unlink));
+   BOOST_INTRUSIVE_STATIC_ASSERT(((int)value_traits::link_mode != (int)auto_unlink));
 
    enum { safemode_or_autounlink  =
             (int)value_traits::link_mode == (int)auto_unlink   ||
@@ -914,7 +913,7 @@ class sgtree_impl
    {
       //The alpha factor CAN't be changed if the fixed, floating operation-less
       //1/sqrt(2) alpha factor option is activated
-      BOOST_STATIC_ASSERT((floating_point));
+      BOOST_INTRUSIVE_STATIC_ASSERT((floating_point));
       BOOST_INTRUSIVE_INVARIANT_ASSERT((new_alpha > 0.5f && new_alpha < 1.0f));
       if(new_alpha >= 0.5f && new_alpha < 1.0f){
          float old_alpha = this->get_alpha_traits().get_alpha();
@@ -1018,48 +1017,48 @@ class sgtree
    typedef typename Base::const_reverse_iterator     const_reverse_iterator;
 
    //Assert if passed value traits are compatible with the type
-   BOOST_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
 
-   BOOST_INTRUSIVE_FORCEINLINE sgtree()
+   inline sgtree()
       :  Base()
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE explicit sgtree(const key_compare &cmp, const value_traits &v_traits = value_traits())
+   inline explicit sgtree(const key_compare &cmp, const value_traits &v_traits = value_traits())
       :  Base(cmp, v_traits)
    {}
 
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE sgtree( bool unique, Iterator b, Iterator e
+   inline sgtree( bool unique, Iterator b, Iterator e
          , const key_compare &cmp = key_compare()
          , const value_traits &v_traits = value_traits())
       :  Base(unique, b, e, cmp, v_traits)
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE sgtree(BOOST_RV_REF(sgtree) x)
+   inline sgtree(BOOST_RV_REF(sgtree) x)
       :  Base(BOOST_MOVE_BASE(Base, x))
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE sgtree& operator=(BOOST_RV_REF(sgtree) x)
+   inline sgtree& operator=(BOOST_RV_REF(sgtree) x)
    {  return static_cast<sgtree &>(this->Base::operator=(BOOST_MOVE_BASE(Base, x)));  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(const sgtree &src, Cloner cloner, Disposer disposer)
+   inline void clone_from(const sgtree &src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(src, cloner, disposer);  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(sgtree) src, Cloner cloner, Disposer disposer)
+   inline void clone_from(BOOST_RV_REF(sgtree) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
-   BOOST_INTRUSIVE_FORCEINLINE static sgtree &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
+   inline static sgtree &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<sgtree &>(Base::container_from_end_iterator(end_iterator));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static const sgtree &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
+   inline static const sgtree &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const sgtree &>(Base::container_from_end_iterator(end_iterator));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static sgtree &container_from_iterator(iterator it) BOOST_NOEXCEPT
+   inline static sgtree &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<sgtree &>(Base::container_from_iterator(it));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static const sgtree &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
+   inline static const sgtree &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const sgtree &>(Base::container_from_iterator(it));   }
 };
 

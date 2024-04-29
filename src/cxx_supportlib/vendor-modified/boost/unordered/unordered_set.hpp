@@ -1,6 +1,7 @@
 // Copyright (C) 2003-2004 Jeremy B. Maitin-Shepard.
 // Copyright (C) 2005-2011 Daniel James.
 // Copyright (C) 2022-2023 Christian Mazakas
+// Copyright (C) 2024 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -154,7 +155,7 @@ namespace boost {
 
       allocator_type get_allocator() const noexcept
       {
-        return table_.node_alloc();
+        return allocator_type(table_.node_alloc());
       }
 
       // iterators
@@ -252,12 +253,15 @@ namespace boost {
       node_type extract(const_iterator position)
       {
         return node_type(
-          table_.extract_by_iterator_unique(position), table_.node_alloc());
+          table_.extract_by_iterator_unique(position),
+          allocator_type(table_.node_alloc()));
       }
 
       node_type extract(const key_type& k)
       {
-        return node_type(table_.extract_by_key_impl(k), table_.node_alloc());
+        return node_type(
+          table_.extract_by_key_impl(k),
+          allocator_type(table_.node_alloc()));
       }
 
       template <class Key>
@@ -266,7 +270,9 @@ namespace boost {
         node_type>::type
       extract(const Key& k)
       {
-        return node_type(table_.extract_by_key_impl(k), table_.node_alloc());
+        return node_type(
+          table_.extract_by_key_impl(k),
+          allocator_type(table_.node_alloc()));
       }
 
       insert_return_type insert(node_type&& np)
@@ -647,7 +653,7 @@ namespace boost {
 
       allocator_type get_allocator() const noexcept
       {
-        return table_.node_alloc();
+        return allocator_type(table_.node_alloc());
       }
 
       // iterators

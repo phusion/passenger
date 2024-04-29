@@ -19,7 +19,6 @@
 #include <boost/intrusive/detail/mpl.hpp>
 #include <boost/intrusive/rbtree.hpp>
 #include <boost/move/utility_core.hpp>
-#include <boost/static_assert.hpp>
 
 #if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
@@ -523,48 +522,48 @@ class set
    typedef typename Base::const_iterator     const_iterator;
 
    //Assert if passed value traits are compatible with the type
-   BOOST_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
 
-   BOOST_INTRUSIVE_FORCEINLINE set()
+   inline set()
       :  Base()
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE explicit set( const key_compare &cmp, const value_traits &v_traits = value_traits())
+   inline explicit set( const key_compare &cmp, const value_traits &v_traits = value_traits())
       :  Base(cmp, v_traits)
    {}
 
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE set( Iterator b, Iterator e
+   inline set( Iterator b, Iterator e
       , const key_compare &cmp = key_compare()
       , const value_traits &v_traits = value_traits())
       :  Base(b, e, cmp, v_traits)
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE set(BOOST_RV_REF(set) x)
+   inline set(BOOST_RV_REF(set) x)
       :  Base(BOOST_MOVE_BASE(Base, x))
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE set& operator=(BOOST_RV_REF(set) x)
+   inline set& operator=(BOOST_RV_REF(set) x)
    {  return static_cast<set &>(this->Base::operator=(BOOST_MOVE_BASE(Base, x)));  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(const set &src, Cloner cloner, Disposer disposer)
+   inline void clone_from(const set &src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(src, cloner, disposer);  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(set) src, Cloner cloner, Disposer disposer)
+   inline void clone_from(BOOST_RV_REF(set) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
-   BOOST_INTRUSIVE_FORCEINLINE static set &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
+   inline static set &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<set &>(Base::container_from_end_iterator(end_iterator));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static const set &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
+   inline static const set &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const set &>(Base::container_from_end_iterator(end_iterator));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static set &container_from_iterator(iterator it) BOOST_NOEXCEPT
+   inline static set &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<set &>(Base::container_from_iterator(it));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static const set &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
+   inline static const set &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const set &>(Base::container_from_iterator(it));   }
 };
 
@@ -1018,48 +1017,48 @@ class multiset
    typedef typename Base::const_iterator     const_iterator;
 
    //Assert if passed value traits are compatible with the type
-   BOOST_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
+   BOOST_INTRUSIVE_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
 
-   BOOST_INTRUSIVE_FORCEINLINE multiset()
+   inline multiset()
       :  Base()
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE explicit multiset( const key_compare &cmp, const value_traits &v_traits = value_traits())
+   inline explicit multiset( const key_compare &cmp, const value_traits &v_traits = value_traits())
       :  Base(cmp, v_traits)
    {}
 
    template<class Iterator>
-   BOOST_INTRUSIVE_FORCEINLINE multiset( Iterator b, Iterator e
+   inline multiset( Iterator b, Iterator e
            , const key_compare &cmp = key_compare()
            , const value_traits &v_traits = value_traits())
       :  Base(b, e, cmp, v_traits)
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE multiset(BOOST_RV_REF(multiset) x)
+   inline multiset(BOOST_RV_REF(multiset) x)
       :  Base(BOOST_MOVE_BASE(Base, x))
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE multiset& operator=(BOOST_RV_REF(multiset) x)
+   inline multiset& operator=(BOOST_RV_REF(multiset) x)
    {  return static_cast<multiset &>(this->Base::operator=(BOOST_MOVE_BASE(Base, x)));  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(const multiset &src, Cloner cloner, Disposer disposer)
+   inline void clone_from(const multiset &src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(src, cloner, disposer);  }
 
    template <class Cloner, class Disposer>
-   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(multiset) src, Cloner cloner, Disposer disposer)
+   inline void clone_from(BOOST_RV_REF(multiset) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
-   BOOST_INTRUSIVE_FORCEINLINE static multiset &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
+   inline static multiset &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<multiset &>(Base::container_from_end_iterator(end_iterator));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static const multiset &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
+   inline static const multiset &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const multiset &>(Base::container_from_end_iterator(end_iterator));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static multiset &container_from_iterator(iterator it) BOOST_NOEXCEPT
+   inline static multiset &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<multiset &>(Base::container_from_iterator(it));   }
 
-   BOOST_INTRUSIVE_FORCEINLINE static const multiset &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
+   inline static const multiset &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const multiset &>(Base::container_from_iterator(it));   }
 };
 

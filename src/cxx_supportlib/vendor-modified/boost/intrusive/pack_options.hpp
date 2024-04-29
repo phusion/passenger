@@ -14,7 +14,7 @@
 #define BOOST_INTRUSIVE_PACK_OPTIONS_HPP
 
 #include <boost/intrusive/detail/config_begin.hpp>
-
+#include <boost/intrusive/detail/workaround.hpp>
 #if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
@@ -338,7 +338,7 @@ struct pack_options
 //!
 //!   typedef pack_options< empty_default, typename my_pointer<void*> >::type::my_pointer_type type;
 //!
-//!   BOOST_STATIC_ASSERT(( boost::is_same<type, void>::value ));
+//!   BOOST_INTRUSIVE_STATIC_ASSERT(( boost::is_same<type, void>::value ));
 //!
 //! \endcode
 #define BOOST_INTRUSIVE_OPTION_TYPE(OPTION_NAME, TYPE, TYPEDEF_EXPR, TYPEDEF_NAME)
@@ -368,7 +368,7 @@ struct pack_options
 //!
 //!   const bool is_incremental = pack_options< empty_default, incremental<true> >::type::is_incremental;
 //!
-//!   BOOST_STATIC_ASSERT(( is_incremental == true ));
+//!   BOOST_INTRUSIVE_STATIC_ASSERT(( is_incremental == true ));
 //!
 //! \endcode
 #define BOOST_INTRUSIVE_OPTION_CONSTANT(OPTION_NAME, TYPE, VALUE, CONSTANT_NAME)

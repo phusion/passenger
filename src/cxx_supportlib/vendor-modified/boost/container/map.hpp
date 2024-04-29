@@ -44,8 +44,6 @@
 // intrusive/detail
 #include <boost/intrusive/detail/minimal_pair_header.hpp>      //pair
 #include <boost/intrusive/detail/minimal_less_equal_header.hpp>//less, equal
-// other
-#include <boost/static_assert.hpp>
 // std
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
 #include <initializer_list>
@@ -130,7 +128,7 @@ class map
       (insert_return_type_base<iterator BOOST_MOVE_I node_type>)                    insert_return_type;
 
    //allocator_type::value_type type must be std::pair<CONST Key, T>
-   BOOST_STATIC_ASSERT((dtl::is_same<typename allocator_type::value_type, std::pair<const Key, T> >::value));
+   BOOST_CONTAINER_STATIC_ASSERT((dtl::is_same<typename allocator_type::value_type, std::pair<const Key, T> >::value));
 
    //////////////////////////////////////////////
    //
@@ -141,7 +139,7 @@ class map
    //! <b>Effects</b>: Default constructs an empty map.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE 
+   inline 
    map() BOOST_NOEXCEPT_IF(dtl::is_nothrow_default_constructible<allocator_type>::value &&
                            dtl::is_nothrow_default_constructible<Compare>::value)
       : base_t()
@@ -151,21 +149,21 @@ class map
    //! and allocator.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE map(const Compare& comp, const allocator_type& a)
+   inline map(const Compare& comp, const allocator_type& a)
       : base_t(comp, a)
    {}
 
    //! <b>Effects</b>: Constructs an empty map using the specified comparison object.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE explicit map(const Compare& comp)
+   inline explicit map(const Compare& comp)
       : base_t(comp)
    {}
 
    //! <b>Effects</b>: Constructs an empty map using the specified allocator.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE explicit map(const allocator_type& a)
+   inline explicit map(const allocator_type& a)
       : base_t(a)
    {}
 
@@ -175,7 +173,7 @@ class map
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is last - first.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE map(InputIterator first, InputIterator last)
+   inline map(InputIterator first, InputIterator last)
       : base_t(true, first, last)
    {}
 
@@ -185,7 +183,7 @@ class map
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is last - first.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE map(InputIterator first, InputIterator last, const allocator_type& a)
+   inline map(InputIterator first, InputIterator last, const allocator_type& a)
       : base_t(true, first, last, Compare(), a)
    {}
 
@@ -195,7 +193,7 @@ class map
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is last - first.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE map(InputIterator first, InputIterator last, const Compare& comp)
+   inline map(InputIterator first, InputIterator last, const Compare& comp)
       : base_t(true, first, last, comp)
    {}
 
@@ -205,7 +203,7 @@ class map
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is last - first.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE map(InputIterator first, InputIterator last, const Compare& comp, const allocator_type& a)
+   inline map(InputIterator first, InputIterator last, const Compare& comp, const allocator_type& a)
       : base_t(true, first, last, comp, a)
    {}
 
@@ -220,7 +218,7 @@ class map
    //!
    //! <b>Note</b>: Non-standard extension.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE map( ordered_unique_range_t, InputIterator first, InputIterator last)
+   inline map( ordered_unique_range_t, InputIterator first, InputIterator last)
       : base_t(ordered_range, first, last)
    {}
 
@@ -235,7 +233,7 @@ class map
    //!
    //! <b>Note</b>: Non-standard extension.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE map( ordered_unique_range_t, InputIterator first, InputIterator last, const Compare& comp)
+   inline map( ordered_unique_range_t, InputIterator first, InputIterator last, const Compare& comp)
       : base_t(ordered_range, first, last, comp)
    {}
 
@@ -250,7 +248,7 @@ class map
    //!
    //! <b>Note</b>: Non-standard extension.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE map( ordered_unique_range_t, InputIterator first, InputIterator last
+   inline map( ordered_unique_range_t, InputIterator first, InputIterator last
       , const Compare& comp, const allocator_type& a)
       : base_t(ordered_range, first, last, comp, a)
    {}
@@ -266,7 +264,7 @@ class map
    //!
    //! <b>Note</b>: Non-standard extension.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE map(ordered_unique_range_t, InputIterator first, InputIterator last, const allocator_type& a)
+   inline map(ordered_unique_range_t, InputIterator first, InputIterator last, const allocator_type& a)
       : base_t(ordered_range, first, last, Compare(), a)
    {}
 
@@ -277,7 +275,7 @@ class map
    //!
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted according
    //! to the predicate and otherwise N logN, where N is il.first() - il.end().
-   BOOST_CONTAINER_FORCEINLINE map(std::initializer_list<value_type> il)
+   inline map(std::initializer_list<value_type> il)
       : base_t(true, il.begin(), il.end())
    {}
 
@@ -286,7 +284,7 @@ class map
    //!
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is il.first() - il.end().
-   BOOST_CONTAINER_FORCEINLINE map(std::initializer_list<value_type> il, const Compare& comp)
+   inline map(std::initializer_list<value_type> il, const Compare& comp)
       : base_t(true, il.begin(), il.end(), comp)
    {}
 
@@ -295,7 +293,7 @@ class map
    //!
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is il.first() - il.end().
-   BOOST_CONTAINER_FORCEINLINE map(std::initializer_list<value_type> il, const allocator_type& a)
+   inline map(std::initializer_list<value_type> il, const allocator_type& a)
       : base_t(true, il.begin(), il.end(), Compare(), a)
    {}
 
@@ -304,7 +302,7 @@ class map
    //!
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is il.first() - il.end().
-   BOOST_CONTAINER_FORCEINLINE map(std::initializer_list<value_type> il, const Compare& comp, const allocator_type& a)
+   inline map(std::initializer_list<value_type> il, const Compare& comp, const allocator_type& a)
       : base_t(true, il.begin(), il.end(), comp, a)
    {}
 
@@ -317,7 +315,7 @@ class map
    //! <b>Complexity</b>: Linear in N.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_FORCEINLINE map(ordered_unique_range_t, std::initializer_list<value_type> il)
+   inline map(ordered_unique_range_t, std::initializer_list<value_type> il)
       : base_t(ordered_range, il.begin(), il.end())
    {}
 
@@ -331,7 +329,7 @@ class map
    //! <b>Complexity</b>: Linear in N.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_FORCEINLINE map(ordered_unique_range_t, std::initializer_list<value_type> il, const Compare& comp)
+   inline map(ordered_unique_range_t, std::initializer_list<value_type> il, const Compare& comp)
       : base_t(ordered_range, il.begin(), il.end(), comp)
    {}
 
@@ -345,7 +343,7 @@ class map
    //! <b>Complexity</b>: Linear in N.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_FORCEINLINE map( ordered_unique_range_t, std::initializer_list<value_type> il
+   inline map( ordered_unique_range_t, std::initializer_list<value_type> il
                                   , const Compare& comp, const allocator_type& a)
       : base_t(ordered_range, il.begin(), il.end(), comp, a)
    {} 
@@ -355,7 +353,7 @@ class map
    //! <b>Effects</b>: Copy constructs a map.
    //!
    //! <b>Complexity</b>: Linear in x.size().
-   BOOST_CONTAINER_FORCEINLINE map(const map& x)
+   inline map(const map& x)
       : base_t(static_cast<const base_t&>(x))
    {}
 
@@ -364,7 +362,7 @@ class map
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Postcondition</b>: x is emptied.
-   BOOST_CONTAINER_FORCEINLINE map(BOOST_RV_REF(map) x)
+   inline map(BOOST_RV_REF(map) x)
       BOOST_NOEXCEPT_IF(boost::container::dtl::is_nothrow_move_constructible<Compare>::value)
       : base_t(BOOST_MOVE_BASE(base_t, x))
    {}
@@ -372,7 +370,7 @@ class map
    //! <b>Effects</b>: Copy constructs a map using the specified allocator.
    //!
    //! <b>Complexity</b>: Linear in x.size().
-   BOOST_CONTAINER_FORCEINLINE map(const map& x, const allocator_type &a)
+   inline map(const map& x, const allocator_type &a)
       : base_t(static_cast<const base_t&>(x), a)
    {}
 
@@ -382,14 +380,14 @@ class map
    //! <b>Complexity</b>: Constant if x == x.get_allocator(), linear otherwise.
    //!
    //! <b>Postcondition</b>: x is emptied.
-   BOOST_CONTAINER_FORCEINLINE map(BOOST_RV_REF(map) x, const allocator_type &a)
+   inline map(BOOST_RV_REF(map) x, const allocator_type &a)
       : base_t(BOOST_MOVE_BASE(base_t, x), a)
    {}
 
    //! <b>Effects</b>: Makes *this a copy of x.
    //!
    //! <b>Complexity</b>: Linear in x.size().
-   BOOST_CONTAINER_FORCEINLINE map& operator=(BOOST_COPY_ASSIGN_REF(map) x)
+   inline map& operator=(BOOST_COPY_ASSIGN_REF(map) x)
    {  return static_cast<map&>(this->base_t::operator=(static_cast<const base_t&>(x)));  }
 
    //! <b>Effects</b>: this->swap(x.get()).
@@ -400,7 +398,7 @@ class map
    //! <b>Complexity</b>: Constant if allocator_traits_type::
    //!   propagate_on_container_move_assignment is true or
    //!   this->get>allocator() == x.get_allocator(). Linear otherwise.
-   BOOST_CONTAINER_FORCEINLINE map& operator=(BOOST_RV_REF(map) x)
+   inline map& operator=(BOOST_RV_REF(map) x)
       BOOST_NOEXCEPT_IF( (allocator_traits_type::propagate_on_container_move_assignment::value ||
                           allocator_traits_type::is_always_equal::value) &&
                            boost::container::dtl::is_nothrow_move_assignable<Compare>::value)
@@ -409,7 +407,7 @@ class map
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
    //! <b>Effects</b>: Assign content of il to *this.
    //!
-   BOOST_CONTAINER_FORCEINLINE map& operator=(std::initializer_list<value_type> il)
+   inline map& operator=(std::initializer_list<value_type> il)
    {
        this->clear();
        insert(il.begin(), il.end());
@@ -574,8 +572,8 @@ class map
    mapped_type& operator[](key_type &&k);
    #elif defined(BOOST_MOVE_HELPERS_RETURN_SFINAE_BROKEN)
       //in compilers like GCC 3.4, we can't catch temporaries
-      BOOST_CONTAINER_FORCEINLINE mapped_type& operator[](const key_type &k)         {  return this->priv_subscript(k);  }
-      BOOST_CONTAINER_FORCEINLINE mapped_type& operator[](BOOST_RV_REF(key_type) k)  {  return this->priv_subscript(::boost::move(k));  }
+      inline mapped_type& operator[](const key_type &k)         {  return this->priv_subscript(k);  }
+      inline mapped_type& operator[](BOOST_RV_REF(key_type) k)  {  return this->priv_subscript(::boost::move(k));  }
    #else
       BOOST_MOVE_CONVERSION_AWARE_CATCH( operator[] , key_type, mapped_type&, this->priv_subscript)
    #endif
@@ -593,7 +591,7 @@ class map
    //!
    //! <b>Complexity</b>: Logarithmic in the size of the container.
    template <class M>
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator, bool> insert_or_assign(const key_type& k, BOOST_FWD_REF(M) obj)
+   inline std::pair<iterator, bool> insert_or_assign(const key_type& k, BOOST_FWD_REF(M) obj)
    {  return this->base_t::insert_or_assign(const_iterator(), k, ::boost::forward<M>(obj));  }
 
    //! <b>Effects</b>: If a key equivalent to k already exists in the container, assigns forward<M>(obj)
@@ -609,7 +607,7 @@ class map
    //!
    //! <b>Complexity</b>: Logarithmic in the size of the container.
    template <class M>
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator, bool> insert_or_assign(BOOST_RV_REF(key_type) k, BOOST_FWD_REF(M) obj)
+   inline std::pair<iterator, bool> insert_or_assign(BOOST_RV_REF(key_type) k, BOOST_FWD_REF(M) obj)
    {  return this->base_t::insert_or_assign(const_iterator(), ::boost::move(k), ::boost::forward<M>(obj));  }
 
    //! <b>Effects</b>: If a key equivalent to k already exists in the container, assigns forward<M>(obj)
@@ -627,7 +625,7 @@ class map
    //! <b>Complexity</b>: Logarithmic in the size of the container in general, but amortized constant if
    //! the new element is inserted just before hint.
    template <class M>
-   BOOST_CONTAINER_FORCEINLINE iterator insert_or_assign(const_iterator hint, const key_type& k, BOOST_FWD_REF(M) obj)
+   inline iterator insert_or_assign(const_iterator hint, const key_type& k, BOOST_FWD_REF(M) obj)
    {  return this->base_t::insert_or_assign(hint, k, ::boost::forward<M>(obj)).first;  }
 
    //! <b>Effects</b>: If a key equivalent to k already exists in the container, assigns forward<M>(obj)
@@ -645,7 +643,7 @@ class map
    //! <b>Complexity</b>: Logarithmic in the size of the container in general, but amortized constant if
    //! the new element is inserted just before hint.
    template <class M>
-   BOOST_CONTAINER_FORCEINLINE iterator insert_or_assign(const_iterator hint, BOOST_RV_REF(key_type) k, BOOST_FWD_REF(M) obj)
+   inline iterator insert_or_assign(const_iterator hint, BOOST_RV_REF(key_type) k, BOOST_FWD_REF(M) obj)
    {  return this->base_t::insert_or_assign(hint, ::boost::move(k), ::boost::forward<M>(obj)).first;  }
 
    //! <b>Returns</b>: A reference to the element whose key is equivalent to x.
@@ -686,7 +684,7 @@ class map
    //!   points to the element with key equivalent to the key of x.
    //!
    //! <b>Complexity</b>: Logarithmic.
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator,bool> insert(const value_type& x)
+   inline std::pair<iterator,bool> insert(const value_type& x)
    { return this->base_t::insert_unique_convertible(x); }
 
    //! <b>Effects</b>: Move constructs a new value from x if and only if there is
@@ -697,7 +695,7 @@ class map
    //!   points to the element with key equivalent to the key of x.
    //!
    //! <b>Complexity</b>: Logarithmic.
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator,bool> insert(BOOST_RV_REF(value_type) x)
+   inline std::pair<iterator,bool> insert(BOOST_RV_REF(value_type) x)
    { return this->base_t::insert_unique_convertible(boost::move(x)); }
 
    //! <b>Effects</b>: Inserts a new value_type created from the pair if and only if
@@ -709,7 +707,7 @@ class map
    //!
    //! <b>Complexity</b>: Logarithmic.
    template <class Pair>
-   BOOST_CONTAINER_FORCEINLINE BOOST_CONTAINER_DOC1ST
+   inline BOOST_CONTAINER_DOC1ST
          ( std::pair<iterator BOOST_MOVE_I bool>
          , typename dtl::enable_if_c<
                dtl::is_convertible<Pair BOOST_MOVE_I value_type>::value ||
@@ -718,7 +716,7 @@ class map
       insert(BOOST_FWD_REF(Pair) x)
    {  return this->base_t::emplace_unique(boost::forward<Pair>(x)); }
 
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, const value_type& x)
+   inline iterator insert(const_iterator p, const value_type& x)
    { return this->base_t::insert_unique_hint_convertible(p, x); }
 
    //! <b>Effects</b>: Inserts a copy of x in the container if and only if there is
@@ -730,7 +728,7 @@ class map
    //!
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, BOOST_RV_REF(value_type) x)
+   inline iterator insert(const_iterator p, BOOST_RV_REF(value_type) x)
    { return this->base_t::insert_unique_hint_convertible(p, boost::move(x)); }
 
    //! <b>Effects</b>: Inserts a copy of x in the container if and only if there is
@@ -743,7 +741,7 @@ class map
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
    template <class Pair>
-   BOOST_CONTAINER_FORCEINLINE BOOST_CONTAINER_DOC1ST
+   inline BOOST_CONTAINER_DOC1ST
          ( iterator
          , typename dtl::enable_if_c<
             dtl::is_convertible<Pair BOOST_MOVE_I value_type>::value  ||
@@ -763,7 +761,7 @@ class map
    //!
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, BOOST_RV_REF(nonconst_value_type) x)
+   inline iterator insert(const_iterator p, BOOST_RV_REF(nonconst_value_type) x)
    { return this->try_emplace(p, boost::move(x.first), boost::move(x.second)); }
 
    //! <b>Effects</b>: Move constructs a new value from x if and only if there is
@@ -775,7 +773,7 @@ class map
    //!
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, BOOST_RV_REF(movable_value_type) x)
+   inline iterator insert(const_iterator p, BOOST_RV_REF(movable_value_type) x)
    { return this->try_emplace(p, boost::move(x.first), boost::move(x.second)); }
 
    //! <b>Effects</b>: Inserts a copy of x in the container.
@@ -784,7 +782,7 @@ class map
    //! <b>Returns</b>: An iterator pointing to the element with key equivalent to the key of x.
    //!
    //! <b>Complexity</b>: Logarithmic.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, const nonconst_value_type& x)
+   inline iterator insert(const_iterator p, const nonconst_value_type& x)
    { return this->try_emplace(p, x.first, x.second); }
 
 
@@ -796,7 +794,7 @@ class map
    //!
    //! <b>Complexity</b>: At most N log(size()+N) (N is the distance from first to last)
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE void insert(InputIterator first, InputIterator last)
+   inline void insert(InputIterator first, InputIterator last)
    {  this->base_t::insert_unique_range(first, last);  }
 
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
@@ -804,7 +802,7 @@ class map
    //!   if there is no element with key equivalent to the key of that element.
    //!
    //! <b>Complexity</b>: At most N log(size()+N) (N is the distance from il.begin() to il.end())
-   BOOST_CONTAINER_FORCEINLINE void insert(std::initializer_list<value_type> il)
+   inline void insert(std::initializer_list<value_type> il)
    {  this->base_t::insert_unique_range(il.begin(), il.end()); }
 #endif
 
@@ -854,7 +852,7 @@ class map
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
    template <class... Args>
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator,bool> emplace(BOOST_FWD_REF(Args)... args)
+   inline std::pair<iterator,bool> emplace(BOOST_FWD_REF(Args)... args)
    {  return this->base_t::emplace_unique(boost::forward<Args>(args)...); }
 
    //! <b>Effects</b>: Inserts an object of type T constructed with
@@ -868,7 +866,7 @@ class map
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
    template <class... Args>
-   BOOST_CONTAINER_FORCEINLINE iterator emplace_hint(const_iterator p, BOOST_FWD_REF(Args)... args)
+   inline iterator emplace_hint(const_iterator p, BOOST_FWD_REF(Args)... args)
    {  return this->base_t::emplace_hint_unique(p, boost::forward<Args>(args)...); }
 
    //! <b>Requires</b>: value_type shall be EmplaceConstructible into map from piecewise_construct, 
@@ -883,7 +881,7 @@ class map
    //! 
    //! <b>Complexity</b>: Logarithmic.
    template <class... Args>
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator, bool> try_emplace(const key_type& k, BOOST_FWD_REF(Args)... args)
+   inline std::pair<iterator, bool> try_emplace(const key_type& k, BOOST_FWD_REF(Args)... args)
    {  return this->base_t::try_emplace(const_iterator(), k, boost::forward<Args>(args)...); }
 
    //! <b>Requires</b>: value_type shall be EmplaceConstructible into map from piecewise_construct, 
@@ -898,7 +896,7 @@ class map
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if value
    //!   is inserted right before p.
    template <class... Args>
-   BOOST_CONTAINER_FORCEINLINE iterator try_emplace(const_iterator hint, const key_type &k, BOOST_FWD_REF(Args)... args)
+   inline iterator try_emplace(const_iterator hint, const key_type &k, BOOST_FWD_REF(Args)... args)
    {  return this->base_t::try_emplace(hint, k, boost::forward<Args>(args)...).first; }
 
    //! <b>Requires</b>: value_type shall be EmplaceConstructible into map from piecewise_construct, 
@@ -913,7 +911,7 @@ class map
    //! 
    //! <b>Complexity</b>: Logarithmic.
    template <class... Args>
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator, bool> try_emplace(BOOST_RV_REF(key_type) k, BOOST_FWD_REF(Args)... args)
+   inline std::pair<iterator, bool> try_emplace(BOOST_RV_REF(key_type) k, BOOST_FWD_REF(Args)... args)
    {  return this->base_t::try_emplace(const_iterator(), boost::move(k), boost::forward<Args>(args)...); }
 
    //! <b>Requires</b>: value_type shall be EmplaceConstructible into map from piecewise_construct, 
@@ -928,34 +926,34 @@ class map
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if value
    //!   is inserted right before p.
    template <class... Args>
-   BOOST_CONTAINER_FORCEINLINE iterator try_emplace(const_iterator hint, BOOST_RV_REF(key_type) k, BOOST_FWD_REF(Args)... args)
+   inline iterator try_emplace(const_iterator hint, BOOST_RV_REF(key_type) k, BOOST_FWD_REF(Args)... args)
    {  return this->base_t::try_emplace(hint, boost::move(k), boost::forward<Args>(args)...).first; }
 
    #else // !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
 
    #define BOOST_CONTAINER_MAP_EMPLACE_CODE(N) \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator,bool> emplace(BOOST_MOVE_UREF##N)\
+   inline std::pair<iterator,bool> emplace(BOOST_MOVE_UREF##N)\
    {  return this->base_t::emplace_unique(BOOST_MOVE_FWD##N);   }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE iterator emplace_hint(const_iterator hint BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
+   inline iterator emplace_hint(const_iterator hint BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
    {  return this->base_t::emplace_hint_unique(hint BOOST_MOVE_I##N BOOST_MOVE_FWD##N);  }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator, bool> try_emplace(const key_type& k BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
+   inline std::pair<iterator, bool> try_emplace(const key_type& k BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
    {  return this->base_t::try_emplace(const_iterator(), k BOOST_MOVE_I##N BOOST_MOVE_FWD##N); }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE iterator try_emplace(const_iterator hint, const key_type &k BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
+   inline iterator try_emplace(const_iterator hint, const key_type &k BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
    {  return this->base_t::try_emplace(hint, k BOOST_MOVE_I##N BOOST_MOVE_FWD##N).first; }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator, bool> try_emplace(BOOST_RV_REF(key_type) k BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
+   inline std::pair<iterator, bool> try_emplace(BOOST_RV_REF(key_type) k BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
    {  return this->base_t::try_emplace(const_iterator(), boost::move(k) BOOST_MOVE_I##N BOOST_MOVE_FWD##N); }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE iterator try_emplace(const_iterator hint, BOOST_RV_REF(key_type) k BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
+   inline iterator try_emplace(const_iterator hint, BOOST_RV_REF(key_type) k BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
    {  return this->base_t::try_emplace(hint, boost::move(k) BOOST_MOVE_I##N BOOST_MOVE_FWD##N).first; }\
    //
    BOOST_MOVE_ITERATE_0TO9(BOOST_CONTAINER_MAP_EMPLACE_CODE)
@@ -968,7 +966,7 @@ class map
    //! <b>Returns</b>: Returns the number of erased elements (0/1).
    //!
    //! <b>Complexity</b>: log(size()) + count(k)
-   BOOST_CONTAINER_FORCEINLINE size_type erase(const key_type& x)
+   inline size_type erase(const key_type& x)
       { return this->base_t::erase_unique(x); }
 
    #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
@@ -1032,7 +1030,7 @@ class map
    //!
    //! <b>Complexity</b>: N log(size() + N) (N has the value source.size())
    template<class C2>
-   BOOST_CONTAINER_FORCEINLINE void merge(map<Key, T, C2, Allocator, Options>& source)
+   inline void merge(map<Key, T, C2, Allocator, Options>& source)
    {
       typedef dtl::tree
          <value_type_impl, select_1st_t, C2, Allocator, Options> base2_t;
@@ -1041,12 +1039,12 @@ class map
 
    //! @copydoc ::boost::container::map::merge(map<Key, T, C2, Allocator, Options>&)
    template<class C2>
-   BOOST_CONTAINER_FORCEINLINE void merge(BOOST_RV_REF_BEG map<Key, T, C2, Allocator, Options> BOOST_RV_REF_END source)
+   inline void merge(BOOST_RV_REF_BEG map<Key, T, C2, Allocator, Options> BOOST_RV_REF_END source)
    {  return this->merge(static_cast<map<Key, T, C2, Allocator, Options>&>(source)); }
 
    //! @copydoc ::boost::container::map::merge(map<Key, T, C2, Allocator, Options>&)
    template<class C2>
-   BOOST_CONTAINER_FORCEINLINE void merge(multimap<Key, T, C2, Allocator, Options>& source)
+   inline void merge(multimap<Key, T, C2, Allocator, Options>& source)
    {
       typedef dtl::tree
          <value_type_impl, select_1st_t, C2, Allocator, Options> base2_t;
@@ -1055,7 +1053,7 @@ class map
 
    //! @copydoc ::boost::container::map::merge(map<Key, T, C2, Allocator, Options>&)
    template<class C2>
-   BOOST_CONTAINER_FORCEINLINE void merge(BOOST_RV_REF_BEG multimap<Key, T, C2, Allocator, Options> BOOST_RV_REF_END source)
+   inline void merge(BOOST_RV_REF_BEG multimap<Key, T, C2, Allocator, Options> BOOST_RV_REF_END source)
    {  return this->merge(static_cast<multimap<Key, T, C2, Allocator, Options>&>(source)); }
 
    #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
@@ -1124,7 +1122,7 @@ class map
    //! <b>Returns</b>: The number of elements with key equivalent to x.
    //!
    //! <b>Complexity</b>: log(size())+count(k)
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       size_type count(const key_type& x) const
    {  return static_cast<size_type>(this->find(x) != this->cend());  }
 
@@ -1135,7 +1133,7 @@ class map
    //!
    //! <b>Complexity</b>: log(size())+count(k)
    template<typename K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       size_type count(const K& x) const
    {  return static_cast<size_type>(this->find(x) != this->cend());  }
 
@@ -1296,7 +1294,7 @@ class map
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    private:
    template<class KeyConvertible>
-   BOOST_CONTAINER_FORCEINLINE mapped_type& priv_subscript(BOOST_FWD_REF(KeyConvertible) k)
+   inline mapped_type& priv_subscript(BOOST_FWD_REF(KeyConvertible) k)
    {
       return this->try_emplace(boost::forward<KeyConvertible>(k)).first->second;
    }
@@ -1460,7 +1458,7 @@ class multimap
          <key_type BOOST_MOVE_I mapped_type> >)                                     node_type;
 
    //allocator_type::value_type type must be std::pair<CONST Key, T>
-   BOOST_STATIC_ASSERT((dtl::is_same<typename allocator_type::value_type, std::pair<const Key, T> >::value));
+   BOOST_CONTAINER_STATIC_ASSERT((dtl::is_same<typename allocator_type::value_type, std::pair<const Key, T> >::value));
 
    //////////////////////////////////////////////
    //
@@ -1471,7 +1469,7 @@ class multimap
    //! <b>Effects</b>: Default constructs an empty multimap.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE multimap()
+   inline multimap()
       BOOST_NOEXCEPT_IF(dtl::is_nothrow_default_constructible<allocator_type>::value &&
                         dtl::is_nothrow_default_constructible<Compare>::value)
       : base_t()
@@ -1481,21 +1479,21 @@ class multimap
    //!   object and allocator.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE explicit multimap(const allocator_type& a)
+   inline explicit multimap(const allocator_type& a)
       : base_t(a)
    {}
 
    //! <b>Effects</b>: Constructs an empty multimap using the specified comparison.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE explicit multimap(const Compare& comp)
+   inline explicit multimap(const Compare& comp)
       : base_t(comp)
    {}
 
    //! <b>Effects</b>: Constructs an empty multimap using the specified comparison and allocator.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE multimap(const Compare& comp, const allocator_type& a)
+   inline multimap(const Compare& comp, const allocator_type& a)
       : base_t(comp, a)
    {}
 
@@ -1505,7 +1503,7 @@ class multimap
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is last - first.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE multimap(InputIterator first, InputIterator last)
+   inline multimap(InputIterator first, InputIterator last)
       : base_t(false, first, last)
    {}
 
@@ -1515,7 +1513,7 @@ class multimap
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is last - first.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE multimap(InputIterator first, InputIterator last, const allocator_type& a)
+   inline multimap(InputIterator first, InputIterator last, const allocator_type& a)
       : base_t(false, first, last, Compare(), a)
    {}
 
@@ -1525,7 +1523,7 @@ class multimap
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is last - first.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE multimap(InputIterator first, InputIterator last, const Compare& comp)
+   inline multimap(InputIterator first, InputIterator last, const Compare& comp)
       : base_t(false, first, last, comp)
    {}
 
@@ -1535,7 +1533,7 @@ class multimap
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is last - first.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE multimap(InputIterator first, InputIterator last,
+   inline multimap(InputIterator first, InputIterator last,
             const Compare& comp, const allocator_type& a)
       : base_t(false, first, last, comp, a)
    {}
@@ -1550,7 +1548,7 @@ class multimap
    //!
    //! <b>Note</b>: Non-standard extension.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE multimap(ordered_range_t, InputIterator first, InputIterator last)
+   inline multimap(ordered_range_t, InputIterator first, InputIterator last)
       : base_t(ordered_range, first, last)
    {}
 
@@ -1564,7 +1562,7 @@ class multimap
    //!
    //! <b>Note</b>: Non-standard extension.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE multimap(ordered_range_t, InputIterator first, InputIterator last, const Compare& comp)
+   inline multimap(ordered_range_t, InputIterator first, InputIterator last, const Compare& comp)
       : base_t(ordered_range, first, last, comp)
    {}
 
@@ -1578,7 +1576,7 @@ class multimap
    //!
    //! <b>Note</b>: Non-standard extension.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE multimap(ordered_range_t, InputIterator first, InputIterator last, const Compare& comp,
+   inline multimap(ordered_range_t, InputIterator first, InputIterator last, const Compare& comp,
          const allocator_type& a)
       : base_t(ordered_range, first, last, comp, a)
    {}
@@ -1593,7 +1591,7 @@ class multimap
    //!
    //! <b>Note</b>: Non-standard extension.
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE multimap(ordered_range_t, InputIterator first, InputIterator last, const allocator_type& a)
+   inline multimap(ordered_range_t, InputIterator first, InputIterator last, const allocator_type& a)
       : base_t(ordered_range, first, last, Compare(), a)
    {}
 
@@ -1603,7 +1601,7 @@ class multimap
    //!
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is il.first() - il.end().
-   BOOST_CONTAINER_FORCEINLINE multimap(std::initializer_list<value_type> il)
+   inline multimap(std::initializer_list<value_type> il)
       : base_t(false, il.begin(), il.end())
    {}
 
@@ -1612,7 +1610,7 @@ class multimap
    //!
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is il.first() - il.end().
-   BOOST_CONTAINER_FORCEINLINE multimap(std::initializer_list<value_type> il, const allocator_type& a)
+   inline multimap(std::initializer_list<value_type> il, const allocator_type& a)
       : base_t(false, il.begin(), il.end(), Compare(), a)
    {}
 
@@ -1621,7 +1619,7 @@ class multimap
    //!
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is il.first() - il.end().
-   BOOST_CONTAINER_FORCEINLINE multimap(std::initializer_list<value_type> il, const Compare& comp)
+   inline multimap(std::initializer_list<value_type> il, const Compare& comp)
       : base_t(false, il.begin(), il.end(), comp)
    {}
 
@@ -1630,7 +1628,7 @@ class multimap
    //!
    //! <b>Complexity</b>: Linear in N if the range [first ,last ) is already sorted using
    //! the predicate and otherwise N logN, where N is il.first() - il.end().
-   BOOST_CONTAINER_FORCEINLINE multimap(std::initializer_list<value_type> il, const Compare& comp, const allocator_type& a)
+   inline multimap(std::initializer_list<value_type> il, const Compare& comp, const allocator_type& a)
       : base_t(false, il.begin(), il.end(), comp, a)
    {}
 
@@ -1644,7 +1642,7 @@ class multimap
    //! <b>Complexity</b>: Linear in N.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_FORCEINLINE multimap(ordered_range_t, std::initializer_list<value_type> il)
+   inline multimap(ordered_range_t, std::initializer_list<value_type> il)
       : base_t(ordered_range, il.begin(), il.end())
    {}
 
@@ -1657,7 +1655,7 @@ class multimap
    //! <b>Complexity</b>: Linear in N.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_FORCEINLINE multimap(ordered_range_t, std::initializer_list<value_type> il, const Compare& comp)
+   inline multimap(ordered_range_t, std::initializer_list<value_type> il, const Compare& comp)
       : base_t(ordered_range, il.begin(), il.end(), comp)
    {}
 
@@ -1670,7 +1668,7 @@ class multimap
    //! <b>Complexity</b>: Linear in N.
    //!
    //! <b>Note</b>: Non-standard extension.
-   BOOST_CONTAINER_FORCEINLINE multimap(ordered_range_t, std::initializer_list<value_type> il, const Compare& comp, const allocator_type& a)
+   inline multimap(ordered_range_t, std::initializer_list<value_type> il, const Compare& comp, const allocator_type& a)
       : base_t(ordered_range, il.begin(), il.end(), comp, a)
    {}
 
@@ -1679,7 +1677,7 @@ class multimap
    //! <b>Effects</b>: Copy constructs a multimap.
    //!
    //! <b>Complexity</b>: Linear in x.size().
-   BOOST_CONTAINER_FORCEINLINE multimap(const multimap& x)
+   inline multimap(const multimap& x)
       : base_t(static_cast<const base_t&>(x))
    {}
 
@@ -1688,7 +1686,7 @@ class multimap
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Postcondition</b>: x is emptied.
-   BOOST_CONTAINER_FORCEINLINE multimap(BOOST_RV_REF(multimap) x)
+   inline multimap(BOOST_RV_REF(multimap) x)
       BOOST_NOEXCEPT_IF(boost::container::dtl::is_nothrow_move_constructible<Compare>::value)
       : base_t(BOOST_MOVE_BASE(base_t, x))
    {}
@@ -1696,7 +1694,7 @@ class multimap
    //! <b>Effects</b>: Copy constructs a multimap.
    //!
    //! <b>Complexity</b>: Linear in x.size().
-   BOOST_CONTAINER_FORCEINLINE multimap(const multimap& x, const allocator_type &a)
+   inline multimap(const multimap& x, const allocator_type &a)
       : base_t(static_cast<const base_t&>(x), a)
    {}
 
@@ -1705,20 +1703,20 @@ class multimap
    //! <b>Complexity</b>: Constant if a == x.get_allocator(), linear otherwise.
    //!
    //! <b>Postcondition</b>: x is emptied.
-   BOOST_CONTAINER_FORCEINLINE multimap(BOOST_RV_REF(multimap) x, const allocator_type &a)
+   inline multimap(BOOST_RV_REF(multimap) x, const allocator_type &a)
       : base_t(BOOST_MOVE_BASE(base_t, x), a)
    {}
 
    //! <b>Effects</b>: Makes *this a copy of x.
    //!
    //! <b>Complexity</b>: Linear in x.size().
-   BOOST_CONTAINER_FORCEINLINE multimap& operator=(BOOST_COPY_ASSIGN_REF(multimap) x)
+   inline multimap& operator=(BOOST_COPY_ASSIGN_REF(multimap) x)
    {  return static_cast<multimap&>(this->base_t::operator=(static_cast<const base_t&>(x)));  }
 
    //! <b>Effects</b>: this->swap(x.get()).
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_FORCEINLINE multimap& operator=(BOOST_RV_REF(multimap) x)
+   inline multimap& operator=(BOOST_RV_REF(multimap) x)
       BOOST_NOEXCEPT_IF( (allocator_traits_type::propagate_on_container_move_assignment::value ||
                           allocator_traits_type::is_always_equal::value) &&
                            boost::container::dtl::is_nothrow_move_assignable<Compare>::value)
@@ -1727,7 +1725,7 @@ class multimap
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
    //! <b>Effects</b>: Assign content of il to *this.
    //!
-   BOOST_CONTAINER_FORCEINLINE multimap& operator=(std::initializer_list<value_type> il)
+   inline multimap& operator=(std::initializer_list<value_type> il)
    {
        this->clear();
        insert(il.begin(), il.end());
@@ -1805,7 +1803,7 @@ class multimap
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
    template <class... Args>
-   BOOST_CONTAINER_FORCEINLINE iterator emplace(BOOST_FWD_REF(Args)... args)
+   inline iterator emplace(BOOST_FWD_REF(Args)... args)
    {  return this->base_t::emplace_equal(boost::forward<Args>(args)...); }
 
    //! <b>Effects</b>: Inserts an object of type T constructed with
@@ -1818,18 +1816,18 @@ class multimap
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
    template <class... Args>
-   BOOST_CONTAINER_FORCEINLINE iterator emplace_hint(const_iterator p, BOOST_FWD_REF(Args)... args)
+   inline iterator emplace_hint(const_iterator p, BOOST_FWD_REF(Args)... args)
    {  return this->base_t::emplace_hint_equal(p, boost::forward<Args>(args)...); }
 
    #else // !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
 
    #define BOOST_CONTAINER_MULTIMAP_EMPLACE_CODE(N) \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE iterator emplace(BOOST_MOVE_UREF##N)\
+   inline iterator emplace(BOOST_MOVE_UREF##N)\
    {  return this->base_t::emplace_equal(BOOST_MOVE_FWD##N);   }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   BOOST_CONTAINER_FORCEINLINE iterator emplace_hint(const_iterator hint BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
+   inline iterator emplace_hint(const_iterator hint BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
    {  return this->base_t::emplace_hint_equal(hint BOOST_MOVE_I##N BOOST_MOVE_FWD##N);  }\
    //
    BOOST_MOVE_ITERATE_0TO9(BOOST_CONTAINER_MULTIMAP_EMPLACE_CODE)
@@ -1841,14 +1839,14 @@ class multimap
    //!   newly inserted element.
    //!
    //! <b>Complexity</b>: Logarithmic.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const value_type& x)
+   inline iterator insert(const value_type& x)
    { return this->base_t::insert_equal_convertible(x); }
 
    //! <b>Effects</b>: Inserts a new value move-constructed from x and returns
    //!   the iterator pointing to the newly inserted element.
    //!
    //! <b>Complexity</b>: Logarithmic.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(BOOST_RV_REF(value_type) x)
+   inline iterator insert(BOOST_RV_REF(value_type) x)
    { return this->base_t::insert_equal_convertible(boost::move(x)); }
 
    //! <b>Effects</b>: Inserts a new value constructed from x and returns
@@ -1856,7 +1854,7 @@ class multimap
    //!
    //! <b>Complexity</b>: Logarithmic.
    template<class Pair>
-   BOOST_CONTAINER_FORCEINLINE BOOST_CONTAINER_DOC1ST
+   inline BOOST_CONTAINER_DOC1ST
          ( iterator
          , typename dtl::enable_if_c<
             dtl::is_convertible<Pair BOOST_MOVE_I value_type>::value  ||
@@ -1873,7 +1871,7 @@ class multimap
    //!
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, const value_type& x)
+   inline iterator insert(const_iterator p, const value_type& x)
    { return this->base_t::insert_equal_hint_convertible(p, x); }
 
    //! <b>Effects</b>: Inserts a new value move constructed from x in the container.
@@ -1884,7 +1882,7 @@ class multimap
    //!
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
-   BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, BOOST_RV_REF(movable_value_type) x)
+   inline iterator insert(const_iterator p, BOOST_RV_REF(movable_value_type) x)
    { return this->base_t::insert_equal_hint_convertible(p, boost::move(x)); }
 
    //! <b>Effects</b>: Inserts a new value constructed from x in the container.
@@ -1896,7 +1894,7 @@ class multimap
    //! <b>Complexity</b>: Logarithmic in general, but amortized constant if t
    //!   is inserted right before p.
    template<class Pair>
-   BOOST_CONTAINER_FORCEINLINE BOOST_CONTAINER_DOC1ST
+   inline BOOST_CONTAINER_DOC1ST
          ( iterator
          , typename dtl::enable_if_c<
             dtl::is_convertible<Pair BOOST_MOVE_I value_type>::value  ||
@@ -1911,14 +1909,14 @@ class multimap
    //!
    //! <b>Complexity</b>: At most N log(size()+N) (N is the distance from first to last)
    template <class InputIterator>
-   BOOST_CONTAINER_FORCEINLINE void insert(InputIterator first, InputIterator last)
+   inline void insert(InputIterator first, InputIterator last)
    {  this->base_t::insert_equal_range(first, last); }
 
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
    //! <b>Effects</b>: inserts each element from the range [il.begin(), il.end().
    //!
    //! <b>Complexity</b>: At most N log(size()+N) (N is the distance from il.begin() to il.end())
-   BOOST_CONTAINER_FORCEINLINE void insert(std::initializer_list<value_type> il)
+   inline void insert(std::initializer_list<value_type> il)
    {  this->base_t::insert_equal_range(il.begin(), il.end()); }
 #endif
 
@@ -1987,7 +1985,7 @@ class multimap
    //!
    //! <b>Complexity</b>: N log(size() + N) (N has the value source.size())
    template<class C2>
-   BOOST_CONTAINER_FORCEINLINE void merge(multimap<Key, T, C2, Allocator, Options>& source)
+   inline void merge(multimap<Key, T, C2, Allocator, Options>& source)
    {
       typedef dtl::tree
          <value_type_impl, select_1st_t, C2, Allocator, Options> base2_t;
@@ -1996,12 +1994,12 @@ class multimap
 
    //! @copydoc ::boost::container::multimap::merge(multimap<Key, T, C2, Allocator, Options>&)
    template<class C2>
-   BOOST_CONTAINER_FORCEINLINE void merge(BOOST_RV_REF_BEG multimap<Key, T, C2, Allocator, Options> BOOST_RV_REF_END source)
+   inline void merge(BOOST_RV_REF_BEG multimap<Key, T, C2, Allocator, Options> BOOST_RV_REF_END source)
    {  return this->merge(static_cast<multimap<Key, T, C2, Allocator, Options>&>(source)); }
 
    //! @copydoc ::boost::container::multimap::merge(multimap<Key, T, C2, Allocator, Options>&)
    template<class C2>
-   BOOST_CONTAINER_FORCEINLINE void merge(map<Key, T, C2, Allocator, Options>& source)
+   inline void merge(map<Key, T, C2, Allocator, Options>& source)
    {
       typedef dtl::tree
          <value_type_impl, select_1st_t, C2, Allocator, Options> base2_t;
@@ -2010,7 +2008,7 @@ class multimap
 
    //! @copydoc ::boost::container::multimap::merge(multimap<Key, T, C2, Allocator, Options>&)
    template<class C2>
-   BOOST_CONTAINER_FORCEINLINE void merge(BOOST_RV_REF_BEG map<Key, T, C2, Allocator, Options> BOOST_RV_REF_END source)
+   inline void merge(BOOST_RV_REF_BEG map<Key, T, C2, Allocator, Options> BOOST_RV_REF_END source)
    {  return this->merge(static_cast<map<Key, T, C2, Allocator, Options>&>(source)); }
 
    #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
