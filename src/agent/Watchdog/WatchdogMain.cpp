@@ -24,7 +24,6 @@
  *  THE SOFTWARE.
  */
 // Include ev++.h early to avoid macro clash on EV_ERROR.
-#include "FileTools/PathManip.h"
 #include <ev++.h>
 
 #include <oxt/thread.hpp>
@@ -72,6 +71,7 @@
 #include <Constants.h>
 #include <InstanceDirectory.h>
 #include <FileDescriptor.h>
+#include <FileTools/PathManip.h>
 #include <FileTools/PathSecurityCheck.h>
 #include <SystemTools/UserDatabase.h>
 #include <SystemTools/ContainerHelpers.h>

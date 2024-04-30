@@ -27,7 +27,6 @@
 #ifndef _PASSENGER_CORE_CONFIG_H_
 #define _PASSENGER_CORE_CONFIG_H_
 
-#include "ServerKit/llversion.h"
 #include <string>
 #include <vector>
 
@@ -41,6 +40,7 @@
 #include <ConfigKit/TableTranslator.h>
 #include <ConfigKit/PrefixTranslator.h>
 #include <ServerKit/Context.h>
+#include <ServerKit/llversion.h>
 #include <ServerKit/HttpServer.h>
 #include <WrapperRegistry/Registry.h>
 #include <Core/Controller/Config.h>
