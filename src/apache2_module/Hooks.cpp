@@ -1089,16 +1089,15 @@ private:
 		apr_status_t rv;
 		int done = 0;
 
-		while ((dst < dst_end) && !done && e !=
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnull-pointer-subtraction"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnull-pointer-subtraction"
-APR_BRIGADE_SENTINEL(bb)
-#pragma GCC diagnostic pop
-#pragma clang diagnostic pop
+		while ((dst < dst_end) && !done && e != APR_BRIGADE_SENTINEL(bb)
 			&& !APR_BUCKET_IS_EOS(e))
 		{
+#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 			const char *bucket_data;
 			apr_size_t bucket_data_len;
 			const char *src;
