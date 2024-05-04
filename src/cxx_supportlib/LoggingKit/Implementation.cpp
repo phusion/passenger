@@ -614,12 +614,19 @@ Context::freeOldConfigRlzLater(ConfigRealization *oldConfigRlz, MonotonicTimeUse
 void
 Context::gcThreadMain() {
 	boost::unique_lock<boost::mutex> l(gcSyncher);
-	while (!gcShuttingDown && !oldConfigRlzs.empty()) {
+	while (true) {
+		while (oldConfigRlzs.empty() && !gcShuttingDown) {
+			gcSyncherCond.wait(l);
+		}
+		if (gcShuttingDown) {
+			break;
+		}
+
 		pair<ConfigRealization *, MonotonicTimeUsec> p = oldConfigRlzs.front();
 		MonotonicTimeUsec now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
+		// Wait until it's time to GC this config object,
+		// or until the destructor tells us that we're shutting down.
 		while (!gcShuttingDown && now < p.second) {
-			// Wait until it's time to GC this config object,
-			// or until the destructor tells us that we're shutting down.
 			gcSyncherCond.timed_wait(l, boost::posix_time::microseconds(p.second - now));
 			now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
 		}
