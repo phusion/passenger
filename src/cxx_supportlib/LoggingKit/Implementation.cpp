@@ -527,29 +527,31 @@ normalizeConfig(const Json::Value &effectiveValues) {
 Context::Context(const Json::Value &initialConfig,
 	const ConfigKit::Translator &translator)
 	: config(schema, initialConfig, translator),
-	  gcThread(NULL),
-	  shuttingDown(false)
+	  gcShuttingDown(false)
 {
 	configRlz.store(new ConfigRealization(config));
 	configRlz.load()->apply(config, NULL);
 	configRlz.load()->finalize();
+	gcThread = new oxt::thread(boost::bind(&Context::gcThreadMain, this),
+		"LoggingKit config garbage collector thread",
+		128 * 1024);
 }
 
 Context::~Context() {
-	boost::unique_lock<boost::mutex> l(gcSyncher);
-
-	// If a gc thread exists, tell it to shut down and
-	// wait until it has done so.
-	shuttingDown = true;
-	gcShuttingDownCond.notify_one();
-	while (gcThread != NULL) {
-		gcHasShutDownCond.wait(l);
+	{
+		boost::unique_lock<boost::mutex> l(gcSyncher);
+		gcShuttingDown = true;
+		gcSyncherCond.notify_one();
 	}
+	gcThread->join();
 
-	killGcThread();
-	gcLockless(false, l);
-
+	delete gcThread;
 	delete configRlz.load();
+
+	while (!oldConfigRlzs.empty()) {
+		delete oldConfigRlzs.front().first;
+		oldConfigRlzs.pop();
+	}
 }
 
 ConfigKit::Store
@@ -596,33 +598,8 @@ Context::inspectConfig() const {
 	return config.inspect();
 }
 
-pair<ConfigRealization*,MonotonicTimeUsec>
-Context::peekOldConfig() {
-	return oldConfigs.front();
-}
-
 void
-Context::popOldConfig(ConfigRealization *oldConfig) {
-	delete oldConfig;
-	oldConfigs.pop();
-}
-
-void
-Context::createGcThread() {
-	if (gcThread == NULL) {
-		try {
-			gcThread = new oxt::thread(boost::bind(&Context::gcThreadMain, this),
-				"LoggingKit config garbage collector thread",
-				128 * 1024);
-		} catch (const std::exception &e) {
-			P_ERROR("Error spawning background thread to garbage collect"
-				" old LoggingKit configuration: " << e.what());
-		}
-	}
-}
-
-void
-Context::pushOldConfigAndCreateGcThread(ConfigRealization *oldConfigRlz, MonotonicTimeUsec monotonicNow) {
+Context::freeOldConfigRlzLater(ConfigRealization *oldConfigRlz, MonotonicTimeUsec monotonicNow) {
 	// Garbage collect old config realization in 5 minutes.
 	// There is no way to cheaply find out whether oldConfigRlz
 	// is still being used (we don't want to resort to more atomic
@@ -630,47 +607,27 @@ Context::pushOldConfigAndCreateGcThread(ConfigRealization *oldConfigRlz, Monoton
 	// waiting 5 minutes should be good enough.
 	MonotonicTimeUsec gcTime = monotonicNow + 5llu * 60llu * 1000000llu;
 	boost::unique_lock<boost::mutex> l(gcSyncher);
-	oldConfigs.push(make_pair(oldConfigRlz, gcTime));
-	createGcThread();
-}
-
-bool
-Context::oldConfigsExist() {
-	return !oldConfigs.empty();
+	oldConfigRlzs.push(make_pair(oldConfigRlz, gcTime));
+	gcSyncherCond.notify_one();
 }
 
 void
 Context::gcThreadMain() {
 	boost::unique_lock<boost::mutex> l(gcSyncher);
-	gcLockless(true, l);
-}
-
-void
-Context::gcLockless(bool wait, boost::unique_lock<boost::mutex> &lock) {
-	while (!shuttingDown && oldConfigsExist()) {
-		pair<ConfigRealization *, MonotonicTimeUsec> p = peekOldConfig();
-		for (MonotonicTimeUsec now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
-			 !shuttingDown && wait && now < p.second;
-			 now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>())
-		{
+	while (!gcShuttingDown && !oldConfigRlzs.empty()) {
+		pair<ConfigRealization *, MonotonicTimeUsec> p = oldConfigRlzs.front();
+		MonotonicTimeUsec now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
+		while (!gcShuttingDown && now < p.second) {
 			// Wait until it's time to GC this config object,
 			// or until the destructor tells us that we're shutting down.
-			gcShuttingDownCond.timed_wait(lock, boost::posix_time::microseconds(p.second - now));
+			gcSyncherCond.timed_wait(l, boost::posix_time::microseconds(p.second - now));
+			now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
 		}
-		if (!shuttingDown) {
-			popOldConfig(p.first);
+		if (!gcShuttingDown) {
+			delete p.first;
+			oldConfigRlzs.pop();
 		}
 	}
-	killGcThread();
-}
-
-void
-Context::killGcThread() {
-	if (gcThread != NULL) {
-		delete gcThread;
-		gcThread = NULL;
-	}
-	gcHasShutDownCond.notify_one();
 }
 
 Json::Value
@@ -916,7 +873,7 @@ ConfigRealization::apply(const ConfigKit::Store &config, ConfigRealization *oldC
 
 	if (oldConfigRlz != NULL) {
 		MonotonicTimeUsec monotonicNow = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
-		context->pushOldConfigAndCreateGcThread(oldConfigRlz, monotonicNow);
+		context->freeOldConfigRlzLater(oldConfigRlz, monotonicNow);
 	}
 }
 
