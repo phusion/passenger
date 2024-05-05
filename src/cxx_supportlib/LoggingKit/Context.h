@@ -93,22 +93,16 @@ private:
 	mutable boost::mutex syncher;
 	ConfigKit::Store config;
 	boost::atomic<ConfigRealization *> configRlz;
+	LogStore logStore;
 
 	mutable boost::mutex gcSyncher;
+	boost::condition_variable gcSyncherCond;
 	oxt::thread *gcThread;
-	boost::condition_variable gcShuttingDownCond, gcHasShutDownCond;
-	std::queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigs;
-	LogStore logStore;
-	bool shuttingDown;
+	std::queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigRlzs;
+	bool gcShuttingDown;
 
-	pair<ConfigRealization*,MonotonicTimeUsec> peekOldConfig();
-	void pushOldConfigAndCreateGcThread(ConfigRealization *oldConfigRlz, MonotonicTimeUsec monotonicNow);
+	void freeOldConfigRlzLater(ConfigRealization *oldConfigRlz, MonotonicTimeUsec monotonicNow);
 	void gcThreadMain();
-	void popOldConfig(ConfigRealization *oldConfig);
-	bool oldConfigsExist();
-	void createGcThread();
-	void killGcThread();
-	void gcLockless(bool wait, boost::unique_lock<boost::mutex> &lock);
 
 public:
 	Context(const Json::Value &initialConfig = Json::Value(),
