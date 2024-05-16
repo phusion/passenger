@@ -4,7 +4,7 @@ Release 6.0.21 (Not yet released)
  * [Ubuntu] Remove packages for Ubuntu 23.10 "mantic".
  * [Nginx] Upgrades preferred Nginx to 1.26.0 from 1.24.0.
  * [Nginx] Switch to using PCRE2 instead of PCRE.
- * [RPM] The Passenger Nginx module rpm package for EL9 (RHEL, Rocky, Alma) will now require Nginx 1.24.0 as per the policy of supporting the newest Nginx module available.
+ * [RPM] The Passenger Nginx module rpm package for EL9 (RHEL, Rocky, Alma) will now require Nginx 1.24.0 as per the policy of supporting the newest Nginx module stream available.
  * [Standalone] Fixes security update checker with builtin engine.
  * [Enterprise] Ability to enforce hard memory limits on application processes (`PassengerHardMemoryLimit`/`passenger_hard_memory_limit`/`--hard-memory-limit``). Unlike the soft memory limit, the hard memory limit doesn't wait for the request to finish. Useful for preventing high memory usage from taking down the entire machine or container.
  * [Enterprise] Ability to throttle memory metrics collection (`PassengerAnalyticsCollectionRate`/`passenger_analytics_collection_rate`). This allows you to control the frequency that Passenger Enterpprise measures the app memory use at.
