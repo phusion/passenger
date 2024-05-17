@@ -1,4 +1,8 @@
-Release 6.0.21 (Not yet released)
+Release 6.0.22 (Not yet released)
+-------------
+
+
+Release 6.0.21
 -------------
  * [Python] Fix version of Python when imp module is replaced with importlib. Contributed by Grigory Ponomarenko.
  * [Ubuntu] Remove packages for Ubuntu 23.10 "mantic".
@@ -7,9 +11,9 @@ Release 6.0.21 (Not yet released)
  * [RPM] The Passenger Nginx module rpm package for EL9 (RHEL, Rocky, Alma) will now require Nginx 1.24.0 as per the policy of supporting the newest Nginx module stream available.
  * [Standalone] Fixes security update checker with builtin engine.
  * [Enterprise] Ability to enforce hard memory limits on application processes (`PassengerHardMemoryLimit`/`passenger_hard_memory_limit`/`--hard-memory-limit``). Unlike the soft memory limit, the hard memory limit doesn't wait for the request to finish. Useful for preventing high memory usage from taking down the entire machine or container.
- * [Enterprise] Ability to throttle memory metrics collection (`PassengerAnalyticsCollectionRate`/`passenger_analytics_collection_rate`). This allows you to control the frequency that Passenger Enterpprise measures the app memory use at.
+ * [Enterprise] Ability to throttle memory metrics collection (`PassengerAnalyticsCollectionRate`/`passenger_analytics_collection_rate`). This allows you to control the frequency that Passenger Enterprise measures the app memory use at.
  * Swaps http-parser for llhttp.
- * Fixes crash-watch hanging when lldb is used as backend.
+ * Fixes crash-watch hanging when lldb is used as the backend.
  * Fixes Apache module unload crash due to not properly cleaning up all threads.
  * Workaround compilation error on clang on x86_64.
  * Upgrades Boost from 1.83 -> 1.85.
