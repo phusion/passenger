@@ -1,5 +1,6 @@
 Release 6.0.22 (Not yet released)
 -------------
+ * Fix Amazon Linux detection. Closes GH-3296.
 
 
 Release 6.0.21

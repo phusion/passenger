@@ -304,7 +304,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :category => :base,
     :optimize => :very_heavy,
     # Compiling with SSE2 causes segfaults on Amazon Linux 2
-    :cflags => RbConfig::CONFIG['host_cpu'] == 'x86_64' && RbConfig::CONFIG['host_os'] == 'linux-gnu' ? ' -mno-sse2' : '',
+    :cflags => RbConfig::CONFIG['host_cpu'] == 'x86_64' && RbConfig::CONFIG['host_os'].include?('linux') ? ' -mno-sse2' : '',
     :strict_aliasing => false
   define_component 'IOTools/IOUtils.o',
     :source   => 'IOTools/IOUtils.cpp',
