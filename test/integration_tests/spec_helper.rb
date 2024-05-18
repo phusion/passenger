@@ -12,6 +12,12 @@ rescue Errno::ENOENT
   exit 1
 end
 
+RSpec.configure do |config|
+  config.expect_with(:rspec) do |c|
+    c.syntax = [:should, :expect]
+  end
+end
+
 $LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 $LOAD_PATH.unshift("#{source_root}/test")
 

@@ -35,7 +35,7 @@ end
 # with Bundler.
 if defined?(Bundler)
   clean_env = nil
-  Bundler.with_clean_env do
+  Bundler.with_unbundled_env do
     clean_env = ENV.to_hash
   end
   ENV.replace(clean_env)

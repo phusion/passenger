@@ -22,6 +22,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'rubygems/version.rb'
+
 TEST_BOOST_OXT_LIBRARY = LIBBOOST_OXT
 TEST_COMMON_LIBRARY    = COMMON_LIBRARY
 TEST_COMMON_CFLAGS     = "-DTESTING_APPLICATION_POOL"
@@ -49,10 +51,13 @@ task 'test:install_deps' do
   default = boolean_option('DEVDEPS_DEFAULT', true)
   install_base_deps = boolean_option('BASE_DEPS', default)
 
+  bundle_args = []
   if deps_target = string_option('DEPS_TARGET')
-    bundle_args = "--path #{shesc deps_target} #{ENV['BUNDLE_ARGS']}".strip
-  else
-    bundle_args = ENV['BUNDLE_ARGS'].to_s
+    if bundler_too_new?
+      sh "bundle config set --local path #{shesc deps_target}"
+    else
+      bundle_args.concat(["--path", shesc(deps_target)])
+    end
   end
 
   npm_args = ENV['NPM_ARGS'].to_s
@@ -62,22 +67,36 @@ task 'test:install_deps' do
   end
 
   if install_base_deps
-    if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('3.0.0') || RUBY_PLATFORM =~ /darwin/
-      sh "bundle install #{bundle_args} --without="
-    else
-      sh "bundle install #{bundle_args} --without future"
+    unless Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('3.0.0') || RUBY_PLATFORM =~ /darwin/
+      if bundler_too_new?
+        sh "bundle config set --local without future"
+      else
+        bundle_args.concat(["--without", "future"])
+      end
     end
   else
-    sh "bundle install #{bundle_args} --without base future"
+    if bundler_too_new?
+      sh "bundle config set --local without 'base future'"
+    else
+      bundle_args.concat(["--without", "base", "future"])
+    end
   end
+  sh "bundle install #{bundle_args.join(' ')} #{ENV['BUNDLE_ARGS']}"
 
   if boolean_option('NODE_MODULES', default)
     sh "npm install #{npm_args}"
   end
 end
 
-def bundler_too_old?
+def bundler_version
   `bundle --version` =~ /version (.+)/
-  version = $1.split('.').map { |x| x.to_i }
-  version[0] < 1 || version[0] == 1 && version[1] < 10
+  Gem::Version.new($1)
+end
+
+def bundler_too_old?
+  Gem::Version.new(bundler_version) < Gem::Version.new("1.1.10")
+end
+
+def bundler_too_new?
+  Gem::Version.new(bundler_version) >= Gem::Version.new("2.1.0")
 end
