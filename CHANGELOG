@@ -1,4 +1,9 @@
-Release 6.0.22 (Not yet released)
+Release 6.0.23 (Not yet released)
+-------------
+ * 
+
+
+Release 6.0.22
 -------------
  * [RPM] Fix dependency on selinux-policy. Closes GH-2545.
  * Fix Amazon Linux detection. Closes GH-3296.
