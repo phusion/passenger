@@ -576,7 +576,7 @@ private
             system("(gcc -I/usr/local/include -I/usr/include/pcre2 " <<
               "-I/usr/pkg/include -I/opt/local/include " <<
               "-I/opt/homebrew/include " <<
-              "-c passenger-check.c) >/dev/null 2>/dev/null")
+              "-DPCRE2_CODE_UNIT_WIDTH=8 -c passenger-check.c) >/dev/null 2>/dev/null")
           end
         ensure
           File.unlink("#{safe_tmpdir}/passenger-check.c") rescue nil
