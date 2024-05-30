@@ -17,7 +17,7 @@
 #
 # Sample invocation in Vagrant dev environment:
 #
-#   env WORKSPACE=$HOME DISTRIBUTION=el7 ARCHITECTURE=x86_64 PASSENGER_ROOT=/passenger ./dev/ci/debian/run
+#   env WORKSPACE=$HOME DISTRIBUTION=noble ARCHITECTURE=x86_64 PASSENGER_ROOT=/passenger ./dev/ci/debian/run
 
 set -e
 SELFDIR=$(dirname "$0")
