@@ -3,7 +3,9 @@ Release 6.0.23 (Not yet released)
  * [Nginx] Upgrades preferred Nginx to 1.26.1 from 1.26.0.
  * [Ubuntu] Add packages for Ubuntu 24.04 "noble".
  * [RPMs] Remove EL7 RPMs, CentOS7 is EOL.
- * 
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - rubies:
+     - dropped 3.0.7
 
 
 Release 6.0.22
