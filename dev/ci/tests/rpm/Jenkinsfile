@@ -23,7 +23,6 @@ pipeline {
   }
 
   parameters {
-    booleanParam(name: 'EL7', defaultValue: true, description: 'RHEL 7 tests')
     booleanParam(name: 'EL8', defaultValue: true, description: 'RHEL 8 tests')
     booleanParam(name: 'EL9', defaultValue: true, description: 'RHEL 9 tests')
   }
@@ -48,12 +47,6 @@ pipeline {
       steps {
         script {
           parallel(
-            'el7 x86_64': {
-              setupTest(params.EL7, 'el7', 'x86_64') {
-                checkout scm
-                sh './dev/ci/tests/rpm/run'
-              }
-            },
             'el8 x86_64': {
               setupTest(params.EL8, 'el8', 'x86_64') {
                 checkout scm
@@ -62,12 +55,6 @@ pipeline {
             },
             'el9 x86_64': {
               setupTest(params.EL9, 'el9', 'x86_64') {
-                checkout scm
-                sh './dev/ci/tests/rpm/run'
-              }
-            },
-            'el7 aarch64': {
-              setupTest(false, 'el7', 'aarch64') {
                 checkout scm
                 sh './dev/ci/tests/rpm/run'
               }
