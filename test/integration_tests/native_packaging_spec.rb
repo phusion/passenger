@@ -35,12 +35,12 @@ end
 # with Bundler.
 if defined?(Bundler)
   clean_env = nil
-  if Bundler.method_defined?(:with_clean_env)
-    Bundler.with_clean_env do
+  if Bundler.method_defined?(:with_unbundled_env)
+    Bundler.with_unbundled_env do
       clean_env = ENV.to_hash
     end
   else
-    Bundler.with_unbundled_env do
+    Bundler.with_clean_env do
       clean_env = ENV.to_hash
     end
   end
