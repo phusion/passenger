@@ -1,8 +1,14 @@
 # Clean Bundler environment variables. Otherwise we can't test against multiple Rails versions.
 if defined?(Bundler)
   clean_env = nil
-  Bundler.with_unbundled_env do
-    clean_env = ENV.to_hash
+  if Bundler.method_defined?(:with_clean_env)
+    Bundler.with_clean_env do
+      clean_env = ENV.to_hash
+    end
+  else
+    Bundler.with_unbundled_env do
+      clean_env = ENV.to_hash
+    end
   end
   ENV.replace(clean_env)
 end

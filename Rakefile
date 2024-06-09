@@ -27,8 +27,15 @@ $LOAD_PATH.unshift("#{SOURCE_ROOT}/src/ruby_supportlib")
 # timing-sensitive tests like those in the C++ test suite.
 if defined?(Bundler)
   clean_env = nil
-  Bundler.with_unbundled_env do
-    clean_env = ENV.to_hash
+
+  if Bundler.method_defined?(:with_clean_env)
+    Bundler.with_clean_env do
+      clean_env = ENV.to_hash
+    end
+  else
+    Bundler.with_unbundled_env do
+      clean_env = ENV.to_hash
+    end
   end
   ENV.replace(clean_env)
   ARGV.each do |arg|
