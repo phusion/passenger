@@ -1,5 +1,6 @@
 source_root = File.expand_path(File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
+require 'rubygems'
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'packaging'
@@ -22,8 +23,9 @@ Gem::Specification.new do |s|
     "mailing_list_uri"  => "https://www.phusionpassenger.com/contact",
     "wiki_uri"          => "https://github.com/phusion/passenger/wiki"
   }
-  s.add_dependency 'rake', '>= 0.8.1'
-  s.add_dependency 'rack'
+  s.add_dependency 'rake', '>= 12.3.3'
+  s.add_dependency 'rack', '>= 1.6.13'
+  s.add_dependency 'rackup'
   s.files = Dir[*PhusionPassenger::Packaging::GLOB] -
     Dir[*PhusionPassenger::Packaging::EXCLUDE_GLOB]
   s.executables = PhusionPassenger::Packaging::USER_EXECUTABLES +

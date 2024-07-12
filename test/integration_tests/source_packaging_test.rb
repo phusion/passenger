@@ -121,7 +121,11 @@ describe "A user-generated gem" do
   include_examples "a user-generated package"
 
   it "doesn't invoke the binaries downloader upon gem installation" do
-    spec = YAML.load_file("#{@temp_dir}/metadata")
+    spec = if Psych::VERSION >= '4.0'
+      YAML.unsafe_load_file("#{@temp_dir}/metadata")
+    else
+      YAML.load_file("#{@temp_dir}/metadata")
+    end
     spec.extensions.should be_empty
   end
 end
@@ -173,7 +177,11 @@ describe "An officially-generated gem" do
   include_examples "an official package"
 
   it "invokes the binaries downloader upon gem installation" do
-    spec = YAML.load_file("#{@temp_dir}/metadata")
+    spec = if Psych::VERSION >= '4.0'
+      YAML.unsafe_load_file("#{@temp_dir}/metadata")
+    else
+      YAML.load_file("#{@temp_dir}/metadata")
+    end
     spec.extensions.should_not be_empty
   end
 end

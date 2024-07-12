@@ -15,6 +15,7 @@ end
 
 group :future do
   gem 'webrick', '~> 1.8.1'
+  gem 'rackup', '>= 2.1'
 end
 
 if ENV['USER'] == 'camdennarzt'
