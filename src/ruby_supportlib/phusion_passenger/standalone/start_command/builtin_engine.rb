@@ -144,6 +144,7 @@ module PhusionPassenger
           add_param(command, :app_start_command, "--app-start-command")
           add_param(command, :spawn_method, "--spawn-method")
           add_param(command, :restart_dir, "--restart-dir")
+          add_param(command, :custom_error_page, "--custom-error-page")
           if @options.has_key?(:friendly_error_pages)
             if @options[:friendly_error_pages]
               command << " --force-friendly-error-pages"

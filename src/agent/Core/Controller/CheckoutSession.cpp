@@ -23,6 +23,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include "DataStructures/LString.h"
 #include <Core/Controller.h>
 #include <Core/SpawningKit/ErrorRenderer.h>
 
@@ -351,8 +352,17 @@ Controller::endRequestWithErrorResponse(Client **c, Request **r,
 	Request *req = *r;
 	SpawningKit::ErrorRenderer renderer(*appPool->getSpawningKitContext());
 	string data;
+	const LString *path = customErrorPageEnabled(req);
 
-	if (friendlyErrorPagesEnabled(req)) {
+	if (!psg_lstr_cmp(path, StaticString(""))) {
+		try {
+			data = renderer.renderCustom(StaticString(path->start->data, path->size));
+		} catch (const SystemException &e2) {
+			SKC_ERROR(client, "Cannot render an error page: " << e2.what() <<
+				"\n" << e2.backtrace());
+			data = "<h2>Internal server error</h2>";
+		}
+	} else if (friendlyErrorPagesEnabled(req)) {
 		try {
 			data = renderer.renderWithDetails(e);
 		} catch (const SystemException &e2) {
@@ -371,6 +381,13 @@ Controller::endRequestWithErrorResponse(Client **c, Request **r,
 	}
 
 	endRequestWithSimpleResponse(c, r, psg_pstrdup(req->pool, data), statusCode);
+}
+
+const LString*
+Controller::customErrorPageEnabled(Request *req) {
+	const StaticString name = "!~PASSENGER_CUSTOM_ERROR_PAGE";
+	const LString* value = req->secureHeaders.lookup(name);
+	return psg_lstr_make_contiguous(value, req->pool);
 }
 
 bool

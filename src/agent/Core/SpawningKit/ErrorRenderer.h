@@ -33,6 +33,7 @@
 #include <jsoncpp/json.h>
 
 #include <Constants.h>
+#include <DataStructures/LString.h>
 #include <StaticString.h>
 #include <FileTools/FileManip.h>
 #include <StrIntTools/Template.h>
@@ -107,6 +108,10 @@ public:
 		params.set("PROGRAM_AUTHOR", PROGRAM_AUTHOR);
 
 		return Template::apply(unsafeReadFile(htmlFile), params);
+	}
+
+	string renderCustom(const StaticString &htmlFile) const {
+		return unsafeReadFile(htmlFile);
 	}
 };
 

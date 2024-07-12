@@ -171,6 +171,11 @@
          "has_default_value" : "static",
          "type" : "string"
       },
+      "default_custom_error_page" : {
+         "default_value" : "",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
       "default_environment" : {
          "default_value" : "production",
          "has_default_value" : "static",
@@ -622,6 +627,11 @@
       },
       "default_bind_address" : {
          "default_value" : "127.0.0.1",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_custom_error_page" : {
+         "default_value" : "",
          "has_default_value" : "static",
          "type" : "string"
       },
@@ -1494,6 +1504,11 @@
       },
       "default_bind_address" : {
          "default_value" : "127.0.0.1",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_custom_error_page" : {
+         "default_value" : "",
          "has_default_value" : "static",
          "type" : "string"
       },

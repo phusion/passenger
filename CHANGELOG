@@ -5,6 +5,10 @@ Release 6.0.23 (Not yet released)
  * [Ubuntu] Add packages for Ubuntu 24.04 "noble".
  * [RPMs] Remove EL7 RPMs, CentOS7 is EOL.
  * Fixes compatibility with Ruby apps whose Gemfile.lock depends on strscan.
+ * Adds option to render a custom error page when app fails to launch. Closes GH-2515.
+   - Apache: PassengerCustomErrorPage "public/error.html"
+   - Nginx: passenger_custom_error_page public/error.html;
+   - Standalone: --custom-error-page public/error.html
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
    - ccache: 4.9.1 -> 4.10
    - cmake 3.29.3 -> 3.29.5
