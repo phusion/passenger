@@ -257,6 +257,10 @@ psg_lstr_cmp(const LString *str, const StaticString &other) {
 	const LString::Part *part;
 	const char *b;
 
+	if (str == NULL) {
+		return false;
+	}
+
 	// Fast check: check length match
 	if (str->size != other.size()) {
 		return false;
