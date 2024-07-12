@@ -1,5 +1,6 @@
 Release 6.0.23 (Not yet released)
 -------------
+ * [Ruby] Improve Rack 3 compatibility.
  * [Nginx] Upgrades preferred Nginx to 1.26.1 from 1.26.0.
  * [Ubuntu] Add packages for Ubuntu 24.04 "noble".
  * [RPMs] Remove EL7 RPMs, CentOS7 is EOL.
