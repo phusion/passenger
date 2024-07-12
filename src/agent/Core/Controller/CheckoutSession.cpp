@@ -386,8 +386,14 @@ Controller::endRequestWithErrorResponse(Client **c, Request **r,
 const LString*
 Controller::customErrorPageEnabled(Request *req) {
 	const StaticString name = "!~PASSENGER_CUSTOM_ERROR_PAGE";
-	const LString* value = req->secureHeaders.lookup(name);
-	return psg_lstr_make_contiguous(value, req->pool);
+	LString* customErrorPagePath = req->secureHeaders.lookup(name);
+    if (customErrorPagePath != NULL && customErrorPagePath->size > 0) {
+        return psg_lstr_make_contiguous(customErrorPagePath, req->pool);
+    } else {
+        customErrorPagePath = (LString *) psg_palloc(req->pool, sizeof(LString));
+        psg_lstr_init(customErrorPagePath);
+		return customErrorPagePath;
+    }
 }
 
 bool
