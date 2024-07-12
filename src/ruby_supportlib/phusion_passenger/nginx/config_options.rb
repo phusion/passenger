@@ -404,6 +404,11 @@ NGINX_CONFIGURATION_OPTIONS = [
     :dynamic_default => 'On if passenger_app_env is development, off otherwise'
   },
   {
+    :name     => 'passenger_custom_error_page',
+    :scope    => :application,
+    :type     => :string
+  },
+  {
     :name     => 'passenger_min_instances',
     :scope    => :application,
     :type     => :uinteger,

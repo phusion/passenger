@@ -216,6 +216,7 @@ private:
 		const ExceptionPtr &e);
 	void endRequestWithErrorResponse(Client **c, Request **r,
 		const SpawningKit::SpawnException &e, int statusCode);
+	const LString* customErrorPageEnabled(Request *req);
 	bool friendlyErrorPagesEnabled(Request *req);
 
 

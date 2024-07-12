@@ -282,6 +282,11 @@ module PhusionPassenger
         :desc      => 'Turn on friendly error pages'
       },
       {
+        :name      => :custom_error_page,
+        :type      => :path,
+        :desc      => 'Path to html file to use for Passenger generated error pages'
+      },
+      {
         :type      => :boolean,
         :cli       => '--no-friendly-error-pages',
         :cli_parser => lambda do |options, value|

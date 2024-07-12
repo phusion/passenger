@@ -260,6 +260,21 @@ cmd_passenger_buffer_upload(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_custom_error_page(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+	if (err != NULL) {
+		return err;
+	}
+
+	DirConfig *config = (DirConfig *) pcfg;
+	config->mCustomErrorPageSourceFile = cmd->directive->filename;
+	config->mCustomErrorPageSourceLine = cmd->directive->line_num;
+	config->mCustomErrorPageExplicitlySet = true;
+	config->mCustomErrorPage = arg;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_data_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {

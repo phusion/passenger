@@ -88,6 +88,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   default_abort_websockets_on_process_shutdown        boolean            -          default(true)
  *   default_app_file_descriptor_ulimit                  unsigned integer   -          -
  *   default_bind_address                                string             -          default("127.0.0.1")
+ *   default_custom_error_page                           string             -          default("")
  *   default_environment                                 string             -          default("production")
  *   default_force_max_concurrent_requests_per_process   integer            -          default(-1)
  *   default_friendly_error_pages                        string             -          default("auto")
@@ -161,6 +162,7 @@ private:
 		add("server_software", STRING_TYPE, OPTIONAL, SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 		add("vary_turbocache_by_cookie", STRING_TYPE, OPTIONAL);
 
+		add("default_custom_error_page", STRING_TYPE, OPTIONAL, "");
 		add("default_friendly_error_pages", STRING_TYPE, OPTIONAL, "auto");
 		add("default_environment", STRING_TYPE, OPTIONAL, DEFAULT_APP_ENV);
 		add("default_spawn_method", STRING_TYPE, OPTIONAL, DEFAULT_SPAWN_METHOD);
@@ -428,6 +430,7 @@ public:
 	StaticString defaultStickySessionsCookieAttributes;
 	StaticString defaultVaryTurbocacheByCookie;
 
+	StaticString defaultCustomErrorPage;
 	StaticString defaultFriendlyErrorPages;
 	StaticString defaultEnvironment;
 	StaticString defaultSpawnMethod;
@@ -463,6 +466,7 @@ public:
 		  defaultStickySessionsCookieAttributes(psg_pstrdup(pool, config["default_sticky_sessions_cookie_attributes"].asString())),
 		  defaultVaryTurbocacheByCookie(psg_pstrdup(pool, config["vary_turbocache_by_cookie"].asString())),
 
+		  defaultCustomErrorPage(psg_pstrdup(pool, config["default_custom_error_page"].asString())),
 		  defaultFriendlyErrorPages(psg_pstrdup(pool, config["default_friendly_error_pages"].asString())),
 		  defaultEnvironment(psg_pstrdup(pool, config["default_environment"].asString())),
 		  defaultSpawnMethod(psg_pstrdup(pool, config["default_spawn_method"].asString())),

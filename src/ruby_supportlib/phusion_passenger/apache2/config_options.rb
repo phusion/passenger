@@ -463,6 +463,11 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => 'Whether to display friendly error pages when something goes wrong.'
   },
   {
+    :name      => 'PassengerCustomErrorPage',
+    :type      => :string,
+    :desc      => 'Path to html file to use for Passenger generated error pages.'
+  },
+  {
     :name      => 'PassengerRestartDir',
     :type      => :string,
     :default   => 'tmp',

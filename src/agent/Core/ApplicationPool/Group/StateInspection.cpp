@@ -291,7 +291,7 @@ Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
 		result["environment_variables"] = VAL(Json::objectValue, Json::objectValue);
 	}
 
-	// Missing: sticky_sessions, sticky_session_cookie_name, friendly_error_pages
+	// Missing: sticky_sessions, sticky_session_cookie_name, friendly_error_pages, custom_error_page
 
 	/******************/
 

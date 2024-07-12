@@ -55,6 +55,7 @@ passenger_enabled on;
 <%= nginx_option(app, :preload_bundler) %>
 <%= nginx_option(app, :app_file_descriptor_ulimit) %>
 <%= nginx_option(app, :friendly_error_pages) %>
+<%= nginx_option(app, :custom_error_page) %>
 <%= nginx_option(app, :abort_websockets_on_process_shutdown) %>
 <%= nginx_option(app, :force_max_concurrent_requests_per_process) %>
 <%= nginx_option(app, :max_requests) %>

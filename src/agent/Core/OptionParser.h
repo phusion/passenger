@@ -339,6 +339,9 @@ parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 	} else if (p.isFlag(argv[i], '\0', "--multi-app")) {
 		updates["multi_app"] = true;
 		i++;
+	} else if (p.isFlag(argv[i], '\0', "--custom-error-page")) {
+		updates["custom_error_page"] = argv[i + 1];
+		i+=2;
 	} else if (p.isFlag(argv[i], '\0', "--force-friendly-error-pages")) {
 		updates["default_friendly_error_pages"] = true;
 		i++;
