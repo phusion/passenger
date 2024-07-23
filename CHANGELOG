@@ -3,6 +3,7 @@ Release 6.0.23 (Not yet released)
  * [Enterprise] The rolling restart feature now replaces app processes in newest-to-oldest order, to make more efficient use of alive processes during the rolling-restart's duration. Closes GH-2551.
  * [Ruby] Improve Rack 3 compatibility.
  * [Nginx] Upgrades preferred Nginx to 1.26.1 from 1.26.0.
+ * [Debian] Remove packages for Debian 10 Buster. (EOL 2024-07).
  * [Ubuntu] Add packages for Ubuntu 24.04 "noble".
  * [RPMs] Remove EL7 RPMs, CentOS7 is EOL.
  * Fixes compatibility with Ruby apps whose Gemfile.lock depends on strscan.
