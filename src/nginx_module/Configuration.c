@@ -224,10 +224,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream_config.send_lowat = NGX_CONF_UNSET_SIZE;
     conf->upstream_config.buffer_size = NGX_CONF_UNSET_SIZE;
-    #if NGINX_VERSION_NUM >= 1027000
-         ngx_conf_merge_ptr_value(conf->upstream_config.limit_rate,
-                                  prev->upstream_config.limit_rate, NULL);
-    #elif NGINX_VERSION_NUM >= 1007007
+    #if NGINX_VERSION_NUM >= 1007007
         conf->upstream_config.limit_rate = NGX_CONF_UNSET_SIZE;
     #endif
 
