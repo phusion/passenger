@@ -38,3 +38,4 @@ autom4te.cache
 /external
 /play
 *.orig
+/compile_commands.json
