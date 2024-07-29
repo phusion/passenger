@@ -1,4 +1,9 @@
-Release 6.0.23 (Not yet released)
+Release 6.0.24 (Not yet released)
+-------------
+ *
+
+
+Release 6.0.23
 -------------
  * [Enterprise] The rolling restart feature now replaces app processes in newest-to-oldest order, to make more efficient use of alive processes during the rolling-restart's duration. Closes GH-2551.
  * [Ruby] Improve Rack 3 compatibility.
