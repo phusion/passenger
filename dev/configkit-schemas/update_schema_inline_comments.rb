@@ -1,5 +1,14 @@
 #!/usr/bin/env ruby
-require_relative '../../src/ruby_supportlib/phusion_passenger/utils/json'
+source_root = File.expand_path("../..", File.dirname(__FILE__))
+$LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
+begin
+  require 'rubygems'
+rescue LoadError
+end
+require 'phusion_passenger'
+
+PhusionPassenger.locate_directories
+PhusionPassenger.require_passenger_lib  'utils/json'
 
 SimpleJSON = PhusionPassenger::Utils::JSON
 
