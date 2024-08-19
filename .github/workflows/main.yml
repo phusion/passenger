@@ -128,11 +128,13 @@ jobs:
   homebrew_packaging:
     name: 'Homebrew packaging unit tests'
     runs-on: macos-latest
+    env:
+      GEM_HOME: ${{ env.RUNNER_WORKSPACE }}/.gem
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: true
-    - run: printenv && which -a bundle
+    - run: printenv && which -a rake
     - run: ./dev/ci/setup-host homebrew-packaging
     - run: ./dev/ci/run-tests-natively homebrew-packaging
     - uses: actions/upload-artifact@v4
