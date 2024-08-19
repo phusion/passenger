@@ -90,7 +90,7 @@ jobs:
           'buildout/${{ matrix.integration.dir }}_*/**'
 
   language:
-    name: '${{matrix.lang.name}} unit tests on ${{ matrix.os }}'
+    name: '${{ matrix.lang.name }} unit tests on ${{ matrix.os }}'
     strategy:
       matrix:
         lang:
@@ -113,17 +113,17 @@ jobs:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
         bundler-cache: true
     - run: printenv && which -a bundle
-    - run: ./dev/ci/setup-host ${{matrix.lang.name}}
-    - run: ./dev/ci/run-tests-with-docker ${{matrix.lang.name}}
+    - run: ./dev/ci/setup-host ${{ matrix.lang.label }}
+    - run: ./dev/ci/run-tests-with-docker ${{ matrix.lang.label }}
       if: matrix.os == 'ubuntu-latest'
-    - run: ./dev/ci/run-tests-natively ${{matrix.lang.name}}
+    - run: ./dev/ci/run-tests-natively ${{ matrix.lang.label }}
       if: matrix.os == 'macos-latest'
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
         path: |
           'buildout/testlogs'
-          'buildout/${{matrix.lang.dir}}_*/**'
+          'buildout/${{ matrix.lang.dir }}_*/**'
 
   homebrew_packaging:
     name: 'Homebrew packaging unit tests'
