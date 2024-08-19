@@ -77,18 +77,11 @@ function autodetect_environment()
 		echo "Operating system: Linux"
 		export OS=linux
 	fi
-	if [[ "$JENKINS_HOME" != "" ]]; then
-		echo "Running in Jenkins: yes"
-		export IN_JEKINS=true
-                if [ $OS = "linux" ]; then
-		    export CACHE_DIR="$JENKINS_HOME/cache/$JOB_NAME/executor-$EXECUTOR_NUMBER"
-                else
-                    require_envvar WORKSPACE "$WORKSPACE"
-		    export CACHE_DIR="$WORKSPACE/cache/$JOB_NAME/executor-$EXECUTOR_NUMBER"
-                fi
+	if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
+		echo "Running in Github Actions: yes"
+		export CACHE_DIR="$RUNNER_TOOL_CACHE/$GITHUB_JOB/$RUNNER_OS"
 	else
-		echo "Running in Jenkins: no"
-		export IN_JENKINS=false
+		echo "Running in Github Actions: no"
 		export CACHE_DIR="$PASSENGER_ROOT/.ci_cache"
 	fi
 	echo "Cache directory: $CACHE_DIR"
@@ -97,13 +90,17 @@ function autodetect_environment()
 function sanity_check_environment()
 {
 	if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
-		if [[ "$JOB_NAME" = "" ]]; then
-			echo "ERROR: Jenkins environment detected, but JOB_NAME environment variable not set." >&2
+		if [ -z "$GITHUB_JOB" ]; then
+			echo "ERROR: Github Actions environment detected, but GITHUB_JOB environment variable not set." >&2
 			return 1
+                else
+                    export "JOB_NAME=$GITHUB_JOB"
 		fi
-		if [[ "$EXECUTOR_NUMBER" = "" ]]; then
-			echo "ERROR: Jenkins environment detected, but EXECUTOR_NUMBER environment variable not set." >&2
+		if [ -z "$GITHUB_RUN_ID" ]; then
+			echo "ERROR: Github Actions environment detected, but GITHUB_RUN_ID environment variable not set." >&2
 			return 1
+                else
+                    export "EXECUTOR_NUMBER=$GITHUB_RUN_ID"
 		fi
 	fi
 }

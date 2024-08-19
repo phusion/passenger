@@ -31,7 +31,6 @@ if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
 	find ./* -type d -print0 | xargs -0 -n 512 chmod g+rx,o+rx
 
 	# Create this file now because otherwise it would be owned by root,
-	# which Jenkins cannot remove.
 	run touch test/test.log
 
 	echo
@@ -44,7 +43,7 @@ run mkdir -p "$CACHE_DIR/ccache"
 run mkdir -p "$CACHE_DIR/npm"
 echo
 
-# Directory must exist so that Jenkinsfile can run archiveArtefacts().
+# Directory must exist so that workflow can upload artifacts.
 header2 "Creating buildout directory"
 run mkdir -p buildout buildout/testlogs
 echo
