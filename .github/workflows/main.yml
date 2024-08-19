@@ -40,12 +40,13 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
     - run: ./dev/ci/run-tests-natively cxx
       if: matrix.os == 'macos-latest'
+    - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}-${{ matrix.user.name }}
         path: |
           'buildout/testlogs'
-          'buildout/APACHE2_*/**'
+          'buildout/CXX_*/**'
 
   integration:
     name: '${{ matrix.integration.name }} integration tests on ${{ matrix.os }}'
@@ -84,6 +85,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
     - run: ./dev/ci/run-tests-natively ${{ matrix.integration.label }}
       if: matrix.os == 'macos-latest'
+    - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
@@ -120,6 +122,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
     - run: ./dev/ci/run-tests-natively ${{ matrix.lang.label }}
       if: matrix.os == 'macos-latest'
+    - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
@@ -138,6 +141,7 @@ jobs:
         submodules: true
     - run: ./dev/ci/setup-host homebrew-packaging
     - run: ./dev/ci/run-tests-natively homebrew-packaging
+    - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
@@ -158,6 +162,7 @@ jobs:
         bundler-cache: true
     - run: ./dev/ci/setup-host source-packaging
     - run: ./dev/ci/run-tests-with-docker source-packaging
+    - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
