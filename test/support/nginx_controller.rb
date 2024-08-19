@@ -18,7 +18,7 @@ class NginxController
     @controller  = PhusionPassenger::DaemonController.new(
       :identifier    => 'Nginx',
       :start_command => "#{CONFIG['nginx']} -p #{root_dir} -c '#{@config_file}'",
-      :ping_command  => [:tcp, '127.0.0.1', PORT],
+      :ping_command  => [:tcp, 'localhost', PORT],
       :pid_file      => @pid_file,
       :log_file      => @log_file,
       :timeout       => 60,
@@ -44,7 +44,7 @@ class NginxController
     @controller.stop
     # On OS X, the Nginx server socket may linger around for a while
     # after Nginx shutdown, despite Nginx setting SO_REUSEADDR.
-    sockaddr = Socket.pack_sockaddr_in(PORT, '127.0.0.1')
+    sockaddr = Socket.pack_sockaddr_in(PORT, 'localhost')
     eventually(30) do
       !@controller.send(:ping_socket, Socket::Constants::AF_INET, sockaddr)
     end
