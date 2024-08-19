@@ -28,6 +28,8 @@ jobs:
       SUDO: ${{ matrix.user.isRoot}}
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: true
     - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -67,6 +69,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: true
     - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -100,6 +104,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: true
     - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -121,6 +127,8 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: true
     - run: ./dev/ci/setup-host homebrew-packaging
     - run: ./dev/ci/run-tests-natively homebrew-packaging
     - uses: actions/upload-artifact@v4
@@ -135,6 +143,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: true
     - uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
