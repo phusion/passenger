@@ -1,0 +1,133 @@
+name: Passenger CI tests
+
+env:
+  DEFAULT_RUBY_VERSION: 3.1.6
+  COMPILE_CONCURRENCY: 4
+
+on:
+  push:
+    branches: [ 'stable-*', 'feature/*' ]
+  pull_request:
+    branches: [ 'stable-*', 'feature/*' ]
+
+jobs:
+  cxx:
+    name: "C++ unit tests on ${{ matrix.os }}, as ${{ matrix.user.name }}"
+    strategy:
+      matrix:
+        user:
+          - name: 'root'
+            isRoot: '1'
+          - name: 'normal-user'
+            isRoot: '0'
+        os:
+          - macos-latest
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      SUDO: ${{ matrix.user.isRoot}}
+    steps:
+    - uses: actions/checkout@v4
+    - run: sh './dev/ci/setup-host cxx'
+    - run: sh './dev/ci/run-tests-with-docker cxx'
+      if: linux
+    - run: sh './dev/ci/run-tests-natively cxx'
+      if: macos
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}-${{ matrix.user.name }}
+        path: |
+          'buildout/testlogs'
+          'buildout/APACHE2_*/**'
+
+  integration:
+    name: '${{ matrix.integration.name }} integration tests on ${{ matrix.os }}'
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+        integration:
+          - name: 'Apache 2'
+            label: 'apache2'
+            dir: 'APACHE2'
+          - name: 'Nginx dynamic module'
+            label: 'nginx-dynamic'
+            dir: 'NGINX_DYNAMIC'
+          - name: 'Nginx'
+            label: 'nginx'
+            dir: 'NGINX'
+          - name: 'Standalone'
+            label: 'standalone'
+            dir: 'STANDALONE'
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - run: sh './dev/ci/setup-host ${{ matrix.integration.label }}'
+    - run: sh './dev/ci/run-tests-with-docker ${{ matrix.integration.label }}'
+      if: matrix.os == 'ubuntu-latest'
+    - run: sh './dev/ci/run-tests-natively ${{ matrix.integration.label }}'
+      if: matrix.os == 'macos-latest'
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}
+        path: |
+          'buildout/testlogs'
+          'buildout/${{ matrix.integration.dir }}_*/**'
+
+  language:
+    name: '${{matrix.lang.name}} unit tests on ${{ matrix.os }}'
+    strategy:
+      matrix:
+        lang:
+          - name: 'Node.js'
+            label: 'nodejs'
+            dir: 'NODEJS'
+          - name: 'Ruby'
+            label: 'ruby'
+            dir: 'RUBY'
+        os:
+          - macos-latest
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - run: sh './dev/ci/setup-host ${{matrix.lang.name}}'
+    - run: sh './dev/ci/run-tests-with-docker ${{matrix.lang.name}}'
+      if: linux
+    - run: sh './dev/ci/run-tests-natively ${{matrix.lang.name}}'
+      if: macos
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}
+        path: |
+          'buildout/testlogs'
+          'buildout/${{matrix.lang.dir}}_*/**'
+
+  homebrew_packaging:
+    name: 'Homebrew packaging unit tests'
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: sh './dev/ci/setup-host homebrew-packaging'
+    - run: sh './dev/ci/run-tests-natively homebrew-packaging'
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}
+        path: |
+          'buildout/testlogs'
+          'buildout/HOMEBREW_PACKAGING*/**'
+
+  source_packaging:
+    name: 'Source packaging unit tests'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: sh './dev/ci/setup-host source-packaging'
+    - run: sh './dev/ci/run-tests-with-docker source-packaging'
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}
+        path: |
+          'buildout/testlogs'
+          'buildout/SOURCE_PACKAGING*/**'
