@@ -43,7 +43,7 @@ jobs:
     - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}-${{ matrix.user.name }}
+        name: cxx-${{ matrix.os }}-${{ matrix.user.name }}
         path: 'buildout/testlogs/*'
 
   integration:
@@ -57,16 +57,12 @@ jobs:
         integration:
           - name: 'Apache 2'
             label: 'apache2'
-            dir: 'APACHE2'
           - name: 'Nginx dynamic module'
             label: 'nginx-dynamic'
-            dir: 'NGINX_DYNAMIC'
           - name: 'Nginx'
             label: 'nginx'
-            dir: 'NGINX'
           - name: 'Standalone'
             label: 'standalone'
-            dir: 'STANDALONE'
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
@@ -93,7 +89,7 @@ jobs:
     - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}
+        name: ${{ matrix.integration.label }}-${{ matrix.os }}
         path: 'buildout/testlogs/*'
 
   language:
@@ -104,10 +100,8 @@ jobs:
         lang:
           - name: 'Node.js'
             label: 'nodejs'
-            dir: 'NODEJS'
           - name: 'Ruby'
             label: 'ruby'
-            dir: 'RUBY'
         os:
           - macos-latest
           - ubuntu-latest
@@ -128,7 +122,7 @@ jobs:
     - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}
+        name: ${{ matrix.lang.label }}-${{ matrix.os }}
         path: 'buildout/testlogs/*'
 
   homebrew_packaging:
@@ -145,7 +139,7 @@ jobs:
     - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}
+        name: homebrew-${{ matrix.os }}
         path: 'buildout/testlogs/*'
 
   source_packaging:
@@ -164,5 +158,5 @@ jobs:
     - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}
+        name: source-packaging-${{ matrix.os }}
         path: 'buildout/testlogs/*'
