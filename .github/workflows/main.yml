@@ -79,7 +79,7 @@ jobs:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
         bundler-cache: true
     - run: ./dev/ci/setup-host ${{ matrix.integration.label }}
-    - run: dscacheutil -q host -a name 127.0.0.1
+    - run: dscacheutil -q host -a name 1.passenger.test
       if: matrix.os == 'macos-latest'
     - run: ./dev/ci/run-tests-with-docker ${{ matrix.integration.label }}
       if: matrix.os == 'ubuntu-latest'
