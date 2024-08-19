@@ -44,9 +44,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}-${{ matrix.user.name }}
-        path: |
-          'buildout/testlogs'
-          'buildout/CXX_*/**'
+        path: 'buildout/testlogs/*'
 
   integration:
     name: '${{ matrix.integration.name }} integration tests on ${{ matrix.os }}'
@@ -96,9 +94,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
-        path: |
-          'buildout/testlogs'
-          'buildout/${{ matrix.integration.dir }}_*/**'
+        path: 'buildout/testlogs/*'
 
   language:
     name: '${{ matrix.lang.name }} unit tests on ${{ matrix.os }}'
@@ -133,9 +129,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
-        path: |
-          'buildout/testlogs'
-          'buildout/${{ matrix.lang.dir }}_*/**'
+        path: 'buildout/testlogs/*'
 
   homebrew_packaging:
     name: 'Homebrew packaging unit tests'
@@ -152,9 +146,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
-        path: |
-          'buildout/testlogs'
-          'buildout/HOMEBREW_PACKAGING*/**'
+        path: 'buildout/testlogs/*'
 
   source_packaging:
     name: 'Source packaging unit tests'
@@ -173,6 +165,4 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
-        path: |
-          'buildout/testlogs'
-          'buildout/SOURCE_PACKAGING*/**'
+        path: 'buildout/testlogs/*'
