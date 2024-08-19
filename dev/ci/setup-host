@@ -33,8 +33,11 @@ if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
 	# Create this file now because otherwise it would be owned by root,
 	run touch test/test.log
 
-        brew update
-        brew install ccache
+        if [ "$OS" = "macos" ]; then
+            brew update
+            brew install ccache
+        fi
+
 	echo
 fi
 
