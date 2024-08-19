@@ -24,7 +24,7 @@ export CCACHE_LOGFILE="$(pwd)/buildout/testlogs/ccache.log"
 export NOEXEC_DISABLE=1
 
 if [[ "$EXECUTOR_NUMBER" != "" ]]; then
-	(( TEST_PORT_BASE=64000+EXECUTOR_NUMBER*10 ))
+	(( TEST_PORT_BASE=64000 ))
 	export TEST_PORT_BASE
 fi
 

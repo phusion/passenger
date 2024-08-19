@@ -7,6 +7,8 @@ class NginxController
   TEMPLATE_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/nginx")
   PORT = ENV.fetch('TEST_PORT_BASE', '64507').to_i
 
+  PORT = 64507 if PORT > 64507
+
   def initialize(root_dir, log_file)
     root_dir     = File.expand_path(root_dir)
     @passenger_root = PhusionPassenger.install_spec
@@ -44,13 +46,7 @@ class NginxController
     @controller.stop
     # On OS X, the Nginx server socket may linger around for a while
     # after Nginx shutdown, despite Nginx setting SO_REUSEADDR.
-    begin
-      sockaddr = Socket.pack_sockaddr_in(PORT, '127.0.0.1')
-    rescue SocketError => e
-      p port
-      p e
-      raise e
-    end
+    sockaddr = Socket.pack_sockaddr_in(PORT, '127.0.0.1')
     eventually(30) do
       !@controller.send(:ping_socket, Socket::Constants::AF_INET, sockaddr)
     end
