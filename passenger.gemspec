@@ -25,7 +25,7 @@ Gem::Specification.new do |s|
   }
   s.add_dependency 'rake', '>= 12.3.3'
   s.add_dependency 'rack', '>= 1.6.13'
-  s.add_dependency 'rackup'
+  s.add_dependency 'rackup', '>= 2.0.0'
   s.files = Dir[*PhusionPassenger::Packaging::GLOB] -
     Dir[*PhusionPassenger::Packaging::EXCLUDE_GLOB]
   s.executables = PhusionPassenger::Packaging::USER_EXECUTABLES +
