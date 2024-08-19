@@ -46,7 +46,7 @@ class NginxController
     # after Nginx shutdown, despite Nginx setting SO_REUSEADDR.
     begin
       sockaddr = Socket.pack_sockaddr_in(PORT, '127.0.0.1')
-    rescue SocketError -> e
+    rescue SocketError => e
       p port
       p e
       raise e
