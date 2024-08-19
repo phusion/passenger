@@ -34,6 +34,7 @@ jobs:
       with:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
         bundler-cache: true
+    - run: printenv
     - run: ./dev/ci/setup-host cxx
     - run: ./dev/ci/run-tests-with-docker cxx
       if: matrix.os == 'ubuntu-latest'
@@ -75,6 +76,7 @@ jobs:
       with:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
         bundler-cache: true
+    - run: printenv
     - run: ./dev/ci/setup-host ${{ matrix.integration.label }}
     - run: ./dev/ci/run-tests-with-docker ${{ matrix.integration.label }}
       if: matrix.os == 'ubuntu-latest'
@@ -110,6 +112,7 @@ jobs:
       with:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
         bundler-cache: true
+    - run: printenv
     - run: ./dev/ci/setup-host ${{matrix.lang.name}}
     - run: ./dev/ci/run-tests-with-docker ${{matrix.lang.name}}
       if: matrix.os == 'ubuntu-latest'
@@ -129,6 +132,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: true
+    - run: printenv
     - run: ./dev/ci/setup-host homebrew-packaging
     - run: ./dev/ci/run-tests-natively homebrew-packaging
     - uses: actions/upload-artifact@v4
@@ -149,6 +153,7 @@ jobs:
       with:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
         bundler-cache: true
+    - run: printenv
     - run: ./dev/ci/setup-host source-packaging
     - run: ./dev/ci/run-tests-with-docker source-packaging
     - uses: actions/upload-artifact@v4
