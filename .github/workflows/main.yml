@@ -121,10 +121,6 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
-        bundler-cache: true
     - run: ./dev/ci/setup-host homebrew-packaging
     - run: ./dev/ci/run-tests-natively homebrew-packaging
     - uses: actions/upload-artifact@v4

@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
-if ! rvm-exec system gem list | grep -qE '^rack '; then
+if ! gem list | grep -qE '^rack '; then
 	# The native packaging test runs passenger-install-*-module with the system Ruby,
 	# which in turn requires the 'rack' gem to be installed in the system Ruby's
 	# default RubyGems path. 'rake test:install_deps' installs to a local bundler
 	# directory but not to the default RubyGems path.
-	export rvmsudo_secure_path=0
-	retry_run 3 rvmsudo rvm-exec system gem install rack --no-document
+	retry_run 3 sudo system gem install rack --no-document
 fi
-retry_run 3 rvm-exec system rake test:install_deps DEVDEPS_DEFAULT=no BASE_DEPS=yes SUDO=yes
-retry_run 3 gem install bundler -v 1.17.2 --no-document
+retry_run 3 rake test:install_deps DEVDEPS_DEFAULT=no BASE_DEPS=yes SUDO=yes
+retry_run 3 gem install bundler -v '~>1.0' --no-document
 retry_run 3 rake test:install_deps BASE_DEPS=yes
