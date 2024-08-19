@@ -19,7 +19,7 @@ if [[ "$OS" = macos && "$1" = "" ]]; then
 	exit 1
 fi
 
-if $IN_JENKINS; then
+if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
 	# Relax permissions. Necessary for unit tests which test permissions.
 	header2 "Relaxing file permissions"
 	echo "+ Setting umask"

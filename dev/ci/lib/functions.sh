@@ -96,7 +96,7 @@ function autodetect_environment()
 
 function sanity_check_environment()
 {
-	if $IN_JENKINS; then
+	if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
 		if [[ "$JOB_NAME" = "" ]]; then
 			echo "ERROR: Jenkins environment detected, but JOB_NAME environment variable not set." >&2
 			return 1
