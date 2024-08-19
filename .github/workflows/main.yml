@@ -30,9 +30,9 @@ jobs:
     - uses: actions/checkout@v4
     - run: sh './dev/ci/setup-host cxx'
     - run: sh './dev/ci/run-tests-with-docker cxx'
-      if: linux
+      if: matrix.os == 'ubuntu-latest'
     - run: sh './dev/ci/run-tests-natively cxx'
-      if: macos
+      if: matrix.os == 'macos-latest'
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}-${{ matrix.user.name }}
@@ -94,9 +94,9 @@ jobs:
     - uses: actions/checkout@v4
     - run: sh './dev/ci/setup-host ${{matrix.lang.name}}'
     - run: sh './dev/ci/run-tests-with-docker ${{matrix.lang.name}}'
-      if: linux
+      if: matrix.os == 'ubuntu-latest'
     - run: sh './dev/ci/run-tests-natively ${{matrix.lang.name}}'
-      if: macos
+      if: matrix.os == 'macos-latest'
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
