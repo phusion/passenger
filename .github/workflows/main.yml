@@ -14,6 +14,7 @@ jobs:
   cxx:
     name: "C++ unit tests on ${{ matrix.os }}, as ${{ matrix.user.name }}"
     strategy:
+      fail-fast: false
       matrix:
         user:
           - name: 'root'
@@ -50,6 +51,7 @@ jobs:
   integration:
     name: '${{ matrix.integration.name }} integration tests on ${{ matrix.os }}'
     strategy:
+      fail-fast: false
       matrix:
         os:
           - macos-latest
@@ -92,6 +94,7 @@ jobs:
   language:
     name: '${{ matrix.lang.name }} unit tests on ${{ matrix.os }}'
     strategy:
+      fail-fast: false
       matrix:
         lang:
           - name: 'Node.js'
