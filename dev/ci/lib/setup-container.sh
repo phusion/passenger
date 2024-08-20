@@ -11,7 +11,6 @@ if ! grep -q passenger.test /etc/hosts; then
 127.0.0.1 4.passenger.test 5.passenger.test 6.passenger.test
 127.0.0.1 7.passenger.test 8.passenger.test 9.passenger.test
 EOF
-        cat /etc/hosts
 	echo
 fi
 

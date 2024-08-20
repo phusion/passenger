@@ -38,22 +38,19 @@ fi
 if [[ -f ~/.rvm/scripts/rvm ]]; then
     # shellcheck source=/dev/null
     source ~/.rvm/scripts/rvm
-    if [[ "$TEST_RUBY_VERSION" != "" ]]; then
-	header2 "Using Ruby version $TEST_RUBY_VERSION"
-	run rvm use "$TEST_RUBY_VERSION"
-	echo
-    fi
 elif [[ -f /usr/local/rvm/scripts/rvm ]]; then
     # shellcheck source=/dev/null
     source /usr/local/rvm/scripts/rvm
-    if [[ "$TEST_RUBY_VERSION" != "" ]]; then
-	header2 "Using Ruby version $TEST_RUBY_VERSION"
-	run rvm use "$TEST_RUBY_VERSION"
-	echo
-    fi
 fi
 
-# RVM's cd override causes problems (probably thanks to bash
-# error handling being weird and quirky:
-# https://news.ycombinator.com/item?id=14321213)
-unset cd
+if command -v rvm; then
+    if [[ "$TEST_RUBY_VERSION" != "" ]]; then
+        header2 "Using Ruby version $TEST_RUBY_VERSION"
+        run rvm use "$TEST_RUBY_VERSION"
+        echo
+    fi
+    # RVM's cd override causes problems (probably thanks to bash
+    # error handling being weird and quirky:
+    # https://news.ycombinator.com/item?id=14321213)
+    unset cd
+fi

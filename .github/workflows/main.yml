@@ -72,16 +72,14 @@ jobs:
       with:
         ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
         bundler-cache: true
-    - run: ./dev/ci/setup-host ${{ matrix.integration.label }}
     - run: |
-        dscacheutil -q host -a name 127.0.0.1
-        dscacheutil -q host -a name localhost
-        dscacheutil -q host -a name 1.passenger.test
-        dscacheutil -q host -a name 2.passenger.test
-        dscacheutil -q host -a name 3.passenger.test
-        dscacheutil -q host -a name 4.passenger.test
-        dscacheutil -q host -a name passenger.test
+        printenv
+        which -a ruby
+        ruby -v
+        which -a gem
+        gem list rake
       if: matrix.os == 'macos-latest'
+    - run: ./dev/ci/setup-host ${{ matrix.integration.label }}
     - run: ./dev/ci/run-tests-with-docker ${{ matrix.integration.label }}
       if: matrix.os == 'ubuntu-latest'
     - run: ./dev/ci/run-tests-natively ${{ matrix.integration.label }}
