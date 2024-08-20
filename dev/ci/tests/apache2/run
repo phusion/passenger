@@ -6,6 +6,6 @@ run ./bin/passenger-install-apache2-module --auto
 if command -v rvmsudo; then
 run rvmsudo ./bin/passenger-install-apache2-module --auto --no-compile
 else
-run sudo ./bin/passenger-install-apache2-module --auto --no-compile
+run sudo -E -- ./bin/passenger-install-apache2-module --auto --no-compile
 fi
 run bundle exec rake "-j$COMPILE_CONCURRENCY" test:integration:apache2
