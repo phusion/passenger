@@ -112,7 +112,7 @@ function sanity_check_environment()
 function add_bundler_path_to_gem_path()
 {
 	local bundle_path
-	
+	which -a bundle
 	if bundle_path=$(bundle show rake); then
 		bundle_path=$(dirname "$bundle_path")
 		bundle_path=$(dirname "$bundle_path")

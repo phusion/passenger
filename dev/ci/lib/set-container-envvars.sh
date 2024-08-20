@@ -28,13 +28,7 @@ if [[ "$EXECUTOR_NUMBER" != "" ]]; then
 	export TEST_PORT_BASE
 fi
 
-if [[ "$OS" = macos ]]; then
-	# Ensure that Homebrew tools can be found
-        echo $PATH
-	echo "$(/usr/libexec/path_helper -s)"
-	eval "$(/usr/libexec/path_helper -s)"
-        echo $PATH
-else
+if [[ "$OS" != macos ]]; then
 	export LC_CTYPE=C.UTF-8
 fi
 
