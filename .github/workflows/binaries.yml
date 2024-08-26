@@ -1,0 +1,38 @@
+name: Passenger CI tests
+
+env:
+  ENTERPRISE: 0
+
+on:
+  push:
+    branches: [ 'stable-*', 'feature/*' ]
+  pull_request:
+    branches: [ 'stable-*', 'feature/*' ]
+
+jobs:
+  build:
+    name: "Binary automation ${{ matrix.os.family }}-${{ matrix.os.arch }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - img: macos-latest
+            family: macos
+          - img: ubuntu-latest
+            family: linux
+        arch:
+          - x86_64
+          - aarch64
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - run: ./dev/ci/binaries/prepare-macos
+      if: matrix.os.family == 'macos'
+    - run: ./dev/ci/binaries/build-${{ matrix.os.family }}
+    - uses: actions/upload-artifact@v4
+      with:
+        name: binaries-${{ matrix.os.family }}-${{ matrix.arch }}
+        path: 'output-${{ matrix.os.family }}-${{ matrix.arch }}/**/*'
+    - run: ./dev/ci/binaries/test-${{ matrix.os.family }}
