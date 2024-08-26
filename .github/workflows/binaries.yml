@@ -28,8 +28,8 @@ jobs:
       WORKSPACE: ${{ github.workspace }}
       OUTPUT_DIR: ${{ github.workspace }}/output-${{ matrix.os.family }}-${{ matrix.arch }}
       ARCHITECTURE: ${{ matrix.arch }}
-      CACHE_DIR: ${{ runner.workspace }}/cache/${{ matrix.os.family }}-${{ matrix.arch }}/executor-${{ github.run_id }}
-      RUNTIME_DIR: ${{ runner.workspace }}/cache/${{ matrix.os.family }}-${{ matrix.arch }}/executor-${{ github.run_id }}/runtime
+      CACHE_DIR: ${{ github.workspace }}/cache/${{ matrix.os.family }}-${{ matrix.arch }}/executor-${{ github.run_id }}
+      RUNTIME_DIR: ${{ github.workspace }}/cache/${{ matrix.os.family }}-${{ matrix.arch }}/executor-${{ github.run_id }}/runtime
     steps:
     - uses: actions/checkout@v4
       with:
