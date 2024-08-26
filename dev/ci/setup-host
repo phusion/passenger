@@ -36,7 +36,7 @@ if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
         if [ "$OS" = "macos" ]; then
             brew update
             brew install ccache
-            sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$PASSENGER_ROOT/dev/ci/Certificates.cer"
+            security add-trusted-cert -d -r trustRoot -p codeSign -k ~/Library/Keychains/login.keychain-db "$PASSENGER_ROOT/dev/ci/Certificates.cer"
         fi
 
 	echo
