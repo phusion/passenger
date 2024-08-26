@@ -23,7 +23,7 @@ jobs:
             isRoot: '0'
         os:
           - macos-latest
-          # - ubuntu-latest
+          - ubuntu-latest
     runs-on: ${{ matrix.os }}
     env:
       SUDO: ${{ matrix.user.isRoot }}
@@ -53,7 +53,7 @@ jobs:
       matrix:
         os:
           - macos-latest
-          # - ubuntu-latest
+          - ubuntu-latest
         integration:
           - name: 'Apache 2'
             label: 'apache2'
@@ -95,7 +95,7 @@ jobs:
             label: 'ruby'
         os:
           - macos-latest
-          # - ubuntu-latest
+          - ubuntu-latest
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4

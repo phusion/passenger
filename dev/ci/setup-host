@@ -40,9 +40,6 @@ if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
             sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$PASSENGER_ROOT/dev/ci/Certificates.cer"
             sudo security import "$PASSENGER_ROOT/dev/ci/Developer.key" -k /Library/Keychains/System.keychain -t priv -A
             sudo security import "$PASSENGER_ROOT/dev/ci/Developer.pub" -k /Library/Keychains/System.keychain -t pub -A
-            security find-certificate -a -m -c "Developer" /Library/Keychains/System.keychain
-            security find-identity -p codesigning /Library/Keychains/System.keychain
-            security find-identity -v -p codesigning /Library/Keychains/System.keychain
         fi
 
 	echo
