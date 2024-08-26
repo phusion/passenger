@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# This script is from the "Passenger binaries test" Jenkins job. It set ups
+# This script is from the "Passenger binaries test" Jenkins job. It sets up
 # a runtime directory for the "build-macos" script.
 #
 # Required environment variables:
