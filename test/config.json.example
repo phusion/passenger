@@ -37,8 +37,9 @@
 
   // On macOS, Apache requires that all modules be code signed.
   // Create a certificate yourself (be sure to enable the "Code Signing" capability)
-  // and specify the certificate name here.
+  // and specify the certificate name and keychain here.
   "codesigning_identity": "<NAME>",
+  "codesigning_keychain": "<PATH>",
 
   // If you want to run the Nginx integration tests, then set the following
   // config option to the full path of the Nginx binary. This Nginx binary *must*

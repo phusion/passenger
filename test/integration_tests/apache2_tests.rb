@@ -75,6 +75,9 @@ describe "Apache 2 module" do
     if CONFIG.has_key?('codesigning_identity')
       @apache2.set(codesigning_identity: CONFIG['codesigning_identity'])
     end
+    if CONFIG.has_key?('codesigning_keychain')
+      @apache2.set(codesigning_keychain: CONFIG['codesigning_keychain'])
+    end
     if Process.uid == 0
       @apache2.set(
         :www_user => CONFIG['normal_user_1'],

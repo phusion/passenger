@@ -95,7 +95,7 @@ class Apache2Controller
 
     if @codesigning_identity
       require 'open3'
-      stdout, stderr, status = Open3.capture3("codesign", "--force", "-s", @codesigning_identity, "--keychain", File.expand_path("~/Library/Keychains/login.keychain-db"), @mod_passenger)
+      stdout, stderr, status = Open3.capture3("codesign", "--force", "-s", @codesigning_identity, "--keychain", File.expand_path(@codesigning_keychain), @mod_passenger)
       if !status.success?
         raise "Could not sign Apache module at #{@mod_passenger} with authority #{@codesigning_identity}: #{stderr}"
       end

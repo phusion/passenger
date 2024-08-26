@@ -10,5 +10,6 @@
 "nonexistant_uid": 9999,
 "nonexistant_gid": 9999,
 "codesigning_identity": "_AUTHORITY_",
+"codesigning_keychain": "_KEYCHAIN_",
 "nginx": "/tmp/nginx/sbin/nginx"
 }
