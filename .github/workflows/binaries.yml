@@ -1,4 +1,4 @@
-name: Passenger CI tests
+name: Passenger generic binaries tests CI tests
 
 env:
   ENTERPRISE: 0
@@ -23,7 +23,7 @@ jobs:
         arch:
           - x86_64
           - aarch64
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os.img }}
     steps:
     - uses: actions/checkout@v4
       with:
