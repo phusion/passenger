@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: "Binary automation ${{ matrix.os.family }}-${{ matrix.os.arch }}"
+    name: "Binary automation ${{ matrix.os.family }}-${{ matrix.arch }}"
     strategy:
       fail-fast: false
       matrix:
