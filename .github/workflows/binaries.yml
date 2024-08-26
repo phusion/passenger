@@ -28,11 +28,11 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: true
-    - run: ./dev/ci/binaries/prepare-macos
+    - run: ./dev/ci/tests/binaries/prepare-macos
       if: matrix.os.family == 'macos'
-    - run: ./dev/ci/binaries/build-${{ matrix.os.family }}
+    - run: ./dev/ci/tests/binaries/build-${{ matrix.os.family }}
     - uses: actions/upload-artifact@v4
       with:
         name: binaries-${{ matrix.os.family }}-${{ matrix.arch }}
         path: 'output-${{ matrix.os.family }}-${{ matrix.arch }}/**/*'
-    - run: ./dev/ci/binaries/test-${{ matrix.os.family }}
+    - run: ./dev/ci/tests/binaries/test-${{ matrix.os.family }}
