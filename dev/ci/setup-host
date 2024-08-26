@@ -36,11 +36,11 @@ if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
         if [ "$OS" = "macos" ]; then
             brew update
             brew install ccache
-            sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$PASSENGER_ROOT/dev/ci/Certificates.cer"
-            security find-identity -p codesigning /Library/Keychains/System.keychain
-            security find-identity -v -p codesigning /Library/Keychains/System.keychain
-            security find-certificate -a /Library/Keychains/System.keychain
-            security find-certificate -a -c "Developer" /Library/Keychains/System.keychain
+            # sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$PASSENGER_ROOT/dev/ci/Certificates.cer"
+            # security find-identity -p codesigning /Library/Keychains/System.keychain
+            # security find-identity -v -p codesigning /Library/Keychains/System.keychain
+            # security find-certificate -a /Library/Keychains/System.keychain
+            # security find-certificate -a -c "Developer" /Library/Keychains/System.keychain
             sudo security import "$PASSENGER_ROOT/dev/ci/Certificates.cer" -k /Library/Keychains/System.keychain -A
             security find-identity -p codesigning /Library/Keychains/System.keychain
             security find-identity -v -p codesigning /Library/Keychains/System.keychain
