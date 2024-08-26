@@ -41,7 +41,7 @@ if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
             security find-identity -v -p codesigning /Library/Keychains/System.keychain
             security find-certificate -a /Library/Keychains/System.keychain
             security find-certificate -a -c "Developer" /Library/Keychains/System.keychain
-            sudo security import -A -k /Library/Keychains/System.keychain "$PASSENGER_ROOT/dev/ci/Certificates.cer"
+            sudo security import "$PASSENGER_ROOT/dev/ci/Certificates.cer" -k /Library/Keychains/System.keychain -A
             security find-identity -p codesigning /Library/Keychains/System.keychain
             security find-identity -v -p codesigning /Library/Keychains/System.keychain
             security find-certificate -a /Library/Keychains/System.keychain
