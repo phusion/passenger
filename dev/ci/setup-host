@@ -37,8 +37,8 @@ if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
             brew update
             brew install ccache
             sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$PASSENGER_ROOT/dev/ci/Certificates.cer"
-            security find-identity -p codesigning
-            security find-identity -v -p codesigning
+            security find-identity -p codesigning /Library/Keychains/System.keychain
+            security find-identity -v -p codesigning /Library/Keychains/System.keychain
         fi
 
 	echo
