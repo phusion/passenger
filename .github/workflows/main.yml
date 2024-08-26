@@ -12,21 +12,22 @@ on:
 
 jobs:
   cxx:
-    name: "C++ unit tests on ${{ matrix.os }}, as ${{ matrix.user.name }}"
+    name: "C++ unit tests on ${{ matrix.os }}, as ${{ matrix.user }}"
     strategy:
       fail-fast: false
       matrix:
         user:
-          - name: 'root'
-            isRoot: '1'
-          - name: 'normal-user'
-            isRoot: '0'
+          - root
+          - 'normal-user'
         os:
           - macos-latest
           - ubuntu-latest
+        exclude:
+          - os: macos-latest
+            user: 'root'
     runs-on: ${{ matrix.os }}
     env:
-      SUDO: ${{ matrix.user.isRoot }}
+      SUDO: ${{ matrix.user == 'root' && 1 || 0 }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -43,7 +44,7 @@ jobs:
     - run: ls -R buildout
     - uses: actions/upload-artifact@v4
       with:
-        name: cxx-${{ matrix.os }}-${{ matrix.user.name }}
+        name: cxx-${{ matrix.os }}-${{ matrix.user }}
         path: 'buildout/testlogs/*'
 
   integration:
