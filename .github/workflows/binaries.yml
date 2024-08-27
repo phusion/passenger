@@ -23,7 +23,7 @@ jobs:
         arch:
           - x86_64
           - aarch64
-    runs-on: ${{ matrix.os.img }}${{ matrix.os.family == 'macos' && matris.arch == 'aarch64' && '-arm64' || '' }}
+    runs-on: ${{ matrix.os.img }}${{ matrix.os.family == 'macos' && matrix.arch == 'aarch64' && '-arm64' || '' }}
     env:
       WORKSPACE: ${{ github.workspace }}
       OUTPUT_DIR: ${{ github.workspace }}/output-${{ matrix.os.family }}-${{ matrix.arch }}
