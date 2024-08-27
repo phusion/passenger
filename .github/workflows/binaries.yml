@@ -16,14 +16,14 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - img: macos-13
+          - img: macos-
             family: macos
           - img: ubuntu-latest
             family: linux
         arch:
           - x86_64
           - aarch64
-    runs-on: ${{ matrix.os.img }}${{ matrix.os.family == 'macos' && matrix.arch == 'aarch64' && '-arm64' || '' }}
+    runs-on: ${{ matrix.os.img }}${{ matrix.os.family == 'macos' && matrix.arch == 'aarch64' && '13' || 'latest' }}
     env:
       WORKSPACE: ${{ github.workspace }}
       OUTPUT_DIR: ${{ github.workspace }}/output-${{ matrix.os.family }}-${{ matrix.arch }}
