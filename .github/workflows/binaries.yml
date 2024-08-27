@@ -18,12 +18,12 @@ jobs:
         os:
           - img: macos-
             family: macos
-          - img: ubuntu-latest
+          - img: ubuntu-
             family: linux
         arch:
           - x86_64
           - aarch64
-    runs-on: ${{ matrix.os.img }}${{ matrix.os.family == 'macos' && matrix.arch == 'aarch64' && '13' || 'latest' }}
+    runs-on: ${{ matrix.os.img }}${{ (matrix.os.family == 'macos' && matrix.arch == 'aarch64') && '13' || 'latest' }}
     env:
       WORKSPACE: ${{ github.workspace }}
       OUTPUT_DIR: ${{ github.workspace }}/output-${{ matrix.os.family }}-${{ matrix.arch }}
