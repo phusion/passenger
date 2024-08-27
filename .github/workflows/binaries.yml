@@ -35,7 +35,9 @@ jobs:
       with:
         submodules: true
     - uses: docker/setup-qemu-action@v3
+      if: matrix.os.family == 'linux'
     - uses: docker/setup-buildx-action@v3
+      if: matrix.os.family == 'linux'
     - run: ./dev/ci/tests/binaries/prepare-macos
       if: matrix.os.family == 'macos'
     - run: ./dev/ci/tests/binaries/build-${{ matrix.os.family }}
