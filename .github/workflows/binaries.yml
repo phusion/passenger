@@ -10,39 +10,57 @@ on:
     branches: [ 'stable-*', 'feature/*' ]
 
 jobs:
-  build:
-    name: "Binary automation ${{ matrix.os.family }}-${{ matrix.arch }}"
+  build_linux:
+    name: "Binary automation Linux-${{ matrix.arch }}"
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - img: macos-
-            family: macos
-          - img: ubuntu-
-            family: linux
         arch:
           - x86_64
           - aarch64
-    runs-on: ${{ matrix.os.img }}${{ (matrix.os.family == 'macos' && matrix.arch == 'aarch64') && '13' || 'latest' }}
+    runs-on: ubuntu-latest
     env:
       WORKSPACE: ${{ github.workspace }}
-      OUTPUT_DIR: ${{ github.workspace }}/output-${{ matrix.os.family }}-${{ matrix.arch }}
+      OUTPUT_DIR: ${{ github.workspace }}/output-linux-${{ matrix.arch }}
       ARCHITECTURE: ${{ matrix.arch }}
-      CACHE_DIR: ${{ github.workspace }}/cache/${{ matrix.os.family }}-${{ matrix.arch }}/executor-${{ github.run_id }}
-      RUNTIME_DIR: ${{ github.workspace }}/cache/${{ matrix.os.family }}-${{ matrix.arch }}/executor-${{ github.run_id }}/runtime
+      CACHE_DIR: ${{ github.workspace }}/cache/linux-${{ matrix.arch }}/executor-${{ github.run_id }}
+      RUNTIME_DIR: ${{ github.workspace }}/cache/linux-${{ matrix.arch }}/executor-${{ github.run_id }}/runtime
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: true
     - uses: docker/setup-qemu-action@v3
-      if: matrix.os.family == 'linux'
     - uses: docker/setup-buildx-action@v3
-      if: matrix.os.family == 'linux'
-    - run: ./dev/ci/tests/binaries/prepare-macos
-      if: matrix.os.family == 'macos'
-    - run: ./dev/ci/tests/binaries/build-${{ matrix.os.family }}
+    - run: ./dev/ci/tests/binaries/build-linux
     - uses: actions/upload-artifact@v4
       with:
-        name: binaries-${{ matrix.os.family }}-${{ matrix.arch }}
-        path: 'output-${{ matrix.os.family }}-${{ matrix.arch }}/**/*'
-    - run: ./dev/ci/tests/binaries/test-${{ matrix.os.family }}
+        name: binaries-linux-${{ matrix.arch }}
+        path: 'output-linux-${{ matrix.arch }}/**/*'
+    - run: ./dev/ci/tests/binaries/test-linux
+
+  build_macos:
+    name: "Binary automation macOS-${{ matrix.arch }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+    runs-on: macos-${{ matrix.arch == 'aarch64' && '13' || 'latest' }}
+    env:
+      WORKSPACE: ${{ github.workspace }}
+      OUTPUT_DIR: ${{ github.workspace }}/output-macos-${{ matrix.arch }}
+      ARCHITECTURE: ${{ matrix.arch }}
+      CACHE_DIR: ${{ github.workspace }}/cache/macos-${{ matrix.arch }}/executor-${{ github.run_id }}
+      RUNTIME_DIR: ${{ github.workspace }}/cache/macos-${{ matrix.arch }}/executor-${{ github.run_id }}/runtime
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - run: ./dev/ci/tests/binaries/prepare-macos
+    - run: ./dev/ci/tests/binaries/build-macos
+    - uses: actions/upload-artifact@v4
+      with:
+        name: binaries-macos-${{ matrix.arch }}
+        path: 'output-macos-${{ matrix.arch }}/**/*'
+    - run: ./dev/ci/tests/binaries/test-macos
