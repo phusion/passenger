@@ -57,6 +57,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: true
+    - run: \curl -sSL https://get.rvm.io | bash
+    - run: xargs -I{} "$HOME/.rvm/bin/rvm" install ruby-{} < packaging/binaries/shared/definitions/ruby_versions
     - run: ./dev/ci/tests/binaries/prepare-macos
     - run: ./dev/ci/tests/binaries/build-macos
     - uses: actions/upload-artifact@v4
