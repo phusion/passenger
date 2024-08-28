@@ -46,7 +46,7 @@ jobs:
         arch:
           - x86_64
           - aarch64
-    runs-on: macos-${{ matrix.arch == 'aarch64' && '13' || 'latest' }}
+    runs-on: macos-${{ matrix.arch == 'x86_64' && '13' || 'latest' }}
     env:
       WORKSPACE: ${{ github.workspace }}
       OUTPUT_DIR: ${{ github.workspace }}/output-macos-${{ matrix.arch }}
