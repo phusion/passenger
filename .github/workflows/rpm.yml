@@ -1,0 +1,55 @@
+name: Passenger RPM packaging tests
+
+env:
+  ENTERPRISE: 0
+
+on:
+  push:
+    branches:
+      - 'stable-*'
+      - 'feature/*'
+  pull_request:
+    branches:
+      - 'stable-*'
+      - 'feature/*'
+
+jobs:
+  define-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      distros: ${{ steps.distros.outputs.distros }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Define Distros
+        id: distros
+        run: echo "distros=[$(awk -F= '/DEFAULT_DISTROS/{print $2}' packaging/rpm/internal/lib/distro_info.sh | sed -e 's/ /", "/g')]" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: "Test ${{ matrix.distro }} ${{ matrix.arch }} packages"
+    needs: define-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: ${{ fromJSON(needs.define-matrix.outputs.distros) }}
+        arch:
+          - x86_64
+          #- aarch64
+    env:
+      WORKSPACE: ${{ github.workspace }}
+      ARCHITECTURE: ${{ matrix.arch }}
+      CACHE_DIR: ${{ github.workspace }}/cache/rpm-test/${{ matrix.distro }}-${{ matrix.arch }}
+      DISTRIBUTION: ${{ matrix.distro }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: docker/setup-qemu-action@v3
+    - uses: docker/setup-buildx-action@v3
+    - run: ./dev/ci/tests/rpm/run
+    - uses: actions/upload-artifact@v4
+      with:
+        name: rpm-${{ matrix.distro }}-${{ matrix.arch }}
+        path: 'output/${{ matrix.distro }}/*'
