@@ -36,7 +36,7 @@ jobs:
         distro: ${{ fromJSON(needs.define-matrix.outputs.distros) }}
         arch:
           - amd64
-          #- arm64
+          - arm64
     env:
       WORKSPACE: ${{ github.workspace }}
       ARCHITECTURE: ${{ matrix.arch }}
