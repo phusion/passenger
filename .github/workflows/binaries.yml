@@ -7,11 +7,11 @@ on:
   push:
     branches:
       - 'stable-*'
-      # - 'feature/*'
+      - 'feature/*'
   pull_request:
     branches:
       - 'stable-*'
-      # - 'feature/*'
+      - 'feature/*'
 
 jobs:
   build_linux:
