@@ -384,6 +384,10 @@ public:
 
 	/** Last time when a session was opened for this Process. */
 	unsigned long long lastUsed;
+    /** Which gereration of app processes this one belongs to,
+        inherited from the app group, incremented when a restart
+		is initiated*/
+	const unsigned int generation;
 	/** Number of sessions currently open.
 	 * @invariant session >= 0
 	 */
@@ -446,8 +450,7 @@ public:
 	/** Collected by Pool::collectAnalytics(). */
 	ProcessMetrics metrics;
 
-
-	Process(const BasicGroupInfo *groupInfo, const Json::Value &args)
+	Process(const BasicGroupInfo *groupInfo, const unsigned int gen, const Json::Value &args)
 		: info(this, groupInfo, args),
 		  socketsAcceptingHttpRequestsCount(0),
 		  spawnerCreationTime(getJsonUint64Field(args, "spawner_creation_time")),
@@ -458,6 +461,7 @@ public:
 		  refcount(1),
 		  index(-1),
 		  lastUsed(spawnEndTime),
+		  generation(gen),
 		  sessions(0),
 		  processed(0),
 		  lifeStatus(ALIVE),
@@ -471,7 +475,7 @@ public:
 		indexSocketsAcceptingHttpRequests();
 	}
 
-	Process(const BasicGroupInfo *groupInfo, const SpawningKit::Result &skResult,
+	Process(const BasicGroupInfo *groupInfo, const unsigned int gen, const SpawningKit::Result &skResult,
 		const Json::Value &args)
 		: info(this, groupInfo, skResult),
 		  socketsAcceptingHttpRequestsCount(0),
@@ -483,6 +487,7 @@ public:
 		  refcount(1),
 		  index(-1),
 		  lastUsed(spawnEndTime),
+		  generation(gen),
 		  sessions(0),
 		  processed(0),
 		  lifeStatus(ALIVE),
