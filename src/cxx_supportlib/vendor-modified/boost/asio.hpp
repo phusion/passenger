@@ -188,15 +188,6 @@
 #include <boost/asio/uses_executor.hpp>
 #include <boost/asio/version.hpp>
 #include <boost/asio/wait_traits.hpp>
-#include <boost/asio/windows/basic_object_handle.hpp>
-#include <boost/asio/windows/basic_overlapped_handle.hpp>
-#include <boost/asio/windows/basic_random_access_handle.hpp>
-#include <boost/asio/windows/basic_stream_handle.hpp>
-#include <boost/asio/windows/object_handle.hpp>
-#include <boost/asio/windows/overlapped_handle.hpp>
-#include <boost/asio/windows/overlapped_ptr.hpp>
-#include <boost/asio/windows/random_access_handle.hpp>
-#include <boost/asio/windows/stream_handle.hpp>
 #include <boost/asio/writable_pipe.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/asio/write_at.hpp>

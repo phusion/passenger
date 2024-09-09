@@ -166,7 +166,7 @@ namespace boost
       typedef thread_attributes attributes;
 
       BOOST_THREAD_MOVABLE_ONLY(thread)
-    private:
+    protected:
 
         struct dummy;
 
@@ -174,7 +174,7 @@ namespace boost
 
         detail::thread_data_ptr thread_info;
 
-    private:
+    protected:
         bool start_thread_noexcept();
         bool start_thread_noexcept(const attributes& attr);
         void start_thread()
