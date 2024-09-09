@@ -723,50 +723,50 @@ struct has_iterator_category
    template <typename X>
    static two test(int, ...);
 
-   static const bool value = (1 == sizeof(test<T>(0, 0)));
+   BOOST_STATIC_CONSTEXPR bool value = (1 == sizeof(test<T>(0, 0)));
 };
 
 
 template<class T, bool = has_iterator_category<T>::value >
 struct is_input_iterator
 {
-   static const bool value = is_same<typename T::iterator_category, std::input_iterator_tag>::value;
+   BOOST_STATIC_CONSTEXPR bool value = is_same<typename T::iterator_category, std::input_iterator_tag>::value;
 };
 
 template<class T>
 struct is_input_iterator<T, false>
 {
-   static const bool value = false;
+   BOOST_STATIC_CONSTEXPR bool value = false;
 };
 
 template<class T>
 struct is_not_input_iterator
 {
-   static const bool value = !is_input_iterator<T>::value;
+   BOOST_STATIC_CONSTEXPR bool value = !is_input_iterator<T>::value;
 };
 
 template<class T, bool = has_iterator_category<T>::value >
 struct is_forward_iterator
 {
-   static const bool value = is_same<typename T::iterator_category, std::forward_iterator_tag>::value;
+   BOOST_STATIC_CONSTEXPR bool value = is_same<typename T::iterator_category, std::forward_iterator_tag>::value;
 };
 
 template<class T>
 struct is_forward_iterator<T, false>
 {
-   static const bool value = false;
+   BOOST_STATIC_CONSTEXPR bool value = false;
 };
 
 template<class T, bool = has_iterator_category<T>::value >
 struct is_bidirectional_iterator
 {
-   static const bool value = is_same<typename T::iterator_category, std::bidirectional_iterator_tag>::value;
+   BOOST_STATIC_CONSTEXPR bool value = is_same<typename T::iterator_category, std::bidirectional_iterator_tag>::value;
 };
 
 template<class T>
 struct is_bidirectional_iterator<T, false>
 {
-   static const bool value = false;
+   BOOST_STATIC_CONSTEXPR bool value = false;
 };
 
 template<class IINodeType>

@@ -103,7 +103,8 @@ inline std::string fix_typeid_name( char const* n )
 }
 
 // class types can be incomplete
-template<class T> std::string typeid_name_impl( int T::* )
+// but also abstract (T[1] doesn't form)
+template<class T> std::string typeid_name_impl( int T::*, T(*)[1] )
 {
     std::string r = fix_typeid_name( typeid(T[1]).name() );
     return r.substr( 0, r.size() - 4 ); // remove ' [1]' suffix
@@ -116,7 +117,7 @@ template<class T> std::string typeid_name_impl( ... )
 
 template<class T> std::string typeid_name()
 {
-    return typeid_name_impl<T>( 0 );
+    return typeid_name_impl<T>( 0, 0 );
 }
 
 // template names
@@ -345,6 +346,8 @@ template<> struct tn_holder<boost::uint128_type>
 
 #endif
 
+#if !defined(BOOST_NO_INTRINSIC_WCHAR_T)
+
 template<> struct tn_holder<wchar_t>
 {
     static std::string type_name( std::string const& suffix )
@@ -352,6 +355,8 @@ template<> struct tn_holder<wchar_t>
         return "wchar_t" + suffix;
     }
 };
+
+#endif
 
 #if !defined(BOOST_NO_CXX11_CHAR16_T)
 

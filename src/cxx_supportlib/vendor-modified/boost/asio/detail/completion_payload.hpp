@@ -1,6 +1,6 @@
 //
-// experimental/detail/channel_payload.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// detail/completion_payload.hpp
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2003-2024 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
@@ -8,8 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef BOOST_ASIO_EXPERIMENTAL_DETAIL_CHANNEL_PAYLOAD_HPP
-#define BOOST_ASIO_EXPERIMENTAL_DETAIL_CHANNEL_PAYLOAD_HPP
+#ifndef BOOST_ASIO_DETAIL_COMPLETION_PAYLOAD_HPP
+#define BOOST_ASIO_DETAIL_COMPLETION_PAYLOAD_HPP
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 # pragma once
@@ -18,7 +18,7 @@
 #include <boost/asio/detail/config.hpp>
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/asio/experimental/detail/channel_message.hpp>
+#include <boost/asio/detail/completion_message.hpp>
 
 #if defined(BOOST_ASIO_HAS_STD_VARIANT)
 # include <variant>
@@ -30,17 +30,16 @@
 
 namespace boost {
 namespace asio {
-namespace experimental {
 namespace detail {
 
 template <typename... Signatures>
-class channel_payload;
+class completion_payload;
 
 template <typename R>
-class channel_payload<R()>
+class completion_payload<R()>
 {
 public:
-  explicit channel_payload(channel_message<R()>)
+  explicit completion_payload(completion_message<R()>)
   {
   }
 
@@ -52,11 +51,11 @@ public:
 };
 
 template <typename Signature>
-class channel_payload<Signature>
+class completion_payload<Signature>
 {
 public:
-  channel_payload(channel_message<Signature>&& m)
-    : message_(static_cast<channel_message<Signature>&&>(m))
+  completion_payload(completion_message<Signature>&& m)
+    : message_(static_cast<completion_message<Signature>&&>(m))
   {
   }
 
@@ -67,18 +66,18 @@ public:
   }
 
 private:
-  channel_message<Signature> message_;
+  completion_message<Signature> message_;
 };
 
 #if defined(BOOST_ASIO_HAS_STD_VARIANT)
 
 template <typename... Signatures>
-class channel_payload
+class completion_payload
 {
 public:
   template <typename Signature>
-  channel_payload(channel_message<Signature>&& m)
-    : message_(static_cast<channel_message<Signature>&&>(m))
+  completion_payload(completion_message<Signature>&& m)
+    : message_(static_cast<completion_message<Signature>&&>(m))
   {
   }
 
@@ -93,25 +92,25 @@ public:
   }
 
 private:
-  std::variant<channel_message<Signatures>...> message_;
+  std::variant<completion_message<Signatures>...> message_;
 };
 
 #else // defined(BOOST_ASIO_HAS_STD_VARIANT)
 
 template <typename R1, typename R2>
-class channel_payload<R1(), R2(boost::system::error_code)>
+class completion_payload<R1(), R2(boost::system::error_code)>
 {
 public:
-  typedef channel_message<R1()> void_message_type;
-  typedef channel_message<R2(boost::system::error_code)> error_message_type;
+  typedef completion_message<R1()> void_message_type;
+  typedef completion_message<R2(boost::system::error_code)> error_message_type;
 
-  channel_payload(void_message_type&&)
+  completion_payload(void_message_type&&)
     : message_(0, boost::system::error_code()),
       empty_(true)
   {
   }
 
-  channel_payload(error_message_type&& m)
+  completion_payload(error_message_type&& m)
     : message_(static_cast<error_message_type&&>(m)),
       empty_(false)
   {
@@ -121,7 +120,7 @@ public:
   void receive(Handler& handler)
   {
     if (empty_)
-      channel_message<R1()>(0).receive(handler);
+      completion_message<R1()>(0).receive(handler);
     else
       message_.receive(handler);
   }
@@ -132,25 +131,25 @@ private:
 };
 
 template <typename Sig1, typename Sig2>
-class channel_payload<Sig1, Sig2>
+class completion_payload<Sig1, Sig2>
 {
 public:
-  typedef channel_message<Sig1> message_1_type;
-  typedef channel_message<Sig2> message_2_type;
+  typedef completion_message<Sig1> message_1_type;
+  typedef completion_message<Sig2> message_2_type;
 
-  channel_payload(message_1_type&& m)
+  completion_payload(message_1_type&& m)
     : index_(1)
   {
     new (&storage_.message_1_) message_1_type(static_cast<message_1_type&&>(m));
   }
 
-  channel_payload(message_2_type&& m)
+  completion_payload(message_2_type&& m)
     : index_(2)
   {
     new (&storage_.message_2_) message_2_type(static_cast<message_2_type&&>(m));
   }
 
-  channel_payload(channel_payload&& other)
+  completion_payload(completion_payload&& other)
     : index_(other.index_)
   {
     switch (index_)
@@ -168,7 +167,7 @@ public:
     }
   }
 
-  ~channel_payload()
+  ~completion_payload()
   {
     switch (index_)
     {
@@ -215,10 +214,9 @@ private:
 #endif // defined(BOOST_ASIO_HAS_STD_VARIANT)
 
 } // namespace detail
-} // namespace experimental
 } // namespace asio
 } // namespace boost
 
 #include <boost/asio/detail/pop_options.hpp>
 
-#endif // BOOST_ASIO_EXPERIMENTAL_DETAIL_CHANNEL_PAYLOAD_HPP
+#endif // BOOST_ASIO_DETAIL_COMPLETION_PAYLOAD_HPP

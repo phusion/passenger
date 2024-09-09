@@ -105,6 +105,10 @@ namespace boost {
       using insert_return_type =
         detail::foa::insert_return_type<iterator, node_type>;
 
+#if defined(BOOST_UNORDERED_ENABLE_STATS)
+      using stats = typename table_type::stats;
+#endif
+
       unordered_node_set() : unordered_node_set(0) {}
 
       explicit unordered_node_set(size_type n, hasher const& h = hasher(),
@@ -562,6 +566,14 @@ namespace boost {
       void rehash(size_type n) { table_.rehash(n); }
 
       void reserve(size_type n) { table_.reserve(n); }
+
+#if defined(BOOST_UNORDERED_ENABLE_STATS)
+      /// Stats
+      ///
+      stats get_stats() const { return table_.get_stats(); }
+
+      void reset_stats() noexcept { table_.reset_stats(); }
+#endif
 
       /// Observers
       ///

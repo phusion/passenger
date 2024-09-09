@@ -47,7 +47,7 @@
 #include <boost/move/detail/fwd_macros.hpp>
 #endif
 #include <boost/move/detail/move_helpers.hpp>
-#include <boost/move/detail/force_ptr.hpp>
+
 // std
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
 #include <initializer_list>
@@ -368,28 +368,14 @@ class slist
       BOOST_NOEXCEPT_IF(allocator_traits_type::propagate_on_container_move_assignment::value
                                   || allocator_traits_type::is_always_equal::value)
    {
-      slist & sr = x;
-      if (BOOST_LIKELY(this != &sr)) {
-         NodeAlloc &this_alloc = this->node_alloc();
-         NodeAlloc &x_alloc    = sr.node_alloc();
-         const bool propagate_alloc = allocator_traits_type::
-               propagate_on_container_move_assignment::value;
-         const bool allocators_equal = this_alloc == x_alloc; (void)allocators_equal;
-         //Resources can be transferred if both allocators are
-         //going to be equal after this function (either propagated or already equal)
-         if(propagate_alloc || allocators_equal){
-            //Destroy
-            this->clear();
-            //Move allocator if needed
-            this->AllocHolder::move_assign_alloc(sr);
-            //Obtain resources
-            this->icont() = boost::move(sr.icont());
-         }
-         //Else do a one by one move
-         else{
-            this->assign( boost::make_move_iterator(sr.begin())
-                        , boost::make_move_iterator(sr.end()));
-         }
+      if (BOOST_LIKELY(this != &x)) {
+         //We know resources can be transferred at comiple time if both allocators are
+         //always equal or the allocator is going to be propagated
+         const bool can_steal_resources_alloc
+            =  allocator_traits_type::propagate_on_container_move_assignment::value
+            || allocator_traits_type::is_always_equal::value;
+         dtl::bool_<can_steal_resources_alloc> flag;
+         this->priv_move_assign(boost::move(x), flag);
       }
       return *this;
    }
@@ -1579,6 +1565,27 @@ class slist
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    private:
+   void priv_move_assign(BOOST_RV_REF(slist) x, dtl::bool_<true> /*steal_resources*/)
+   {
+      //Destroy objects but retain memory in case x reuses it in the future
+      this->clear();
+      //Move allocator if needed
+      this->AllocHolder::move_assign_alloc(x);
+      //Obtain resources
+      this->icont() = boost::move(x.icont());
+   }
+
+   void priv_move_assign(BOOST_RV_REF(slist) x, dtl::bool_<false> /*steal_resources*/)
+   {
+      //We can't guarantee a compile-time equal allocator or propagation so fallback to runtime
+      //Resources can be transferred if both allocators are equal
+      if (this->node_alloc() == x.node_alloc()) {
+         this->priv_move_assign(boost::move(x), dtl::true_());
+      }
+      else {
+         this->assign(boost::make_move_iterator(x.begin()), boost::make_move_iterator(x.end()));
+      }
+   }
 
    template<class U>
    void priv_push_front(BOOST_FWD_REF(U) x)
@@ -1666,7 +1673,7 @@ struct has_trivial_destructor_after_move<boost::container::slist<T, Allocator> >
 {
    typedef typename boost::container::slist<T, Allocator>::allocator_type allocator_type;
    typedef typename ::boost::container::allocator_traits<allocator_type>::pointer pointer;
-   static const bool value = ::boost::has_trivial_destructor_after_move<allocator_type>::value &&
+   BOOST_STATIC_CONSTEXPR bool value = ::boost::has_trivial_destructor_after_move<allocator_type>::value &&
                              ::boost::has_trivial_destructor_after_move<pointer>::value;
 };
 

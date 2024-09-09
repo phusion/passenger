@@ -1,6 +1,6 @@
 /* Fast open-addressing hash table.
  *
- * Copyright 2022-2023 Joaquin M Lopez Munoz.
+ * Copyright 2022-2024 Joaquin M Lopez Munoz.
  * Copyright 2023 Christian Mazakas.
  * Copyright 2024 Braden Ganetsky.
  * Distributed under the Boost Software License, Version 1.0.
@@ -361,6 +361,10 @@ public:
     const_iterator>::type;
   using erase_return_type=table_erase_return_type<iterator>;
 
+#if defined(BOOST_UNORDERED_ENABLE_STATS)
+  using stats=typename super::stats;
+#endif
+
   table(
     std::size_t n=default_bucket_count,const Hash& h_=Hash(),
     const Pred& pred_=Pred(),const Allocator& al_=Allocator()):
@@ -542,6 +546,11 @@ public:
   using super::rehash;
   using super::reserve;
 
+#if defined(BOOST_UNORDERED_ENABLE_STATS)
+  using super::get_stats;
+  using super::reset_stats;
+#endif
+
   template<typename Predicate>
   friend std::size_t erase_if(table& x,Predicate& pr)
   {
@@ -584,6 +593,7 @@ private:
     x.arrays=ah.release();
     x.size_ctrl.ml=x.initial_max_load();
     x.size_ctrl.size=0;
+    BOOST_UNORDERED_SWAP_STATS(this->cstats,x.cstats);
   }
 
   template<typename ExclusiveLockGuard>

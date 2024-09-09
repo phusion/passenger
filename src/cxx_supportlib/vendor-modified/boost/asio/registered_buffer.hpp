@@ -79,7 +79,7 @@ private:
 };
 
 /// Holds a registered buffer over modifiable data.
-/** 
+/**
  * Satisfies the @c MutableBufferSequence type requirements.
  */
 class mutable_registered_buffer
@@ -150,7 +150,7 @@ private:
 };
 
 /// Holds a registered buffer over non-modifiable data.
-/** 
+/**
  * Satisfies the @c ConstBufferSequence type requirements.
  */
 class const_registered_buffer

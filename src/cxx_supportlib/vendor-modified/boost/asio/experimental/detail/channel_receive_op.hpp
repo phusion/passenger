@@ -17,11 +17,10 @@
 
 #include <boost/asio/detail/config.hpp>
 #include <boost/asio/detail/bind_handler.hpp>
+#include <boost/asio/detail/completion_handler.hpp>
 #include <boost/asio/detail/handler_alloc_helpers.hpp>
 #include <boost/asio/error.hpp>
-#include <boost/asio/experimental/detail/channel_handler.hpp>
 #include <boost/asio/experimental/detail/channel_operation.hpp>
-#include <boost/asio/experimental/detail/channel_payload.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
 
@@ -93,7 +92,7 @@ public:
     if (a != channel_operation::destroy_op)
     {
       Payload* payload = static_cast<Payload*>(v);
-      channel_handler<Payload, Handler> handler(
+      boost::asio::detail::completion_payload_handler<Payload, Handler> handler(
           static_cast<Payload&&>(*payload), o->handler_);
       p.h = boost::asio::detail::addressof(handler.handler_);
       p.reset();

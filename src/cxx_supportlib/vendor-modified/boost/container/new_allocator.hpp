@@ -33,7 +33,7 @@ namespace container {
 
 template<bool Value>
 struct new_allocator_bool
-{  static const bool value = Value;  };
+{  BOOST_STATIC_CONSTEXPR bool value = Value;  };
 
 template<class T>
 class new_allocator;

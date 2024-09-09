@@ -21,7 +21,6 @@
 #include <boost/asio/error.hpp>
 #include <boost/asio/experimental/channel_error.hpp>
 #include <boost/asio/experimental/detail/channel_operation.hpp>
-#include <boost/asio/experimental/detail/channel_payload.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
 

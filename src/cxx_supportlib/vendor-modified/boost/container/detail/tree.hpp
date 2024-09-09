@@ -52,7 +52,6 @@
 #include <boost/move/detail/fwd_macros.hpp>
 #endif
 #include <boost/move/detail/move_helpers.hpp>
-#include <boost/move/detail/force_ptr.hpp>
 
 
 
@@ -252,13 +251,13 @@ struct intrusive_tree_type
 //Trait to detect manually rebalanceable tree types
 template<boost::container::tree_type_enum tree_type_value>
 struct is_manually_balanceable
-{  static const bool value = true;  };
+{  BOOST_STATIC_CONSTEXPR bool value = true;  };
 
 template<>  struct is_manually_balanceable<red_black_tree>
-{  static const bool value = false; };
+{  BOOST_STATIC_CONSTEXPR bool value = false; };
 
 template<>  struct is_manually_balanceable<avl_tree>
-{  static const bool value = false; };
+{  BOOST_STATIC_CONSTEXPR bool value = false; };
 
 //Proxy traits to implement different operations depending on the
 //is_manually_balanceable<>::value
@@ -689,40 +688,13 @@ class tree
                            boost::container::dtl::is_nothrow_move_assignable<Compare>::value)
    {
       if (BOOST_LIKELY(this != &x)) {
-         NodeAlloc &this_alloc = this->node_alloc();
-         NodeAlloc &x_alloc    = x.node_alloc();
-         const bool propagate_alloc = allocator_traits<NodeAlloc>::
-               propagate_on_container_move_assignment::value;
-         const bool allocators_equal = this_alloc == x_alloc; (void)allocators_equal;
-         //Resources can be transferred if both allocators are
-         //going to be equal after this function (either propagated or already equal)
-         if(propagate_alloc || allocators_equal){
-            //Destroy
-            this->clear();
-            //Move allocator if needed
-            this->AllocHolder::move_assign_alloc(x);
-            //Obtain resources
-            this->icont() = boost::move(x.icont());
-         }
-         //Else do a one by one move
-         else{
-            //Transfer all the nodes to a temporary tree
-            //If anything goes wrong, all the nodes will be destroyed
-            //automatically
-            Icont other_tree(::boost::move(this->icont()));
-
-            //Now recreate the source tree reusing nodes stored by other_tree
-            this->icont().clone_from
-               (::boost::move(x.icont())
-               , RecyclingCloner<AllocHolder, true>(*this, other_tree)
-               , Destroyer(this->node_alloc()));
-
-            //If there are remaining nodes, destroy them
-            NodePtr p;
-            while((p = other_tree.unlink_leftmost_without_rebalance())){
-               AllocHolder::destroy_node(p);
-            }
-         }
+         //We know resources can be transferred at comiple time if both allocators are
+         //always equal or the allocator is going to be propagated
+         const bool can_steal_resources_alloc
+            =  allocator_traits_type::propagate_on_container_move_assignment::value
+            || allocator_traits_type::is_always_equal::value;
+         dtl::bool_<can_steal_resources_alloc> flag;
+         this->priv_move_assign(boost::move(x), flag);
       }
       return *this;
    }
@@ -896,6 +868,42 @@ class tree
 
 
    private:
+   void priv_move_assign(BOOST_RV_REF(tree) x, dtl::bool_<true> /*steal_resources*/)
+   {
+      //Destroy objects but retain memory in case x reuses it in the future
+      this->clear();
+      //Move allocator if needed
+      this->AllocHolder::move_assign_alloc(x);
+      //Obtain resources
+      this->icont() = boost::move(x.icont());
+   }
+
+   void priv_move_assign(BOOST_RV_REF(tree) x, dtl::bool_<false> /*steal_resources*/)
+   {
+      //We can't guarantee a compile-time equal allocator or propagation so fallback to runtime
+      //Resources can be transferred if both allocators are equal
+      if (this->node_alloc() == x.node_alloc()) {
+         this->priv_move_assign(boost::move(x), dtl::true_());
+      }
+      else {
+         //Transfer all the nodes to a temporary tree
+         //If anything goes wrong, all the nodes will be destroyed
+         //automatically
+         Icont other_tree(::boost::move(this->icont()));
+
+         //Now recreate the source tree reusing nodes stored by other_tree
+         this->icont().clone_from
+         (::boost::move(x.icont())
+            , RecyclingCloner<AllocHolder, true>(*this, other_tree)
+            , Destroyer(this->node_alloc()));
+
+         //If there are remaining nodes, destroy them
+         NodePtr p;
+         while ((p = other_tree.unlink_leftmost_without_rebalance())) {
+            AllocHolder::destroy_node(p);
+         }
+      }
+   }
 
    template<class KeyConvertible, class M>
    iiterator priv_insert_or_assign_commit
@@ -1134,6 +1142,31 @@ class tree
       return ret;
    }
 
+   template <class K>
+   inline typename dtl::enable_if_c<
+      dtl::is_transparent<key_compare>::value &&      //transparent
+      !dtl::is_convertible<K, iterator>::value &&     //not convertible to iterator
+      !dtl::is_convertible<K, const_iterator>::value  //not convertible to const_iterator
+      , size_type>::type
+      erase(const K& k)
+   {  return AllocHolder::erase_key(k, KeyNodeCompare(key_comp()), alloc_version()); }
+
+   template <class K>
+   inline typename dtl::enable_if_c<
+      dtl::is_transparent<key_compare>::value &&      //transparent
+      !dtl::is_convertible<K, iterator>::value &&     //not convertible to iterator
+      !dtl::is_convertible<K, const_iterator>::value  //not convertible to const_iterator
+      , size_type>::type
+      erase_unique(const K& k)
+   {
+      iterator i = this->find(k);
+      size_type ret = static_cast<size_type>(i != this->end());
+
+      if (ret)
+         this->erase(i);
+      return ret;
+   }
+
    iterator erase(const_iterator first, const_iterator last)
    {
       BOOST_ASSERT(first == last || (first != this->cend() && (priv_is_linked)(first)));
@@ -1232,13 +1265,13 @@ class tree
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, iterator>::type
          find(const K& k)
-   {  return iterator(this->icont().find(k, KeyNodeCompare()));  }
+   {  return iterator(this->icont().find(k, KeyNodeCompare(key_comp())));  }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, const_iterator>::type
          find(const K& k) const
-   {  return const_iterator(this->non_const_icont().find(k, KeyNodeCompare()));  }
+   {  return const_iterator(this->non_const_icont().find(k, KeyNodeCompare(key_comp())));  }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       size_type count(const key_type& k) const
@@ -1248,7 +1281,7 @@ class tree
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, size_type>::type
          count(const K& k) const
-   {  return size_type(this->icont().count(k, KeyNodeCompare())); }
+   {  return size_type(this->icont().count(k, KeyNodeCompare(key_comp()))); }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       bool contains(const key_type& x) const
@@ -1272,13 +1305,13 @@ class tree
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, iterator>::type
          lower_bound(const K& k)
-   {  return iterator(this->icont().lower_bound(k, KeyNodeCompare()));  }
+   {  return iterator(this->icont().lower_bound(k, KeyNodeCompare(key_comp())));  }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, const_iterator>::type
          lower_bound(const K& k) const
-   {  return const_iterator(this->non_const_icont().lower_bound(k, KeyNodeCompare()));  }
+   {  return const_iterator(this->non_const_icont().lower_bound(k, KeyNodeCompare(key_comp())));  }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       iterator upper_bound(const key_type& k)
@@ -1292,13 +1325,13 @@ class tree
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, iterator>::type
          upper_bound(const K& k)
-   {  return iterator(this->icont().upper_bound(k, KeyNodeCompare()));   }
+   {  return iterator(this->icont().upper_bound(k, KeyNodeCompare(key_comp())));   }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, const_iterator>::type
          upper_bound(const K& k) const
-   {  return const_iterator(this->non_const_icont().upper_bound(k, KeyNodeCompare()));  }
+   {  return const_iterator(this->non_const_icont().upper_bound(k, KeyNodeCompare(key_comp())));  }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
       std::pair<iterator,iterator> equal_range(const key_type& k)
@@ -1322,7 +1355,7 @@ class tree
          equal_range(const K& k)
    {
       std::pair<iiterator, iiterator> ret =
-         this->icont().equal_range(k, KeyNodeCompare());
+         this->icont().equal_range(k, KeyNodeCompare(key_comp()));
       return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
@@ -1332,7 +1365,7 @@ class tree
          equal_range(const K& k) const
    {
       std::pair<iiterator, iiterator> ret =
-         this->non_const_icont().equal_range(k, KeyNodeCompare());
+         this->non_const_icont().equal_range(k, KeyNodeCompare(key_comp()));
       return std::pair<const_iterator,const_iterator>
          (const_iterator(ret.first), const_iterator(ret.second));
    }
@@ -1360,7 +1393,7 @@ class tree
          lower_bound_range(const K& k)
    {
       std::pair<iiterator, iiterator> ret =
-         this->icont().lower_bound_range(k, KeyNodeCompare());
+         this->icont().lower_bound_range(k, KeyNodeCompare(key_comp()));
       return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
@@ -1370,7 +1403,7 @@ class tree
          lower_bound_range(const K& k) const
    {
       std::pair<iiterator, iiterator> ret =
-         this->non_const_icont().lower_bound_range(k, KeyNodeCompare());
+         this->non_const_icont().lower_bound_range(k, KeyNodeCompare(key_comp()));
       return std::pair<const_iterator,const_iterator>
          (const_iterator(ret.first), const_iterator(ret.second));
    }
@@ -1425,9 +1458,10 @@ struct has_trivial_destructor_after_move
 {
    typedef typename ::boost::container::dtl::tree<T, KeyOfValue, Compare, Allocator, Options>::allocator_type allocator_type;
    typedef typename ::boost::container::allocator_traits<allocator_type>::pointer pointer;
-   static const bool value = ::boost::has_trivial_destructor_after_move<allocator_type>::value &&
-                             ::boost::has_trivial_destructor_after_move<pointer>::value &&
-                             ::boost::has_trivial_destructor_after_move<Compare>::value;
+   BOOST_STATIC_CONSTEXPR bool value =
+      ::boost::has_trivial_destructor_after_move<allocator_type>::value &&
+      ::boost::has_trivial_destructor_after_move<pointer>::value &&
+      ::boost::has_trivial_destructor_after_move<Compare>::value;
 };
 
 } //namespace boost  {

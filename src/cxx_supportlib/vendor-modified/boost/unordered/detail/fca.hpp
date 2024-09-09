@@ -659,12 +659,7 @@ namespace boost {
           std::swap(buckets, other.buckets);
           std::swap(groups, other.groups);
 
-          bool b = boost::allocator_propagate_on_container_swap<
-            allocator_type>::type::value;
-          if (b) {
-            boost::core::invoke_swap(
-              get_node_allocator(), other.get_node_allocator());
-          }
+          swap_allocator_if_pocs(other);
         }
 
         node_allocator_type const& get_node_allocator() const
@@ -875,6 +870,27 @@ namespace boost {
           pbg->next->prev = pbg->prev;
           pbg->prev->next = pbg->next;
           pbg->prev = pbg->next = group_pointer();
+        }
+
+        void swap_allocator_if_pocs(grouped_bucket_array& other)
+        {
+          using allocator_pocs =
+            typename boost::allocator_propagate_on_container_swap<
+              allocator_type>::type;
+          swap_allocator_if_pocs(
+            other, std::integral_constant<bool, allocator_pocs::value>());
+        }
+
+        void swap_allocator_if_pocs(
+          grouped_bucket_array& other, std::true_type /* propagate */)
+        {
+          boost::core::invoke_swap(
+            get_node_allocator(), other.get_node_allocator());
+        }
+
+        void swap_allocator_if_pocs(
+          grouped_bucket_array&, std::false_type /* don't propagate */)
+        {
         }
       };
     } // namespace detail

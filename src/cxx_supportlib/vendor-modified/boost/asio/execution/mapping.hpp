@@ -734,7 +734,7 @@ const T other_t<I>::static_query_v;
 
 typedef detail::mapping_t<> mapping_t;
 
-constexpr mapping_t mapping;
+BOOST_ASIO_INLINE_VARIABLE constexpr mapping_t mapping;
 
 } // namespace execution
 

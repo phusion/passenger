@@ -62,7 +62,7 @@ namespace dtl {
       template<class X>
       static no_type test(...);
 
-      static const bool value = sizeof(test<T>(0)) == sizeof(yes_type);
+      BOOST_STATIC_CONSTEXPR bool value = sizeof(test<T>(0)) == sizeof(yes_type);
    };
 
    template <class T, class InnerAlloc, class ...Args>

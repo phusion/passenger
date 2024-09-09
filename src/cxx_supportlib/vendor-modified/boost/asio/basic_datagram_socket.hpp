@@ -448,7 +448,7 @@ public:
    * Regardless of whether the asynchronous operation completes immediately or
    * not, the completion handler will not be invoked from within this function.
    * On immediate completion, invocation of the handler will be performed in a
-   * manner equivalent to using boost::asio::post().
+   * manner equivalent to using boost::asio::async_immediate().
    *
    * @par Completion Signature
    * @code void(boost::system::error_code, std::size_t) @endcode
@@ -518,7 +518,7 @@ public:
    * Regardless of whether the asynchronous operation completes immediately or
    * not, the completion handler will not be invoked from within this function.
    * On immediate completion, invocation of the handler will be performed in a
-   * manner equivalent to using boost::asio::post().
+   * manner equivalent to using boost::asio::async_immediate().
    *
    * @par Completion Signature
    * @code void(boost::system::error_code, std::size_t) @endcode
@@ -667,7 +667,7 @@ public:
    * Regardless of whether the asynchronous operation completes immediately or
    * not, the completion handler will not be invoked from within this function.
    * On immediate completion, invocation of the handler will be performed in a
-   * manner equivalent to using boost::asio::post().
+   * manner equivalent to using boost::asio::async_immediate().
    *
    * @par Completion Signature
    * @code void(boost::system::error_code, std::size_t) @endcode
@@ -740,7 +740,7 @@ public:
    * Regardless of whether the asynchronous operation completes immediately or
    * not, the completion handler will not be invoked from within this function.
    * On immediate completion, invocation of the handler will be performed in a
-   * manner equivalent to using boost::asio::post().
+   * manner equivalent to using boost::asio::async_immediate().
    *
    * @par Completion Signature
    * @code void(boost::system::error_code, std::size_t) @endcode
@@ -885,7 +885,7 @@ public:
    * Regardless of whether the asynchronous operation completes immediately or
    * not, the completion handler will not be invoked from within this function.
    * On immediate completion, invocation of the handler will be performed in a
-   * manner equivalent to using boost::asio::post().
+   * manner equivalent to using boost::asio::async_immediate().
    *
    * @par Completion Signature
    * @code void(boost::system::error_code, std::size_t) @endcode
@@ -956,7 +956,7 @@ public:
    * Regardless of whether the asynchronous operation completes immediately or
    * not, the completion handler will not be invoked from within this function.
    * On immediate completion, invocation of the handler will be performed in a
-   * manner equivalent to using boost::asio::post().
+   * manner equivalent to using boost::asio::async_immediate().
    *
    * @par Completion Signature
    * @code void(boost::system::error_code, std::size_t) @endcode
@@ -1027,7 +1027,7 @@ public:
     boost::asio::detail::throw_error(ec, "receive_from");
     return s;
   }
-  
+
   /// Receive a datagram with the endpoint of the sender.
   /**
    * This function is used to receive a datagram. The function call will block
@@ -1054,7 +1054,7 @@ public:
     boost::asio::detail::throw_error(ec, "receive_from");
     return s;
   }
-  
+
   /// Receive a datagram with the endpoint of the sender.
   /**
    * This function is used to receive a datagram. The function call will block
@@ -1108,7 +1108,7 @@ public:
    * Regardless of whether the asynchronous operation completes immediately or
    * not, the completion handler will not be invoked from within this function.
    * On immediate completion, invocation of the handler will be performed in a
-   * manner equivalent to using boost::asio::post().
+   * manner equivalent to using boost::asio::async_immediate().
    *
    * @par Completion Signature
    * @code void(boost::system::error_code, std::size_t) @endcode
@@ -1180,7 +1180,7 @@ public:
    * Regardless of whether the asynchronous operation completes immediately or
    * not, the completion handler will not be invoked from within this function.
    * On immediate completion, invocation of the handler will be performed in a
-   * manner equivalent to using boost::asio::post().
+   * manner equivalent to using boost::asio::async_immediate().
    *
    * @par Completion Signature
    * @code void(boost::system::error_code, std::size_t) @endcode
@@ -1220,7 +1220,7 @@ private:
       const basic_datagram_socket&) = delete;
 
   class initiate_async_send
-  { 
+  {
   public:
     typedef Executor executor_type;
 

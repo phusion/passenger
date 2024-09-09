@@ -46,7 +46,6 @@
 #include <boost/move/utility_core.hpp>
 #include <boost/move/detail/to_raw_pointer.hpp>
 #include <boost/move/algo/detail/merge.hpp>
-#include <boost/move/detail/force_ptr.hpp>
 
 //std
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
@@ -148,7 +147,7 @@ class devector
    typedef typename get_devector_opt<Options, alloc_size_type>::type             options_type;
    typedef typename options_type::growth_factor_type                             growth_factor_type;
    typedef typename options_type::stored_size_type                               stored_size_type;
-   static const std::size_t devector_min_free_fraction =
+   BOOST_STATIC_CONSTEXPR std::size_t devector_min_free_fraction =
       options_type::free_fraction;
 
    #endif // ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
@@ -513,20 +512,21 @@ class devector
       const devector &x = rhs;
       if (this == &x) { return *this; } // skip self
 
-      BOOST_IF_CONSTEXPR(allocator_traits_type::propagate_on_container_copy_assignment::value)
+      const bool do_propagate = allocator_traits_type::propagate_on_container_copy_assignment::value;
+      BOOST_IF_CONSTEXPR(do_propagate)
       {
-            allocator_type &this_alloc = this->get_allocator_ref();
-            const allocator_type &other_alloc = x.get_allocator_ref();
-            if (this_alloc != other_alloc)
-            {
-               // new allocator cannot free existing storage
-               this->clear();
-               this->deallocate_buffer();
-               m_.capacity = 0u;
-               m_.buffer = pointer();
-            }
-
-            this_alloc = other_alloc;
+         allocator_type &this_alloc = this->get_allocator_ref();
+         const allocator_type &other_alloc = x.get_allocator_ref();
+         if (this_alloc != other_alloc)
+         {
+            // new allocator cannot free existing storage
+            this->clear();
+            this->deallocate_buffer();
+            m_.capacity = 0u;
+            m_.buffer = pointer();
+         }
+         dtl::bool_<do_propagate> flag;
+         dtl::assign_alloc(this_alloc, other_alloc, flag);
       }
 
       size_type n = x.size();
@@ -566,53 +566,16 @@ class devector
       BOOST_NOEXCEPT_IF(allocator_traits_type::propagate_on_container_move_assignment::value
                                  || allocator_traits_type::is_always_equal::value)
    {
-      BOOST_CONSTEXPR_OR_CONST bool copy_alloc = allocator_traits_type::propagate_on_container_move_assignment::value;
-
-      BOOST_IF_CONSTEXPR (copy_alloc || get_allocator_ref() == x.get_allocator_ref())
-      {
-         this->clear();
-         this->deallocate_buffer();
-
-         if (copy_alloc)
-         {
-            this->get_allocator_ref() = boost::move(x.get_allocator_ref());
-         }
-
-         m_.capacity = x.m_.capacity;
-         m_.buffer = x.m_.buffer;
-         m_.front_idx = x.m_.front_idx;
-         m_.back_idx = x.m_.back_idx;
-
-         // leave x in valid state
-         x.m_.capacity = 0u;
-         x.m_.buffer = pointer();
-         x.m_.back_idx = x.m_.front_idx = 0;
+      if (BOOST_LIKELY(this != &x)) {
+         //We know resources can be transferred at comiple time if both allocators are
+         //always equal or the allocator is going to be propagated
+         const bool can_steal_resources_alloc
+            = allocator_traits_type::propagate_on_container_move_assignment::value
+            || allocator_traits_type::is_always_equal::value;
+         dtl::bool_<can_steal_resources_alloc> flag;
+         this->priv_move_assign(boost::move(x), flag);
       }
-      else
-      {
-         // if the allocator shouldn't be copied and they do not compare equal
-         // we can't steal memory.
-
-         move_iterator<iterator> xbegin = boost::make_move_iterator(x.begin());
-         move_iterator<iterator> xend = boost::make_move_iterator(x.end());
-
-         if (copy_alloc)
-         {
-            get_allocator_ref() = boost::move(x.get_allocator_ref());
-         }
-
-         if (m_.capacity >= x.size())
-         {
-            overwrite_buffer(xbegin, xend);
-         }
-         else
-         {
-            allocate_and_copy_range(xbegin, xend);
-         }
-      }
-
       BOOST_ASSERT(invariants_ok());
-
       return *this;
    }
 
@@ -1308,6 +1271,78 @@ class devector
    {
       BOOST_ASSERT(n < size());
       return m_.buffer[m_.front_idx + n];
+   }
+
+   //! <b>Requires</b>: size() >= n.
+   //!
+   //! <b>Effects</b>: Returns an iterator to the nth element
+   //!   from the beginning of the container. Returns end()
+   //!   if n == size().
+   //!
+   //! <b>Throws</b>: Nothing.
+   //!
+   //! <b>Complexity</b>: Constant.
+   //!
+   //! <b>Note</b>: Non-standard extension
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+      iterator nth(size_type n) BOOST_NOEXCEPT_OR_NOTHROW
+   {
+      BOOST_ASSERT(n <= size());
+      return iterator(m_.buffer + (m_.front_idx + n));
+   }
+
+   //! <b>Requires</b>: size() >= n.
+   //!
+   //! <b>Effects</b>: Returns a const_iterator to the nth element
+   //!   from the beginning of the container. Returns end()
+   //!   if n == size().
+   //!
+   //! <b>Throws</b>: Nothing.
+   //!
+   //! <b>Complexity</b>: Constant.
+   //!
+   //! <b>Note</b>: Non-standard extension
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+      const_iterator nth(size_type n) const BOOST_NOEXCEPT_OR_NOTHROW
+   {
+      BOOST_ASSERT(n <= size());
+      return const_iterator(m_.buffer + (m_.front_idx + n));
+   }
+
+   //! <b>Requires</b>: begin() <= p <= end().
+   //!
+   //! <b>Effects</b>: Returns the index of the element pointed by p
+   //!   and size() if p == end().
+   //!
+   //! <b>Throws</b>: Nothing.
+   //!
+   //! <b>Complexity</b>: Constant.
+   //!
+   //! <b>Note</b>: Non-standard extension
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+      size_type index_of(iterator p) BOOST_NOEXCEPT_OR_NOTHROW
+   {
+      BOOST_ASSERT(p >= begin());
+      BOOST_ASSERT(p <= end());
+      return static_cast<size_type>(p - this->begin());
+   }
+
+   //! <b>Requires</b>: begin() <= p <= end().
+   //!
+   //! <b>Effects</b>: Returns the index of the element pointed by p
+   //!   and size() if p == end().
+   //!
+   //! <b>Throws</b>: Nothing.
+   //!
+   //! <b>Complexity</b>: Constant.
+   //!
+   //! <b>Note</b>: Non-standard extension
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+      size_type index_of(const_iterator p) const BOOST_NOEXCEPT_OR_NOTHROW
+   {
+      BOOST_ASSERT(p >= cbegin());
+      BOOST_ASSERT(p <= cend());
+      return static_cast<size_type>(p - this->cbegin());
    }
 
    /**
@@ -2137,6 +2172,53 @@ class devector
 
    private:
 
+   void priv_move_assign(BOOST_RV_REF(devector) x, dtl::bool_<true> /*steal_resources*/)
+   {
+      this->clear();
+      this->deallocate_buffer();
+
+      //Move allocator if needed
+      dtl::bool_<allocator_traits_type::
+         propagate_on_container_move_assignment::value> flag;
+      dtl::move_alloc(this->get_allocator_ref(), x.get_allocator_ref(), flag);
+
+      m_.capacity = x.m_.capacity;
+      m_.buffer = x.m_.buffer;
+      m_.front_idx = x.m_.front_idx;
+      m_.back_idx = x.m_.back_idx;
+
+      // leave x in valid state
+      x.m_.capacity = 0u;
+      x.m_.buffer = pointer();
+      x.m_.back_idx = x.m_.front_idx = 0;
+   }
+
+   void priv_move_assign(BOOST_RV_REF(devector) x, dtl::bool_<false> /*steal_resources*/)
+   {
+      //We can't guarantee a compile-time equal allocator or propagation so fallback to runtime
+      //Resources can be transferred if both allocators are equal
+      if (get_allocator_ref() == x.get_allocator_ref()) {
+         this->priv_move_assign(boost::move(x), dtl::true_());
+      }
+      else {
+         // We can't steal memory.
+         move_iterator<iterator> xbegin = boost::make_move_iterator(x.begin());
+         move_iterator<iterator> xend = boost::make_move_iterator(x.end());
+
+         //Move allocator if needed
+         dtl::bool_<allocator_traits_type::
+            propagate_on_container_move_assignment::value> flag;
+         dtl::move_alloc(this->get_allocator_ref(), x.get_allocator_ref(), flag);
+
+         if (m_.capacity >= x.size()) {
+            overwrite_buffer(xbegin, xend);
+         }
+         else {
+            allocate_and_copy_range(xbegin, xend);
+         }
+      }
+   }
+
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
    size_type pos_to_index(const_iterator i) const 
    {
@@ -2653,10 +2735,7 @@ class devector
       size_type const cap = m_.capacity;
       //Test if enough free memory would be left
       if (free_cap >= n && (free_cap - n) >= cap/devector_min_free_fraction) {
-         //Make sure relocation is happening because there was no enough space
          size_type const old_size = this->size();
-         BOOST_ASSERT(should_move_back(p) ? (back_free_cap < n) : (front_free_cap < n));
-
          T* const raw_pos = const_cast<T*>(boost::movelib::to_raw_pointer(p));
          size_type const new_size = old_size + n;
          size_type const new_front_idx = (cap - new_size) / 2u;
@@ -2948,8 +3027,9 @@ struct has_trivial_destructor_after_move<boost::container::devector<T, Allocator
 {
     typedef typename boost::container::devector<T, Allocator, Options>::allocator_type allocator_type;
     typedef typename ::boost::container::allocator_traits<allocator_type>::pointer pointer;
-    static const bool value = ::boost::has_trivial_destructor_after_move<allocator_type>::value &&
-                                           ::boost::has_trivial_destructor_after_move<pointer>::value;
+    BOOST_STATIC_CONSTEXPR bool value =
+      ::boost::has_trivial_destructor_after_move<allocator_type>::value &&
+      ::boost::has_trivial_destructor_after_move<pointer>::value;
 };
 
 }

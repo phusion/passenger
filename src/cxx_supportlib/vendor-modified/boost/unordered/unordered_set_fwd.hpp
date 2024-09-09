@@ -1,6 +1,7 @@
 
 // Copyright (C) 2008-2011 Daniel James.
 // Copyright (C) 2022 Christian Mazakas
+// Copyright (C) 2024 Braden Ganetsky
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -15,6 +16,10 @@
 #include <boost/container_hash/hash_fwd.hpp>
 #include <functional>
 #include <memory>
+
+#ifndef BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
+#include <memory_resource>
+#endif
 
 namespace boost {
   namespace unordered {
@@ -56,6 +61,18 @@ namespace boost {
 
     template <class N, class T, class A> class node_handle_set;
     template <class Iter, class NodeType> struct insert_return_type_set;
+
+#ifndef BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
+    namespace pmr {
+      template <class T, class H = boost::hash<T>, class P = std::equal_to<T> >
+      using unordered_set = boost::unordered::unordered_set<T, H, P,
+        std::pmr::polymorphic_allocator<T> >;
+
+      template <class T, class H = boost::hash<T>, class P = std::equal_to<T> >
+      using unordered_multiset = boost::unordered::unordered_multiset<T, H, P,
+        std::pmr::polymorphic_allocator<T> >;
+    } // namespace pmr
+#endif
   } // namespace unordered
 
   using boost::unordered::unordered_multiset;

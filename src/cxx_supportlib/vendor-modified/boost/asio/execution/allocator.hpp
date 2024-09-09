@@ -226,7 +226,7 @@ const T allocator_t<void>::static_query_v;
 #endif // defined(BOOST_ASIO_HAS_DEDUCED_STATIC_QUERY_TRAIT)
        //   && defined(BOOST_ASIO_HAS_SFINAE_VARIABLE_TEMPLATES)
 
-constexpr allocator_t<void> allocator;
+BOOST_ASIO_INLINE_VARIABLE constexpr allocator_t<void> allocator;
 
 } // namespace execution
 

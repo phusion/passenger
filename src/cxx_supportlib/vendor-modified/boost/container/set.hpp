@@ -1026,7 +1026,7 @@ template <class Key, class Compare, class Allocator, class Options>
 struct has_trivial_destructor_after_move<boost::container::set<Key, Compare, Allocator, Options> >
 {
    typedef ::boost::container::dtl::tree<Key, void, Compare, Allocator, Options> tree;
-   static const bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
+   BOOST_STATIC_CONSTEXPR bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
 };
 
 namespace container {
@@ -1681,7 +1681,7 @@ template <class Key, class Compare, class Allocator, class Options>
 struct has_trivial_destructor_after_move<boost::container::multiset<Key, Compare, Allocator, Options> >
 {
    typedef ::boost::container::dtl::tree<Key, void, Compare, Allocator, Options> tree;
-   static const bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
+   BOOST_STATIC_CONSTEXPR bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
 };
 
 namespace container {

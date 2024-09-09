@@ -188,7 +188,6 @@ public:
     BOOST_ASIO_HANDLER_INVOCATION_END;
   }
 
-
 private:
   Handler handler_;
   handler_work<Handler, IoExecutor> work_;

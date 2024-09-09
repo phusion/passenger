@@ -85,8 +85,9 @@ struct promise_value_type<>
  * awaitable<void> read_write_some(boost::asio::ip::tcp::socket & sock,
  *     boost::asio::mutable_buffer read_buf, boost::asio::const_buffer to_write)
  * {
- *   auto p = boost::asio::async_read(read_buf, boost::asio::use_awaitable);
- *   co_await boost::asio::async_write_some(to_write, boost::asio::deferred);
+ *   auto p = boost::asio::async_read(read_buf,
+ *       boost::asio::experimental::use_promise);
+ *   co_await boost::asio::async_write_some(to_write);
  *   co_await p;
  * }
  * @endcode
@@ -139,7 +140,6 @@ struct promise<void(Ts...), Executor,  Allocator>
    * It is safe to destruct a promise of a promise that didn't complete.
    */
   ~promise() { cancel(); }
-
 
 private:
 #if !defined(GENERATING_DOCUMENTATION)

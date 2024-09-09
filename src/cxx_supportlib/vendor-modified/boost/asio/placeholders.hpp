@@ -59,12 +59,18 @@ unspecified signal_number;
 
 #else
 
-static constexpr auto& error = std::placeholders::_1;
-static constexpr auto& bytes_transferred = std::placeholders::_2;
-static constexpr auto& iterator = std::placeholders::_2;
-static constexpr auto& results = std::placeholders::_2;
-static constexpr auto& endpoint = std::placeholders::_2;
-static constexpr auto& signal_number = std::placeholders::_2;
+static BOOST_ASIO_INLINE_VARIABLE constexpr auto& error
+  = std::placeholders::_1;
+static BOOST_ASIO_INLINE_VARIABLE constexpr auto& bytes_transferred
+  = std::placeholders::_2;
+static BOOST_ASIO_INLINE_VARIABLE constexpr auto& iterator
+  = std::placeholders::_2;
+static BOOST_ASIO_INLINE_VARIABLE constexpr auto& results
+  = std::placeholders::_2;
+static BOOST_ASIO_INLINE_VARIABLE constexpr auto& endpoint
+  = std::placeholders::_2;
+static BOOST_ASIO_INLINE_VARIABLE constexpr auto& signal_number
+  = std::placeholders::_2;
 
 #endif
 

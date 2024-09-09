@@ -26,7 +26,6 @@
 
 #include <boost/move/utility_core.hpp>
 
-#include <boost/container/detail/pair.hpp>
 #include <boost/container/vector.hpp>
 #include <boost/container/allocator_traits.hpp>
 
@@ -43,11 +42,11 @@
 
 #include <boost/intrusive/detail/minimal_pair_header.hpp>      //pair
 
-#include <boost/move/make_unique.hpp>
 #include <boost/move/iterator.hpp>
 #include <boost/move/adl_move_swap.hpp>
 #include <boost/move/detail/iterator_to_raw_pointer.hpp>
 #include <boost/move/detail/force_ptr.hpp>
+#include <boost/move/detail/launder.hpp>
 #include <boost/move/algo/adaptive_sort.hpp>
 #include <boost/move/algo/detail/pdqsort.hpp>
 
@@ -583,7 +582,7 @@ class flat_tree
       (boost::container::dtl::, container_type
       ,stored_allocator_type, allocator_type)               stored_allocator_type;
 
-   static const bool has_stored_allocator_type =
+   BOOST_STATIC_CONSTEXPR bool has_stored_allocator_type =
       BOOST_INTRUSIVE_HAS_TYPE(boost::container::dtl::, container_type, stored_allocator_type);
 
    private:
@@ -955,6 +954,7 @@ class flat_tree
    template <class InIt>
    void insert_equal(ordered_range_t, InIt first, InIt last)
    {
+      BOOST_ASSERT((is_sorted)(first, last, this->priv_value_comp()));
       const bool value = boost::container::dtl::
          has_member_function_callable_with_merge_unique<container_type, InIt, InIt, value_compare>::value;
       (flat_tree_merge_equal)(this->m_data.m_seq, first, last, this->priv_value_comp(), dtl::bool_<value>());
@@ -963,6 +963,7 @@ class flat_tree
    template <class InIt>
    void insert_unique(ordered_unique_range_t, InIt first, InIt last)
    {
+      BOOST_ASSERT((is_sorted_and_unique)(this->m_data.m_seq.cbegin(), this->m_data.m_seq.cend(), this->priv_value_comp()));
       const bool value = boost::container::dtl::
          has_member_function_callable_with_merge_unique<container_type, InIt, InIt, value_compare>::value;
       (flat_tree_merge_unique)(this->m_data.m_seq, first, last, this->priv_value_comp(), dtl::bool_<value>());
@@ -975,8 +976,8 @@ class flat_tree
    {
       typename dtl::aligned_storage<sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;
       get_stored_allocator_noconst_return_t a = this->get_stored_allocator();
-      stored_allocator_traits::construct(a, move_detail::force_ptr<value_type *>(&v), ::boost::forward<Args>(args)... );
-      value_type *pval = move_detail::force_ptr<value_type *>(&v);
+      stored_allocator_traits::construct(a, (value_type *)(&v), ::boost::forward<Args>(args)... );
+      value_type *pval = move_detail::launder_cast<value_type *>(&v);
       value_destructor<stored_allocator_type, value_type> d(a, *pval);
       return this->insert_unique(::boost::move(*pval));
    }
@@ -987,8 +988,8 @@ class flat_tree
       //hint checked in insert_unique
       typename dtl::aligned_storage<sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;
       get_stored_allocator_noconst_return_t a = this->get_stored_allocator();
-      stored_allocator_traits::construct(a, move_detail::force_ptr<value_type *>(&v), ::boost::forward<Args>(args)... );
-      value_type *pval = move_detail::force_ptr<value_type *>(&v);
+      stored_allocator_traits::construct(a, (value_type*)(&v), ::boost::forward<Args>(args)... );
+      value_type *pval = move_detail::launder_cast<value_type *>(&v);
       value_destructor<stored_allocator_type, value_type> d(a, *pval);
       return this->insert_unique(hint, ::boost::move(*pval));
    }
@@ -998,8 +999,8 @@ class flat_tree
    {
       typename dtl::aligned_storage<sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;
       get_stored_allocator_noconst_return_t a = this->get_stored_allocator();
-      stored_allocator_traits::construct(a, move_detail::force_ptr<value_type *>(&v), ::boost::forward<Args>(args)... );
-      value_type *pval = move_detail::force_ptr<value_type *>(&v);
+      stored_allocator_traits::construct(a, (value_type*)(&v), ::boost::forward<Args>(args)... );
+      value_type *pval = move_detail::launder_cast<value_type *>(&v);
       value_destructor<stored_allocator_type, value_type> d(a, *pval);
       return this->insert_equal(::boost::move(*pval));
    }
@@ -1010,8 +1011,8 @@ class flat_tree
       //hint checked in insert_equal
       typename dtl::aligned_storage<sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;
       get_stored_allocator_noconst_return_t a = this->get_stored_allocator();
-      stored_allocator_traits::construct(a, move_detail::force_ptr<value_type *>(&v), ::boost::forward<Args>(args)... );
-      value_type *pval = move_detail::force_ptr<value_type *>(&v);
+      stored_allocator_traits::construct(a, (value_type*)(&v), ::boost::forward<Args>(args)... );
+      value_type *pval = move_detail::launder_cast<value_type *>(&v);
       value_destructor<stored_allocator_type, value_type> d(a, *pval);
       return this->insert_equal(hint, ::boost::move(*pval));
    }
@@ -1044,8 +1045,8 @@ class flat_tree
    {\
       typename dtl::aligned_storage<sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;\
       get_stored_allocator_noconst_return_t a = this->get_stored_allocator();\
-      stored_allocator_traits::construct(a, move_detail::force_ptr<value_type *>(&v) BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
-      value_type *pval = move_detail::force_ptr<value_type *>(&v);\
+      stored_allocator_traits::construct(a, (value_type *)(&v) BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
+      value_type *pval = move_detail::launder_cast<value_type *>(&v);\
       value_destructor<stored_allocator_type, value_type> d(a, *pval);\
       return this->insert_unique(::boost::move(*pval));\
    }\
@@ -1055,8 +1056,8 @@ class flat_tree
    {\
       typename dtl::aligned_storage<sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;\
       get_stored_allocator_noconst_return_t a = this->get_stored_allocator();\
-      stored_allocator_traits::construct(a, move_detail::force_ptr<value_type *>(&v) BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
-      value_type *pval = move_detail::force_ptr<value_type *>(&v);\
+      stored_allocator_traits::construct(a, (value_type *)(&v) BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
+      value_type *pval = move_detail::launder_cast<value_type *>(&v);\
       value_destructor<stored_allocator_type, value_type> d(a, *pval);\
       return this->insert_unique(hint, ::boost::move(*pval));\
    }\
@@ -1066,8 +1067,8 @@ class flat_tree
    {\
       typename dtl::aligned_storage<sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;\
       get_stored_allocator_noconst_return_t a = this->get_stored_allocator();\
-      stored_allocator_traits::construct(a, move_detail::force_ptr<value_type *>(&v) BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
-      value_type *pval = move_detail::force_ptr<value_type *>(&v);\
+      stored_allocator_traits::construct(a, (value_type *)(&v) BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
+      value_type *pval = move_detail::launder_cast<value_type *>(&v);\
       value_destructor<stored_allocator_type, value_type> d(a, *pval);\
       return this->insert_equal(::boost::move(*pval));\
    }\
@@ -1077,8 +1078,8 @@ class flat_tree
    {\
       typename dtl::aligned_storage <sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;\
       get_stored_allocator_noconst_return_t a = this->get_stored_allocator();\
-      stored_allocator_traits::construct(a, move_detail::force_ptr<value_type *>(&v) BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
-      value_type *pval = move_detail::force_ptr<value_type *>(&v);\
+      stored_allocator_traits::construct(a, (value_type *)(&v) BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
+      value_type *pval = move_detail::launder_cast<value_type *>(&v);\
       value_destructor<stored_allocator_type, value_type> d(a, *pval);\
       return this->insert_equal(hint, ::boost::move(*pval));\
    }\
@@ -1126,9 +1127,6 @@ class flat_tree
       return ret;
    }
 
-   inline iterator erase(const_iterator position)
-   {  return this->m_data.m_seq.erase(position);  }
-
    size_type erase(const key_type& k)
    {
       std::pair<iterator,iterator > itp = this->equal_range(k);
@@ -1147,6 +1145,40 @@ class flat_tree
          this->erase(i);
       return ret;
    }
+
+   template <class K>
+   inline typename dtl::enable_if_c<
+      dtl::is_transparent<key_compare>::value &&      //transparent
+      !dtl::is_convertible<K, iterator>::value &&     //not convertible to iterator
+      !dtl::is_convertible<K, const_iterator>::value  //not convertible to const_iterator
+      , size_type>::type
+      erase(const K& k)
+   {
+      std::pair<iterator, iterator > itp = this->equal_range(k);
+      size_type ret = static_cast<size_type>(itp.second - itp.first);
+      if (ret) {
+         this->m_data.m_seq.erase(itp.first, itp.second);
+      }
+      return ret;
+   }
+
+   template <class K>
+   inline typename dtl::enable_if_c<
+      dtl::is_transparent<key_compare>::value &&      //transparent
+      !dtl::is_convertible<K, iterator>::value &&     //not convertible to iterator
+      !dtl::is_convertible<K, const_iterator>::value  //not convertible to const_iterator
+      , size_type>::type
+      erase_unique(const K& k)
+   {
+      const_iterator i = static_cast<const flat_tree&>(*this).find(k);
+      size_type ret = static_cast<size_type>(i != this->cend());
+      if (ret)
+         this->erase(i);
+      return ret;
+   }
+
+   inline iterator erase(const_iterator position)
+   {  return this->m_data.m_seq.erase(position);  }
 
    inline iterator erase(const_iterator first, const_iterator last)
    {  return this->m_data.m_seq.erase(first, last);  }
@@ -1700,7 +1732,7 @@ struct has_trivial_destructor_after_move<boost::container::dtl::flat_tree<T, Key
    typedef boost::container::dtl::flat_tree<T, KeyOfValue, Compare, AllocatorOrContainer> flat_tree;
    typedef typename flat_tree::container_type container_type;
    typedef typename flat_tree::key_compare key_compare;
-   static const bool value = ::boost::has_trivial_destructor_after_move<container_type>::value &&
+   BOOST_STATIC_CONSTEXPR bool value = ::boost::has_trivial_destructor_after_move<container_type>::value &&
                              ::boost::has_trivial_destructor_after_move<key_compare>::value;
 };
 

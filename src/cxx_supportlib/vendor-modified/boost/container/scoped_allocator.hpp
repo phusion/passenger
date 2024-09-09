@@ -56,7 +56,7 @@ struct is_scoped_allocator_imp
    template <typename T>
    static int test(...);
 
-   static const bool value = (sizeof(yes_type) == sizeof(test<Allocator>(0)));
+   BOOST_STATIC_CONSTEXPR bool value = (sizeof(yes_type) == sizeof(test<Allocator>(0)));
 };
 
 template<class MaybeScopedAlloc, bool = is_scoped_allocator_imp<MaybeScopedAlloc>::value >

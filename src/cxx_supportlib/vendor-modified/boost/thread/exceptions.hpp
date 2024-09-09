@@ -21,7 +21,6 @@
 #include <stdexcept>
 #include <boost/system/system_error.hpp>
 #include <boost/system/error_code.hpp>
-#include <oxt/tracable_exception.hpp>
 
 
 #include <boost/config/abi_prefix.hpp>
@@ -31,7 +30,6 @@ namespace boost
 
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
     class BOOST_SYMBOL_VISIBLE thread_interrupted
-      : public oxt::tracable_exception
     {};
 #endif
 

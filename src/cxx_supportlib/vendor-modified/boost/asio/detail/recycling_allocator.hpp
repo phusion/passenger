@@ -49,16 +49,25 @@ public:
 
   T* allocate(std::size_t n)
   {
+#if !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
     void* p = thread_info_base::allocate(Purpose(),
         thread_context::top_of_thread_call_stack(),
         sizeof(T) * n, alignof(T));
+#else // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
+    void* p = boost::asio::aligned_new(align, s);
+#endif // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
     return static_cast<T*>(p);
   }
 
   void deallocate(T* p, std::size_t n)
   {
+#if !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
     thread_info_base::deallocate(Purpose(),
         thread_context::top_of_thread_call_stack(), p, sizeof(T) * n);
+#else // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
+    (void)n;
+    boost::asio::aligned_delete(p);
+#endif // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
   }
 };
 

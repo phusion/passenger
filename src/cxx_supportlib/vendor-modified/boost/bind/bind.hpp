@@ -737,43 +737,17 @@ template<class F, class... A>
 namespace _bi
 {
 
-template< class Pm, int I > struct add_cref;
+template<class M, int I> struct add_cref;
 
-template< class M, class T > struct add_cref< M T::*, 0 >
+template<class M> struct add_cref<M, 0>
 {
     typedef M type;
 };
 
-template< class M, class T > struct add_cref< M T::*, 1 >
+template<class M> struct add_cref<M, 1>
 {
-#ifdef BOOST_MSVC
-#pragma warning(push)
-#pragma warning(disable:4180)
-#endif
-    typedef M const & type;
-#ifdef BOOST_MSVC
-#pragma warning(pop)
-#endif
+    typedef M const& type;
 };
-
-template< class R, class T > struct add_cref< R (T::*) (), 1 >
-{
-    typedef void type;
-};
-
-template< class R, class T > struct add_cref< R (T::*) () const, 1 >
-{
-    typedef void type;
-};
-
-#if defined( __cpp_noexcept_function_type ) || defined( _NOEXCEPT_TYPES_SUPPORTED )
-
-template< class R, class T > struct add_cref< R (T::*) () const noexcept, 1 >
-{
-    typedef void type;
-};
-
-#endif // __cpp_noexcept_function_type
 
 template<class R> struct isref
 {
@@ -790,30 +764,34 @@ template<class R> struct isref< R* >
     enum value_type { value = 1 };
 };
 
-template<class Pm, class A1> struct dm_result
+template<class M, class A1, bool fn = std::is_function<M>::value> struct dm_result
 {
-    typedef typename add_cref< Pm, 1 >::type type;
 };
 
-template<class Pm, class R, class F, class L> struct dm_result< Pm, bind_t<R, F, L> >
+template<class M, class A1> struct dm_result<M, A1, false>
+{
+    typedef typename add_cref< M, 1 >::type type;
+};
+
+template<class M, class R, class F, class L> struct dm_result<M, bind_t<R, F, L>, false>
 {
     typedef typename bind_t<R, F, L>::result_type result_type;
-    typedef typename add_cref< Pm, isref< result_type >::value >::type type;
+    typedef typename add_cref< M, isref< result_type >::value >::type type;
 };
 
 } // namespace _bi
 
-template< class A1, class M, class T >
+template<class A1, class M, class T>
 
 _bi::bind_t<
-    typename _bi::dm_result< M T::*, A1 >::type,
+    typename _bi::dm_result<M, A1>::type,
     _mfi::dm<M, T>,
     typename _bi::list_av<A1>::type
 >
 
 BOOST_BIND( M T::*f, A1 a1 )
 {
-    typedef typename _bi::dm_result< M T::*, A1 >::type result_type;
+    typedef typename _bi::dm_result<M, A1>::type result_type;
     typedef _mfi::dm<M, T> F;
     typedef typename _bi::list_av<A1>::type list_type;
     return _bi::bind_t< result_type, F, list_type >( F( f ), list_type( a1 ) );

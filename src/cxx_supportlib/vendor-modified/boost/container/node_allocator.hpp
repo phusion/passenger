@@ -8,8 +8,8 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#ifndef BOOST_CONTAINER_POOLED_NODE_ALLOCATOR_HPP
-#define BOOST_CONTAINER_POOLED_NODE_ALLOCATOR_HPP
+#ifndef BOOST_CONTAINER_NODE_ALLOCATOR_HPP
+#define BOOST_CONTAINER_NODE_ALLOCATOR_HPP
 
 #ifndef BOOST_CONFIG_HPP
 #  include <boost/config.hpp>
@@ -26,6 +26,7 @@
 #include <boost/container/detail/node_pool.hpp>
 #include <boost/container/detail/mpl.hpp>
 #include <boost/container/detail/multiallocation_chain.hpp>
+#include <boost/move/detail/iterator_to_raw_pointer.hpp>
 #include <boost/container/detail/dlmalloc.hpp>
 #include <boost/container/detail/singleton.hpp>
 
@@ -62,7 +63,7 @@ class node_allocator
    typedef unsigned int allocation_type;
    typedef node_allocator<T, NodesPerBlock, Version>   self_t;
 
-   static const std::size_t nodes_per_block = NodesPerBlock;
+   BOOST_STATIC_CONSTEXPR std::size_t nodes_per_block = NodesPerBlock;
 
    BOOST_CONTAINER_STATIC_ASSERT((Version <=2));
    #endif
@@ -225,7 +226,10 @@ class node_allocator
       typedef dtl::singleton_default<shared_pool_t> singleton_t;
       typename shared_pool_t::multiallocation_chain ch;
       singleton_t::instance().allocate_nodes(num_elements, ch);
-      chain.incorporate_after(chain.before_begin(), (T*)&*ch.begin(), (T*)&*ch.last(), ch.size());
+      chain.incorporate_after(chain.before_begin()
+                             , (T*)boost::movelib::iterator_to_raw_pointer(ch.begin())
+                             , (T*)boost::movelib::iterator_to_raw_pointer(ch.last())
+                             , ch.size());
    }
 
    //!Deallocates memory previously allocated with allocate_one().
@@ -246,7 +250,10 @@ class node_allocator
       typedef dtl::shared_node_pool
          <sizeof(T), NodesPerBlock> shared_pool_t;
       typedef dtl::singleton_default<shared_pool_t> singleton_t;
-      typename shared_pool_t::multiallocation_chain ch(&*chain.begin(), &*chain.last(), chain.size());
+      typename shared_pool_t::multiallocation_chain ch
+         ( boost::movelib::iterator_to_raw_pointer(chain.begin())
+         , boost::movelib::iterator_to_raw_pointer(chain.last())
+         , chain.size());
       singleton_t::instance().deallocate_nodes(ch);
    }
 
@@ -285,8 +292,8 @@ class node_allocator
    void deallocate_many(multiallocation_chain &chain) BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_CONTAINER_STATIC_ASSERT(( Version > 1 ));
-      void *first = &*chain.begin();
-      void *last  = &*chain.last();
+      void *first = boost::movelib::iterator_to_raw_pointer(chain.begin());
+      void *last  = boost::movelib::iterator_to_raw_pointer(chain.last());
       size_t num  = chain.size();
       dlmalloc_memchain ch;
       BOOST_CONTAINER_MEMCHAIN_INIT_FROM(&ch, first, last, num);
@@ -337,4 +344,4 @@ class node_allocator
 
 #include <boost/container/detail/config_end.hpp>
 
-#endif   //#ifndef BOOST_CONTAINER_POOLED_NODE_ALLOCATOR_HPP
+#endif   //#ifndef BOOST_CONTAINER_NODE_ALLOCATOR_HPP

@@ -893,7 +893,7 @@ const T never_t<I>::static_query_v;
 
 typedef detail::blocking_t<> blocking_t;
 
-constexpr blocking_t blocking;
+BOOST_ASIO_INLINE_VARIABLE constexpr blocking_t blocking;
 
 } // namespace execution
 
