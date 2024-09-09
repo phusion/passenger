@@ -6,9 +6,13 @@ env:
 
 on:
   push:
-    branches: [ 'stable-*', 'feature/*' ]
+    branches:
+      - 'stable-*'
+      - 'feature/*'
   pull_request:
-    branches: [ 'stable-*', 'feature/*' ]
+    branches:
+      - 'stable-*'
+      - 'feature/*'
 
 jobs:
   cxx:

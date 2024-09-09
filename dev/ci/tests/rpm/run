@@ -59,5 +59,6 @@ run ./test \
 	-d "$WORKSPACE/output/$DISTRIBUTION" \
 	-c "$CACHE_DIR" \
 	-x "$TEST_DISTRO_NAME" \
+	-a "$ARCHITECTURE" \
 	-j \
 	$EXTRA_TEST_PARAMS
