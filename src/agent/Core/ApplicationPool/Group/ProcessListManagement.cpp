@@ -132,6 +132,9 @@ Group::findEnabledProcessWithLowestBusyness() const {
 		if (leastBusyProcessIndex == -1 ||
 			enabledProcessBusynessLevels[i] < lowestBusyness ||
 			(enabledProcessBusynessLevels[i] == lowestBusyness && enabledProcesses[i]->generation > highest_gen)) {
+			if (enabledProcesses[i]->generation > highest_gen) {
+				highest_gen = enabledProcesses[i]->generation;
+			}
 			leastBusyProcessIndex = i;
 			lowestBusyness = enabledProcessBusynessLevels[i];
 		}
