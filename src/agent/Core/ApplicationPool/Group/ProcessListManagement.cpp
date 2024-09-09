@@ -61,14 +61,20 @@ Process *
 Group::findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
 	int leastBusyProcessIndex = -1;
 	int lowestBusyness = 0;
-	unsigned int i, size = enabledProcessBusynessLevels.size();
+	unsigned int i, size = enabledProcessBusynessLevels.size(), highest_gen = 0;
 	const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
 
 	for (i = 0; i < size; i++) {
 		Process *process = enabledProcesses[i].get();
+        highest_gen = max(highest_gen, process->generation);
 		if (process->getStickySessionId() == id) {
 			return process;
-		} else if (leastBusyProcessIndex == -1 || enabledProcessBusynessLevels[i] < lowestBusyness) {
+                } else if (leastBusyProcessIndex == -1 ||
+                           enabledProcessBusynessLevels[i] < lowestBusyness ||
+						   (enabledProcessBusynessLevels[i] == lowestBusyness && process->generation > highest_gen)) {
+			if (process->generation > highest_gen) {
+				highest_gen = process->generation;
+			}
 			leastBusyProcessIndex = i;
 			lowestBusyness = enabledProcessBusynessLevels[i];
 		}
@@ -88,13 +94,19 @@ Group::findProcessWithLowestBusyness(const ProcessList &processes) const {
 	}
 
 	int lowestBusyness = -1;
+    unsigned int highest_gen = 0;
 	Process *leastBusyProcess = NULL;
 	ProcessList::const_iterator it;
 	ProcessList::const_iterator end = processes.end();
 	for (it = processes.begin(); it != end; it++) {
 		Process *process = (*it).get();
 		int busyness = process->busyness();
-		if (lowestBusyness == -1 || lowestBusyness > busyness) {
+		if (lowestBusyness == -1 ||
+			lowestBusyness > busyness ||
+			(busyness == lowestBusyness && process->generation > highest_gen)) {
+			if (process->generation > highest_gen) {
+				highest_gen = process->generation;
+			}
 			lowestBusyness = busyness;
 			leastBusyProcess = process;
 		}
@@ -113,11 +125,13 @@ Group::findEnabledProcessWithLowestBusyness() const {
 
 	int leastBusyProcessIndex = -1;
 	int lowestBusyness = 0;
-	unsigned int i, size = enabledProcessBusynessLevels.size();
+	unsigned int i, size = enabledProcessBusynessLevels.size(), highest_gen = 0;
 	const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
 
 	for (i = 0; i < size; i++) {
-		if (leastBusyProcessIndex == -1 || enabledProcessBusynessLevels[i] < lowestBusyness) {
+		if (leastBusyProcessIndex == -1 ||
+			enabledProcessBusynessLevels[i] < lowestBusyness ||
+			(enabledProcessBusynessLevels[i] == lowestBusyness && enabledProcesses[i]->generation > highest_gen)) {
 			leastBusyProcessIndex = i;
 			lowestBusyness = enabledProcessBusynessLevels[i];
 		}
