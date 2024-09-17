@@ -4,14 +4,8 @@ env:
   ENTERPRISE: 0
 
 on:
-  push:
-    branches:
-      - 'stable-*'
-      - 'feature/*'
-  pull_request:
-    branches:
-      - 'stable-*'
-      - 'feature/*'
+  push: {}
+  pull_request: {}
 
 jobs:
   define-matrix:
@@ -27,29 +21,30 @@ jobs:
         run: echo "distros=[$(awk -F= '/DEFAULT_DISTROS/{print $2}' packaging/debian/internal/lib/distro_info.sh | sed -e 's/ /", "/g')]" >> "$GITHUB_OUTPUT"
 
   test:
-    name: "Test ${{ matrix.distro }} ${{ matrix.arch }} packages"
+    name: "Test ${{ matrix.distro }} ${{ matrix.arch.name }} packages"
     needs: define-matrix
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         distro: ${{ fromJSON(needs.define-matrix.outputs.distros) }}
         arch:
-          - amd64
-          - arm64
+          - name: amd64
+            runner: ubuntu-24.04
+          - name: arm64
+            runner: passenger-ubuntu-24.04-arm64-4cpu
+    runs-on: ${{ matrix.arch.runner }}
     env:
       WORKSPACE: ${{ github.workspace }}
-      ARCHITECTURE: ${{ matrix.arch }}
-      CACHE_DIR: ${{ github.workspace }}/cache/debian-test/${{ matrix.distro }}-${{ matrix.arch }}
+      ARCHITECTURE: ${{ matrix.arch.name }}
+      CACHE_DIR: ${{ github.workspace }}/cache/debian-test/${{ matrix.distro }}-${{ matrix.arch.name }}
       DISTRIBUTION: ${{ matrix.distro }}
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: true
-    - uses: docker/setup-qemu-action@v3
     - uses: docker/setup-buildx-action@v3
     - run: ./dev/ci/tests/debian/run
     - uses: actions/upload-artifact@v4
       with:
-        name: debian-${{ matrix.distro }}-${{ matrix.arch }}
+        name: debian-${{ matrix.distro }}-${{ matrix.arch.name }}
         path: 'output/${{ matrix.distro }}/*'
