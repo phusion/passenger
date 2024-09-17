@@ -4,14 +4,8 @@ env:
   ENTERPRISE: 0
 
 on:
-  push:
-    branches:
-      - 'stable-*'
-      - 'feature/*'
-  pull_request:
-    branches:
-      - 'stable-*'
-      - 'feature/*'
+  push: {}
+  pull_request: {}
 
 jobs:
   build_linux:
@@ -19,10 +13,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - x86_64
-          - aarch64
-    runs-on: ubuntu-latest
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: passenger-ubuntu-24.04-arm64-2cpu
+    runs-on: ${{ matrix.runner }}
     env:
       WORKSPACE: ${{ github.workspace }}
       OUTPUT_DIR: ${{ github.workspace }}/output-linux-${{ matrix.arch }}
@@ -33,7 +29,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: true
-    - uses: docker/setup-qemu-action@v3
     - uses: docker/setup-buildx-action@v3
     - run: ./dev/ci/tests/binaries/build-linux
     - uses: actions/upload-artifact@v4
