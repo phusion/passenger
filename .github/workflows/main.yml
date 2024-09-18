@@ -1,152 +1,654 @@
 name: Passenger CI tests
 
 env:
-  DEFAULT_RUBY_VERSION: 3.1.6
-  COMPILE_CONCURRENCY: 4
+  FORCE_COLOR: 1
+  RUST_LOG_STYLE: always
+  DEFAULT_RUBY_VERSION: 3.1
+  BUNDLE_CLEAN: true
 
 on:
   push: {}
   pull_request: {}
 
 jobs:
-  cxx:
-    name: "C++ unit tests on ${{ matrix.os }}, as ${{ matrix.user }}"
+  cxx-linux:
+    name: C++ tests on Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXTRA_CFLAGS: '-fdiagnostics-color'
+      EXTRA_CXXFLAGS: '-fdiagnostics-color'
+      SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_KEY_PREFIX: sccache/cxx-ubuntu
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Setup sccache
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          ARCH_AND_OS: x86_64-unknown-linux-musl
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+      - name: Setup library dependencies
+        run: >
+          sudo apt update &&
+          sudo apt install -y libcurl4-openssl-dev
+
+      - name: Setup misc
+        run: |
+          set -x
+          sudo chmod 755 "$HOME"
+          cp test/config.json.github-ci-linux test/config.json
+
+      - name: Build C++ tests
+        run: bundle exec drake -j4 test:cxx:build
+
+      - name: Run C++ tests
+        run: >
+          sudo env
+          PATH="$PATH"
+          GEM_PATH="$GEM_PATH"
+          ../buildout/test/cxx/main
+        working-directory: test
+
+      - name: Archive logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cxx-test-logs-macos
+          path: 'buildout/testlogs/*'
+
+      - name: Teardown sccache
+        run: ./dev/ci/teardown-sccache
+        if: always()
+
+  cxx-macos:
+    name: C++ tests on macOS
+    runs-on: macos-14
+    timeout-minutes: 30
+    env:
+      EXTRA_CFLAGS: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
+      EXTRA_CXXFLAGS: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
+      SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_KEY_PREFIX: sccache/cxx-macos-14-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Setup sccache
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          ARCH_AND_OS: aarch64-apple-darwin
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+      - name: Setup misc
+        run: |
+          sudo chmod 755 "$HOME"
+          sed "s|_USER_|$(whoami)|" test/config.json.github-ci-macos > test/config.json
+
+      - name: Build C++ tests
+        run: bundle exec drake -j4 test:cxx:build
+
+      - name: Run C++ tests
+        # The AbortHandler doesn't work so well on Github's macOS runners:
+        # - crash-watch invocation freezes the runner, so we disable this.
+        # - resuming the parent process after SIGSTOP doesn't work, so we force kill the parent.
+        run: >
+          sudo env
+          PATH="$PATH"
+          GEM_PATH="$GEM_PATH"
+          PASSENGER_DUMP_WITH_CRASH_WATCH=false
+          PASSENGER_FORCE_TERMINATE_ON_ABORT=true
+          ../buildout/test/cxx/main
+        working-directory: test
+        # The AbortHandler may not be able to forcefully kill the parent. We set a low timeout
+        # to prevent the test from hanging for a long time.
+        timeout-minutes: 10
+
+      - name: Archive logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cxx-test-logs-macos
+          path: 'buildout/testlogs/*'
+
+      - name: Teardown sccache
+        run: ./dev/ci/teardown-sccache
+        if: always()
+
+  apache2:
+    name: "Apache2 tests on ${{ matrix.name }}"
     strategy:
       fail-fast: false
       matrix:
-        user:
-          - root
-          - 'normal-user'
-        os:
-          - macos-latest
-          - ubuntu-latest
-        exclude:
-          - os: macos-latest
-            user: 'root'
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+            config_file: test/config.json.github-ci-linux
+            extra_cflags: '-fdiagnostics-color'
+            sccache_arch_and_os: x86_64-unknown-linux-musl
+            sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
+          - name: macOS
+            os: macos-14
+            config_file: test/config.json.github-ci-macos
+            extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
+            sccache_arch_and_os: aarch64-apple-darwin
+            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
     runs-on: ${{ matrix.os }}
     env:
-      SUDO: ${{ matrix.user == 'root' && 1 || 0 }}
+      EXTRA_CFLAGS: ${{ matrix.extra_cflags }}
+      EXTRA_CXXFLAGS: ${{ matrix.extra_cflags }}
+      SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
+      SCCACHE_CACHE_MULTIARCH: true
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
-        bundler-cache: true
-    - run: ./dev/ci/setup-host cxx
-    - run: ./dev/ci/run-tests-with-docker cxx
-      if: matrix.os == 'ubuntu-latest'
-    - run: ./dev/ci/run-tests-natively cxx
-      if: matrix.os == 'macos-latest'
-    - run: ls -R buildout
-    - uses: actions/upload-artifact@v4
-      with:
-        name: cxx-${{ matrix.os }}-${{ matrix.user }}
-        path: 'buildout/testlogs/*'
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
 
-  integration:
-    name: '${{ matrix.integration.name }} integration tests on ${{ matrix.os }}'
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Setup misc
+        run: |
+          sudo chmod 755 "$HOME"
+          sed "s|_USER_|$(whoami)|; s|_SOURCE_ROOT_|$(pwd)|" ${{ matrix.config_file }} > test/config.json
+
+      - name: Setup Linux dependencies
+        run: >
+          sudo apt update &&
+          sudo apt install -y libcurl4-openssl-dev apache2-dev libapr1-dev libaprutil1-dev
+        if: matrix.name == 'Linux'
+
+      - name: Setup macOS code signing
+        run: |
+          exec 2>&1
+          set -x
+
+          echo "$OPENSSL_CONFIG" > cert_config.cnf
+          openssl req -new -newkey rsa:2048 -nodes -keyout github-ci.key -out github-ci.csr -config cert_config.cnf
+          openssl x509 -req -in github-ci.csr -signkey github-ci.key -out github-ci.crt -days 3650 -extensions req_ext -extfile cert_config.cnf
+
+          sudo security authorizationdb write com.apple.trust-settings.admin allow
+          security create-keychain -p mypassword mykeychain.keychain
+          security set-keychain-settings -lut 21600 mykeychain.keychain
+          security unlock-keychain -p mypassword mykeychain.keychain
+
+          security import github-ci.key -k mykeychain.keychain -A
+          security set-key-partition-list -S apple-tool:,apple: -k mypassword mykeychain.keychain
+          security add-trusted-cert -d -r trustRoot -k mykeychain.keychain github-ci.crt
+          security list-keychain -d user -s mykeychain.keychain
+        if: matrix.name == 'macOS'
+        env:
+          OPENSSL_CONFIG: |
+            [ req ]
+            default_bits = 2048
+            prompt = no
+            default_md = sha256
+            distinguished_name = req_distinguished_name
+            req_extensions = req_ext
+
+            [ req_distinguished_name ]
+            CN = Github CI
+
+            [ req_ext ]
+            keyUsage = critical, digitalSignature, keyEncipherment
+            extendedKeyUsage = codeSigning
+
+      - name: Setup hosts entries
+        run: |
+          echo 127.0.0.1 passenger.test | sudo tee -a /etc/hosts
+          echo 127.0.0.1 1.passenger.test 2.passenger.test 3.passenger.test | sudo tee -a /etc/hosts
+          echo 127.0.0.1 4.passenger.test 5.passenger.test 6.passenger.test | sudo tee -a /etc/hosts
+          echo 127.0.0.1 7.passenger.test 8.passenger.test 9.passenger.test | sudo tee -a /etc/hosts
+
+      - run: npm ci
+
+
+      - name: Setup sccache
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          ARCH_AND_OS: ${{ matrix.sccache_arch_and_os }}
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+      - name: Test module installation as normal user
+        run: ./bin/passenger-install-apache2-module --auto --force-colors
+
+      - name: Teardown sccache
+        run: ./dev/ci/teardown-sccache
+        if: always()
+
+
+      - name: Setup sccache as root
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          SUDO: true
+          ARCH_AND_OS: ${{ matrix.sccache_arch_and_os }}
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+      - name: Test module installation as root
+        run: sudo -E ./bin/passenger-install-apache2-module --auto --force-colors --no-compile
+
+      - name: Teardown sccache as root
+        run: ./dev/ci/teardown-sccache
+        if: always()
+        env:
+          SUDO: true
+
+
+      - name: Integration tests
+        run: bundle exec rake test:integration:apache2
+
+      - name: Archive logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: apache-test-logs-${{ matrix.os }}
+          path: 'buildout/testlogs/*'
+
+  nginx:
+    name: "Nginx tests on ${{ matrix.name }}"
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-latest
-          - ubuntu-latest
-        integration:
-          - name: 'Apache 2'
-            label: 'apache2'
-          - name: 'Nginx dynamic module'
-            label: 'nginx-dynamic'
-          - name: 'Nginx'
-            label: 'nginx'
-          - name: 'Standalone'
-            label: 'standalone'
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+            config_file: test/config.json.github-ci-linux
+            extra_cflags: '-fdiagnostics-color'
+            sccache_arch_and_os: x86_64-unknown-linux-musl
+            sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
+          - name: macOS
+            os: macos-14
+            config_file: test/config.json.github-ci-macos
+            extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
+            sccache_arch_and_os: aarch64-apple-darwin
+            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
     runs-on: ${{ matrix.os }}
+    env:
+      EXTRA_CFLAGS: ${{ matrix.extra_cflags }}
+      EXTRA_CXXFLAGS: ${{ matrix.extra_cflags }}
+      SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
-        bundler-cache: true
-    - run: ./dev/ci/setup-host ${{ matrix.integration.label }}
-    - run: ./dev/ci/run-tests-with-docker ${{ matrix.integration.label }}
-      if: matrix.os == 'ubuntu-latest'
-    - run: ./dev/ci/run-tests-natively ${{ matrix.integration.label }}
-      if: matrix.os == 'macos-latest'
-    - run: ls -R buildout
-    - uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.integration.label }}-${{ matrix.os }}
-        path: 'buildout/testlogs/*'
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
 
-  language:
-    name: '${{ matrix.lang.name }} unit tests on ${{ matrix.os }}'
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Setup sccache
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          ARCH_AND_OS: ${{ matrix.sccache_arch_and_os }}
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+      - name: Setup misc
+        run: |
+          sudo chmod 755 "$HOME"
+          sed "s|_USER_|$(whoami)|" ${{ matrix.config_file }} > test/config.json
+
+      - name: Setup Linux dependencies
+        run: >
+          sudo apt update &&
+          sudo apt install -y libcurl4-openssl-dev
+        if: matrix.name == 'Linux'
+
+      - name: Setup hosts entries
+        run: |
+          echo 127.0.0.1 passenger.test | sudo tee -a /etc/hosts
+          echo 127.0.0.1 1.passenger.test 2.passenger.test 3.passenger.test | sudo tee -a /etc/hosts
+          echo 127.0.0.1 4.passenger.test 5.passenger.test 6.passenger.test | sudo tee -a /etc/hosts
+          echo 127.0.0.1 7.passenger.test 8.passenger.test 9.passenger.test | sudo tee -a /etc/hosts
+
+      - run: npm ci
+
+      - name: Test installation
+        run: ./bin/passenger-install-nginx-module --auto --force-colors --prefix=/tmp/nginx --auto-download
+
+      - name: Integration tests
+        run: bundle exec rake test:integration:nginx
+
+      - name: Archive logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: nginx-test-logs-${{ matrix.os }}
+          path: 'buildout/testlogs/*'
+
+      - name: Teardown sccache
+        run: ./dev/ci/teardown-sccache
+        if: always()
+
+  nginx_dynamic:
+    name: "Nginx dynamic module tests on ${{ matrix.name }}"
     strategy:
       fail-fast: false
       matrix:
-        lang:
-          - name: 'Node.js'
-            label: 'nodejs'
-          - name: 'Ruby'
-            label: 'ruby'
-        os:
-          - macos-latest
-          - ubuntu-latest
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+            extra_cflags: '-fdiagnostics-color'
+            sccache_arch_and_os: x86_64-unknown-linux-musl
+            sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
+          - name: macOS
+            os: macos-14
+            extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
+            sccache_arch_and_os: aarch64-apple-darwin
+            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+    runs-on: ${{ matrix.os }}
+    env:
+      EXTRA_CFLAGS: ${{ matrix.extra_cflags }}
+      EXTRA_CXXFLAGS: ${{ matrix.extra_cflags }}
+      SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Setup sccache
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          ARCH_AND_OS: ${{ matrix.sccache_arch_and_os }}
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+      - name: Setup Linux dependencies
+        run: >
+          sudo apt update &&
+          sudo apt install -y libcurl4-openssl-dev
+        if: matrix.name == 'Linux'
+
+      - name: Setup parameters
+        run: |
+          TEST_DYNAMIC_WITH_NGINX_VERSION=$(ruby -r "./src/ruby_supportlib/phusion_passenger.rb" -e 'puts PhusionPassenger::PREFERRED_NGINX_VERSION')
+          NGINX_ADDON_DIR=$(./bin/passenger-config --nginx-addon-dir)
+          echo "TEST_DYNAMIC_WITH_NGINX_VERSION=$TEST_DYNAMIC_WITH_NGINX_VERSION" >> "$GITHUB_ENV"
+          echo "NGINX_ADDON_DIR=$NGINX_ADDON_DIR" >> "$GITHUB_ENV"
+
+      - name: Compile module
+        run: bundle exec drake -j4 nginx:as_dynamic_module
+
+      - name: Download Nginx source
+        run: curl -sSLO "https://www.nginx.org/download/nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION.tar.gz"
+
+      - name: Extract Nginx source
+        run: tar -xzf "nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION.tar.gz"
+
+      - name: Configure Nginx source
+        run: ./configure --with-cc-opt='-Wno-error' --add-dynamic-module="$NGINX_ADDON_DIR"
+        working-directory: "nginx-${{ env.TEST_DYNAMIC_WITH_NGINX_VERSION }}"
+
+      - name: Compile Nginx with dynamic module
+        run: make -j4
+        working-directory: "nginx-${{ env.TEST_DYNAMIC_WITH_NGINX_VERSION }}"
+
+      - name: Teardown sccache
+        run: ./dev/ci/teardown-sccache
+        if: always()
+
+  standalone:
+    name: "Passenger Standalone tests on ${{ matrix.name }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+            extra_cflags: '-fdiagnostics-color'
+            sccache_arch_and_os: x86_64-unknown-linux-musl
+            sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
+          - name: macOS
+            os: macos-14
+            extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
+            sccache_arch_and_os: aarch64-apple-darwin
+            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+    runs-on: ${{ matrix.os }}
+    env:
+      EXTRA_CFLAGS: ${{ matrix.extra_cflags }}
+      EXTRA_CXXFLAGS: ${{ matrix.extra_cflags }}
+      SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Setup sccache
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          ARCH_AND_OS: ${{ matrix.sccache_arch_and_os }}
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+      - name: Setup Linux dependencies
+        run: >
+          sudo apt update &&
+          sudo apt install -y libcurl4-openssl-dev
+        if: matrix.name == 'Linux'
+
+      - name: Compile prerequisites
+        run: bundle exec drake -j4 nginx
+
+      - name: Integration test
+        run: bundle exec drake -j4 test:integration:standalone
+
+      - name: Teardown sccache
+        run: ./dev/ci/teardown-sccache
+        if: always()
+
+  ruby:
+    name: "Ruby tests on ${{ matrix.name }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+            config_file: test/config.json.github-ci-linux
+            extra_cflags: '-fdiagnostics-color'
+            sccache_arch_and_os: x86_64-unknown-linux-musl
+            sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
+          - name: macOS
+            os: macos-14
+            config_file: test/config.json.github-ci-macos
+            extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
+            sccache_arch_and_os: aarch64-apple-darwin
+            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+    runs-on: ${{ matrix.os }}
+    env:
+      EXTRA_CFLAGS: ${{ matrix.extra_cflags }}
+      EXTRA_CXXFLAGS: ${{ matrix.extra_cflags }}
+      SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Setup sccache
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          ARCH_AND_OS: ${{ matrix.sccache_arch_and_os }}
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+      - name: Setup misc
+        run: |
+          sudo chmod 755 "$HOME"
+          sed "s|_USER_|$(whoami)|" ${{ matrix.config_file }} > test/config.json
+
+      - name: Setup Linux dependencies
+        run: >
+          sudo apt update &&
+          sudo apt install -y libcurl4-openssl-dev
+        if: matrix.name == 'Linux'
+
+      - name: Compile
+        run: bundle exec drake -j4 agent
+
+      - name: Test
+        run: bundle exec rake test:ruby
+
+      - name: Teardown sccache
+        run: ./dev/ci/teardown-sccache
+        if: always()
+
+  nodejs:
+    name: "Node.js tests on ${{ matrix.name }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+          - name: macOS
+            os: macos-14
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
-        bundler-cache: true
-    - run: ./dev/ci/setup-host ${{ matrix.lang.label }}
-    - run: ./dev/ci/run-tests-with-docker ${{ matrix.lang.label }}
-      if: matrix.os == 'ubuntu-latest'
-    - run: ./dev/ci/run-tests-natively ${{ matrix.lang.label }}
-      if: matrix.os == 'macos-latest'
-    - run: ls -R buildout
-    - uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.lang.label }}-${{ matrix.os }}
-        path: 'buildout/testlogs/*'
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - run: npm ci
+
+      - name: Test
+        run: bundle exec rake test:node
 
   homebrew_packaging:
-    name: 'Homebrew packaging unit tests'
-    runs-on: macos-latest
-    env:
-      GEM_HOME: ${{ github.workspace }}/.gem
+    name: Homebrew packaging tests
+    runs-on: macos-14
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - run: ./dev/ci/setup-host homebrew-packaging
-    - run: ./dev/ci/run-tests-natively homebrew-packaging
-    - run: ls -R buildout
-    - uses: actions/upload-artifact@v4
-      with:
-        name: homebrew-${{ matrix.os }}
-        path: 'buildout/testlogs/*'
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Create tarball
+        run: bundle exec rake package:set_official package:tarball
+
+      - name: Check whether formula is up-to-date
+        run: >
+          ./packaging/homebrew/verify-oss-formula-uptodate
+          -c homebrew-core.git
+          -r upstream
+
+      - name: Modify formula
+        run: >
+          ./packaging/homebrew/modify-formula
+          --passenger-dir .
+          --formula packaging/homebrew/Formula/passenger.rb
+          --tarball pkg/*.tar.gz
+          --output pkg/passenger.rb
+
+      - name: Test formula
+        run: >
+          ./packaging/homebrew/test-formula
+          -p .
+          -f pkg/passenger.rb
+          -t pkg/*.tar.gz
 
   source_packaging:
-    name: 'Source packaging unit tests'
-    runs-on: ubuntu-latest
+    name: Source packaging tests
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
-        bundler-cache: true
-    - run: ./dev/ci/setup-host source-packaging
-    - run: ./dev/ci/run-tests-with-docker source-packaging
-    - run: ls -R buildout
-    - uses: actions/upload-artifact@v4
-      with:
-        name: source-packaging-${{ matrix.os }}
-        path: 'buildout/testlogs/*'
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Test
+        run: bundle exec rake test:source_packaging

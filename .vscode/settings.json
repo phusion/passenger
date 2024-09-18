@@ -1,5 +1,6 @@
 {
-    "files.exclude": {
+    "files.trimTrailingWhitespace": true,
+	"files.exclude": {
         ".externalToolBuilders": true,
         ".settings": true,
         ".cproject": true,

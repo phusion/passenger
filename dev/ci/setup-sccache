@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -e
+
+## Check parameters & set defaults.
+
+if [[ -z "$ARCH_AND_OS" ]]; then
+	echo "ARCH_AND_OS is required"
+	exit 1
+fi
+
+if [[ -z "$SCCACHE_AZURE_CONNECTION_STRING" ]]; then
+	echo "SCCACHE_AZURE_CONNECTION_STRING is required"
+	exit 1
+fi
+
+SCCACHE_LOG=${SCCACHE_LOG:-info} # set to 'debug' or 'trace' for more verbose logging
+SUDO=${SUDO:-false}
+
+
+## Ensure Github Actions print stdout and stderr data in correct order.
+exec 2>&1
+
+
+## Download and install sccache.
+if [[ ! -e /usr/local/bin/sccache ]]; then
+	echo "::group::Download sccache"
+	wget --output-document sccache.tar.gz "https://github.com/mozilla/sccache/releases/download/v0.8.2/sccache-v0.8.2-$ARCH_AND_OS.tar.gz"
+	echo "::endgroup::"
+	set -x
+	tar xzf sccache.tar.gz
+	rm sccache.tar.gz
+	sudo mv sccache*/sccache /usr/local/bin/sccache
+	rm -rf sccache*
+fi
+
+
+## Set up sccache as a compiler wrapper.
+set -x
+echo "PATH=/usr/local/libexec/sccache:/usr/local/bin:$PATH" >> "$GITHUB_ENV"
+sudo mkdir -p /usr/local/libexec/sccache
+for PROG in cc c++; do
+	FULLPATH=$(command -v "$PROG")
+	echo '#!/bin/sh' > "$PROG"
+	echo "exec /usr/local/bin/sccache $FULLPATH \"\$@\"" >> "$PROG"
+	chmod +x "$PROG"
+	sudo mv "$PROG" /usr/local/libexec/sccache/
+done
+
+
+## Update environment variables.
+
+HAS_SCCACHE_IN_PATH=$(ruby -e 'puts ENV["PATH"].split(":").include?("/usr/local/bin")')
+if ! $HAS_SCCACHE_IN_PATH; then
+	echo "PATH=/usr/local/bin:$PATH" >> "$GITHUB_ENV"
+fi
+
+HAS_COMPILER_WRAPPERS_IN_PATH=$(ruby -e 'puts ENV["PATH"].split(":").include?("/usr/local/libexec/sccache")')
+if $HAS_COMPILER_WRAPPERS_IN_PATH; then
+	# When starting the sccache server, the compiler wrappers must *not* be in PATH
+	# so that the sccache server uses the non-wrapped compilers.
+	PATH=$(ruby -e 'paths = ENV["PATH"].split(":"); paths.delete("/usr/local/libexec/sccache"); puts paths.join(":")')
+	export PATH
+else
+	echo "PATH=/usr/local/libexec/sccache:$PATH" >> "$GITHUB_ENV"
+fi
+
+
+## Start sccache server.
+
+rm -f sccache.log
+export RUST_LOG_STYLE=always
+export SCCACHE_LOG
+export SCCACHE_IDLE_TIMEOUT=0
+export SCCACHE_ERROR_LOG="$(pwd)/sccache.log"
+echo "SCCACHE_ERROR_LOG=$SCCACHE_ERROR_LOG" >> "$GITHUB_ENV"
+
+if $SUDO; then
+	sudo -E env SCCACHE_START_SERVER=1 sccache
+else
+	env SCCACHE_START_SERVER=1 sccache
+fi
+
+set +x
+echo "Waiting until sccache server is started..."
+while [[ ! -e sccache.log ]]; do
+	sleep 0.1
+done
+sleep 0.5
+echo "sccache server is started."

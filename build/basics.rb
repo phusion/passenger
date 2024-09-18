@@ -27,6 +27,7 @@ begin
 rescue LoadError
 end
 require 'fileutils'
+require 'shellwords'
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'constants'

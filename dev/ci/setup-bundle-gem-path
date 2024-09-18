@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+
+File.open(ENV['GITHUB_ENV'], 'a') do |f|
+  f.puts "GEM_PATH=#{Dir.pwd}/vendor/bundle/#{RUBY_ENGINE}/#{Gem.ruby_api_version}:#{Gem.paths.path.join(':')}"
+end

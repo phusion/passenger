@@ -1,0 +1,15 @@
+{
+  "normal_user_1": "games",
+  "normal_user_2": "daemon",
+  "default_user": "man",
+  "normal_group_1": "daemon",
+  "normal_group_2": "man",
+  "default_group": "games",
+
+  "nonexistant_user": "xxxxxxxxxxxxxxxxxxx",
+  "nonexistant_group": "xxxxxxxxxxxxxxxxxxx",
+  "nonexistant_uid": 9999,
+  "nonexistant_gid": 9999,
+
+  "nginx": "/tmp/nginx/sbin/nginx"
+}
