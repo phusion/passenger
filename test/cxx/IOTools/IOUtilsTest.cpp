@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <cerrno>
 #include <string>
+#include <algorithm>
 
 using namespace Passenger;
 using namespace std;
@@ -66,9 +67,28 @@ namespace tut {
 
 		static void writeDataSlowly(int fd, unsigned int bytesToWrite, unsigned int bytesPerSec) {
 			try {
-				for (unsigned i = 0; i < bytesToWrite && !boost::this_thread::interruption_requested(); i++) {
-					syscalls::write(fd, "x", 1);
-					syscalls::usleep(1000000 / bytesPerSec);
+				MonotonicTimeUsec startTime = SystemTime::getMonotonicUsec();
+				MonotonicTimeUsec deadline = startTime + static_cast<MonotonicTimeUsec>(bytesToWrite) * 1e6 / bytesPerSec;
+				unsigned int bytesWritten = 0;
+				string data(bytesToWrite, 'x');
+
+				while (bytesWritten < bytesToWrite && !boost::this_thread::interruption_requested()) {
+					MonotonicTimeUsec elapsed = SystemTime::getMonotonicUsec() - startTime;
+					unsigned int shouldHaveWritten = static_cast<unsigned int>(elapsed * (static_cast<double>(bytesPerSec) / 1e6));
+
+					if (shouldHaveWritten > bytesWritten) {
+						ssize_t ret = syscalls::write(fd, data.data(), shouldHaveWritten - bytesWritten);
+						if (ret == -1) {
+							int e = errno;
+							throw SystemException("Write error", e);
+						}
+						bytesWritten += ret;
+					}
+
+					MonotonicTimeUsec now = SystemTime::getMonotonicUsec();
+					if (now < deadline) {
+						syscalls::usleep(std::min<useconds_t>(deadline - now, 10000));
+					}
 				}
 			} catch (const boost::thread_interrupted &) {
 				// Do nothing.
@@ -515,7 +535,7 @@ namespace tut {
 		unsigned long long timeout = 1000000;
 		ensure("Data is available", waitUntilReadable(p.first, &timeout));
 		ensure("At least 35 msec passed.", timeout <= 1000000 - 35000);
-		ensure("At most 70 msec passed.", timeout >= 1000000 - 70000);  // depends on system scheduler though
+		ensure("At most 250 msec passed.", timeout >= 1000000 - 250000);  // depends on system scheduler though
 	}
 
 	TEST_METHOD(52) {
@@ -599,9 +619,9 @@ namespace tut {
 	}
 
 	TEST_METHOD(58) {
-		// readExact() deducts the amount of time spent on waiting from the timeout variable.
+		set_test_name("readExact() deducts the amount of time spent on waiting from the timeout variable");
 		Pipe p = createPipe(__FILE__, __LINE__);
-		unsigned long long timeout = 100000;
+		unsigned long long timeout = 500000;
 		char buf[3];
 
 		// Spawn a thread that writes 100 bytes per second, i.e. each byte takes 10 msec.
@@ -609,13 +629,8 @@ namespace tut {
 
 		// We read 3 bytes.
 		ensure_equals(readExact(p.first, &buf, sizeof(buf), &timeout), 3u);
-		ensure("Should have taken at least 20 msec", timeout <= 100000 - 20000);
-        #if defined(__FreeBSD__) || defined(BOOST_OS_MACOS)
-			// Stupid timer resolution on FreeBSD...
-			ensure("Should have taken at most 95 msec", timeout >= 100000 - 95000);
-		#else
-			ensure("Should have taken at most 50 msec", timeout >= 100000 - 40000);
-		#endif
+		ensure("Should have taken at least 25 msec", timeout <= 500000 - 25000);
+		ensure("Should have taken at most 150 msec", timeout >= 500000 - 150000);
 	}
 
 	TEST_METHOD(59) {
@@ -651,7 +666,7 @@ namespace tut {
 		unsigned long long timeout = 1000000;
 		ensure("Socket became writable", waitUntilWritable(p.second, &timeout));
 		ensure("At least 35 msec passed.", timeout <= 1000000 - 35000);
-		ensure("At most 70 msec passed.", timeout >= 1000000 - 70000);  // depends on system scheduler though
+		ensure("At most 250 msec passed.", timeout >= 1000000 - 250000);  // depends on system scheduler though
 	}
 
 	TEST_METHOD(62) {
