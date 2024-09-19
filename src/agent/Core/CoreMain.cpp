@@ -85,7 +85,6 @@
 #include <AppTypeDetector/Detector.h>
 #include <IOTools/MessageSerialization.h>
 #include <FileDescriptor.h>
-#include <ResourceLocator.h>
 #include <BackgroundEventLoop.cpp>
 #include <FileTools/FileManip.h>
 #include <FileTools/PathSecurityCheck.h>
@@ -145,7 +144,6 @@ namespace Core {
 
 		boost::mutex configSyncher;
 
-		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
 		SpawningKit::Context::Schema spawningKitContextSchema;
 		SpawningKit::ContextPtr spawningKitContext;
@@ -697,8 +695,6 @@ initializeNonPrivilegedWorkingObjects() {
 
 	setenv("SERVER_SOFTWARE", coreConfig->get("server_software").asCString(), 1);
 
-	wo->resourceLocator = ResourceLocator(coreConfig->get("passenger_root").asString());
-
 	wo->randomGenerator = boost::make_shared<RandomGenerator>();
 	// Check whether /dev/urandom is actually random.
 	// https://code.google.com/p/phusion-passenger/issues/detail?id=516
@@ -710,7 +706,7 @@ initializeNonPrivilegedWorkingObjects() {
 	UPDATE_TRACE_POINT();
 	wo->spawningKitContext = boost::make_shared<SpawningKit::Context>(
 		wo->spawningKitContextSchema);
-	wo->spawningKitContext->resourceLocator = &wo->resourceLocator;
+	wo->spawningKitContext->resourceLocator = Agent::Fundamentals::context->resourceLocator;
 	wo->spawningKitContext->wrapperRegistry = coreWrapperRegistry;
 	wo->spawningKitContext->randomGenerator = wo->randomGenerator;
 	wo->spawningKitContext->integrationMode = coreConfig->get("integration_mode").asString();
@@ -772,7 +768,7 @@ initializeNonPrivilegedWorkingObjects() {
 			&coreSchema->controllerSingleAppMode.schema,
 			&wo->singleAppModeConfig,
 			coreSchema->controllerSingleAppMode.translator);
-		two.controller->resourceLocator = &wo->resourceLocator;
+		two.controller->resourceLocator = Agent::Fundamentals::context->resourceLocator;
 		two.controller->wrapperRegistry = coreWrapperRegistry;
 		two.controller->appPool = wo->appPool;
 		two.controller->shutdownFinishCallback = controllerShutdownFinished;
@@ -877,7 +873,7 @@ initializeSecurityUpdateChecker() {
 		config,
 		coreSchema->securityUpdateChecker.translator);
 	workingObjects->securityUpdateChecker = checker;
-	checker->resourceLocator = &workingObjects->resourceLocator;
+	checker->resourceLocator = Agent::Fundamentals::context->resourceLocator;
 	checker->initialize();
 	checker->start();
 }
@@ -927,7 +923,7 @@ initializeAdminPanelConnector() {
 	AdminPanelConnector *connector = new Core::AdminPanelConnector(
 		coreSchema->adminPanelConnector.schema, config,
 		coreSchema->adminPanelConnector.translator);
-	connector->resourceLocator = &wo.resourceLocator;
+	connector->resourceLocator = Agent::Fundamentals::context->resourceLocator;
 	connector->appPool = wo.appPool;
 	connector->configGetter = inspectConfig;
 	for (unsigned int i = 0; i < wo.threadWorkingObjects.size(); i++) {
@@ -956,7 +952,7 @@ prestartWebApps() {
 	}
 
 	boost::function<void ()> func = boost::bind(prestartWebApps,
-		wo->resourceLocator,
+		*Agent::Fundamentals::context->resourceLocator,
 		coreConfig->get("default_ruby").asString(),
 		prestartURLs
 	);
@@ -983,7 +979,7 @@ warnIfPassengerRootVulnerable() {
 		return; // Passenger is not root, so no escalation.
 	}
 
-	string root = workingObjects->resourceLocator.getInstallSpec();
+	string root = Agent::Fundamentals::context->resourceLocator->getInstallSpec();
 	vector<string> errors, checkErrors;
 	if (isPathProbablySecureForRootUse(root, errors, checkErrors)) {
 		if (!checkErrors.empty()) {
