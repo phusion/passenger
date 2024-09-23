@@ -5,7 +5,6 @@
 #include <FileTools/FileManip.h>
 #include <StrIntTools/StrIntUtils.h>
 #include <IOTools/MessageSerialization.h>
-#include <map>
 #include <vector>
 #include <cerrno>
 #include <signal.h>
@@ -630,6 +629,37 @@ namespace tut {
 		debug->debugger->recv("Begin spawn loop iteration 1");
 		ensure(pool->detachGroupByName("stub/rack"));
 		ensure_equals(pool->getGroupCount(), 0u);
+	}
+
+	TEST_METHOD(15) {
+	    // Test that the process generation increments when the group restarts
+		Options options = createOptions();
+
+		// Spawn a process and opens a session with it.
+		pool->setMax(1);
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+
+		// Close the session so that the process is now idle.
+		ProcessPtr process = currentSession->getProcess()->shared_from_this();
+		currentSession.reset();
+		unsigned int gen1 = process->generation;
+
+		ensure(pool->restartGroupByName(options.appRoot));
+		EVENTUALLY(5,
+			result = pool->getProcessCount() == 1;
+		);
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 2;
+		);
+
+		process = currentSession->getProcess()->shared_from_this();
+		currentSession.reset();
+		unsigned int gen2 = process->generation;
+		ensure_equals(gen1+1,gen2);
 	}
 
 	TEST_METHOD(17) {
