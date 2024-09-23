@@ -662,6 +662,35 @@ namespace tut {
 		ensure_equals(gen1+1,gen2);
 	}
 
+	TEST_METHOD(16) {
+	    // Test that the correct process from the pool is routed
+		Options options = createOptions();
+		ensureMinProcesses(2);
+
+		// async restart the group
+		ensure(pool->restartGroupByName(options.appRoot));
+		ensureMinProcesses(1);
+
+        /*
+		  Imagine we have these processes (ordered from oldest to newest):
+
+          #. PID 1 (generation A, busyness 5)
+          #. PID 2 (generation A, busyness 3)
+          #. PID 3 (generation B, busyness 1)
+
+          The algorithm should select PID 3
+		 */
+
+		/*
+		  Imagine we have these processes (ordered from oldest to newest):
+
+          #. PID 1 (generation A, busyness 1)
+          #. PID 2 (generation B, busyness 5)
+
+          The algorithm should select PID 1
+		 */
+	}
+
 	TEST_METHOD(17) {
 		// Test that restartGroupByName() spawns more processes to ensure
 		// that minProcesses and other constraints are met.
