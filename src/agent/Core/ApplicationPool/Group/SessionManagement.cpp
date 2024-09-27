@@ -58,14 +58,14 @@ Group::RouteResult
 Group::route(const Options &options) const {
 	if (OXT_LIKELY(enabledCount > 0)) {
 		if (options.stickySessionId == 0) {
-			Process *process = findEnabledProcessWithLowestBusyness();
+			Process *process = findBestEnabledProcess();
 			if (process->canBeRoutedTo()) {
 				return RouteResult(process);
 			} else {
 				return RouteResult(NULL, true);
 			}
 		} else {
-			Process *process = findProcessWithStickySessionIdOrLowestBusyness(
+			Process *process = findBestProcessPreferringStickySessionId(
 				options.stickySessionId);
 			if (process != NULL) {
 				if (process->canBeRoutedTo()) {
@@ -78,7 +78,7 @@ Group::route(const Options &options) const {
 			}
 		}
 	} else {
-		Process *process = findProcessWithLowestBusyness(disablingProcesses);
+		Process *process = findBestProcess(disablingProcesses);
 		if (process->canBeRoutedTo()) {
 			return RouteResult(process);
 		} else {
@@ -304,7 +304,7 @@ Group::get(const Options &newOptions, const GetCallback &callback,
 		assert(m_spawning || restarting() || poolAtFullCapacity());
 
 		if (disablingCount > 0 && !restarting()) {
-			Process *process = findProcessWithLowestBusyness(disablingProcesses);
+			Process *process = findBestProcess(disablingProcesses);
 			assert(process != NULL);
 			if (!process->isTotallyBusy()) {
 				return newSession(process, newOptions.currentTime);

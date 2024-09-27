@@ -28,7 +28,6 @@
 
 #include <string>
 #include <vector>
-#include <algorithm>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/move/core.hpp>
 #include <boost/container/vector.hpp>
@@ -102,6 +101,12 @@ class Process {
 public:
 	static const unsigned int MAX_SOCKETS_ACCEPTING_HTTP_REQUESTS = 3;
 
+	/**
+	 * Time at which the Spawner that created this process was created.
+	 * Microseconds resolution.
+	 */
+	unsigned long long spawnerCreationTime;
+
 private:
 	/*************************************************************
 	 * Read-only fields, set once during initialization and never
@@ -140,12 +145,6 @@ private:
 	 * May be an empty string if no code revision has been inferred.
 	 */
 	StaticString codeRevision;
-
-	/**
-	 * Time at which the Spawner that created this process was created.
-	 * Microseconds resolution.
-	 */
-	unsigned long long spawnerCreationTime;
 
 	/** Time at which we started spawning this process. Microseconds resolution. */
 	unsigned long long spawnStartTime;
@@ -451,9 +450,9 @@ public:
 	ProcessMetrics metrics;
 
 	Process(const BasicGroupInfo *groupInfo, const unsigned int gen, const Json::Value &args)
-		: info(this, groupInfo, args),
+		: spawnerCreationTime(getJsonUint64Field(args, "spawner_creation_time")),
+		  info(this, groupInfo, args),
 		  socketsAcceptingHttpRequestsCount(0),
-		  spawnerCreationTime(getJsonUint64Field(args, "spawner_creation_time")),
 		  spawnStartTime(getJsonUint64Field(args, "spawn_start_time")),
 		  spawnEndTime(SystemTime::getUsec()),
 		  type(args["type"] == "dummy" ? SpawningKit::Result::DUMMY : SpawningKit::Result::UNKNOWN),
@@ -477,9 +476,9 @@ public:
 
 	Process(const BasicGroupInfo *groupInfo, const unsigned int gen, const SpawningKit::Result &skResult,
 		const Json::Value &args)
-		: info(this, groupInfo, skResult),
+		: spawnerCreationTime(getJsonUint64Field(args, "spawner_creation_time")),
+		  info(this, groupInfo, skResult),
 		  socketsAcceptingHttpRequestsCount(0),
-		  spawnerCreationTime(getJsonUint64Field(args, "spawner_creation_time")),
 		  spawnStartTime(skResult.spawnStartTime),
 		  spawnEndTime(skResult.spawnEndTime),
 		  type(skResult.type),

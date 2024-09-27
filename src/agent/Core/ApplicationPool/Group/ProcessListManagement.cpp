@@ -58,81 +58,81 @@ Group::findProcessWithStickySessionId(unsigned int id) const {
 }
 
 Process *
-Group::findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
-	int leastBusyProcessIndex = -1;
-	int lowestBusyness = 0;
-	unsigned int i, size = enabledProcessBusynessLevels.size(), highestGeneration = 0;
-	const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
-
-	for (i = 0; i < size; i++) {
-		Process *process = enabledProcesses[i].get();
+Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
+	Process *bestProcess = nullptr;
+	ProcessList::const_iterator it;
+	ProcessList::const_iterator end = enabledProcesses.end();
+	for (it = enabledProcesses.begin(); it != end; it++) {
+		Process *process = (*it).get();
 		if (process->getStickySessionId() == id) {
 			return process;
-        } else if (leastBusyProcessIndex == -1 ||
-                   enabledProcessBusynessLevels[i] < lowestBusyness ||
-				   (enabledProcessBusynessLevels[i] == lowestBusyness && process->generation > highestGeneration)) {
-			highestGeneration = std::max(highestGeneration, process->generation);
-			leastBusyProcessIndex = i;
-			lowestBusyness = enabledProcessBusynessLevels[i];
+        } else if (bestProcess == nullptr ||
+                   process->generation > bestProcess->generation ||
+				   (process->generation == bestProcess->generation && process->spawnerCreationTime < bestProcess->spawnerCreationTime) ||
+				   (process->generation == bestProcess->generation && process->spawnerCreationTime == bestProcess->spawnerCreationTime && process->busyness() < bestProcess->busyness())
+        ) {
+			bestProcess = process;
 		}
 	}
-
-	if (leastBusyProcessIndex == -1) {
-		return NULL;
-	} else {
-		return enabledProcesses[leastBusyProcessIndex].get();
-	}
+	return bestProcess;
 }
 
 Process *
-Group::findProcessWithLowestBusyness(const ProcessList &processes) const {
+Group::findBestProcess(const ProcessList &processes) const {
 	if (processes.empty()) {
-		return NULL;
+		return nullptr;
 	}
 
-	int lowestBusyness = -1;
-    unsigned int highestGeneration = 0;
-	Process *leastBusyProcess = NULL;
+	Process *bestProcess = nullptr;
 	ProcessList::const_iterator it;
 	ProcessList::const_iterator end = processes.end();
 	for (it = processes.begin(); it != end; it++) {
 		Process *process = (*it).get();
-		int busyness = process->busyness();
-		if (lowestBusyness == -1 ||
-			lowestBusyness > busyness ||
-			(busyness == lowestBusyness && process->generation > highestGeneration)) {
-			highestGeneration = std::max(highestGeneration, process->generation);
-			lowestBusyness = busyness;
-			leastBusyProcess = process;
+
+		if (bestProcess == nullptr ||
+			process->generation > bestProcess->generation ||
+			(process->generation == bestProcess->generation && process->spawnerCreationTime < bestProcess->spawnerCreationTime) ||
+			(process->generation == bestProcess->generation && process->spawnerCreationTime == bestProcess->spawnerCreationTime && process->busyness() < bestProcess->busyness())
+        ) {
+			bestProcess = process;
 		}
 	}
-	return leastBusyProcess;
+	return bestProcess;
 }
 
 /**
- * Cache-optimized version of findProcessWithLowestBusyness() for the common case.
+ * Cache-optimized version of findBestProcess() for the common case.
  */
 Process *
-Group::findEnabledProcessWithLowestBusyness() const {
+Group::findBestEnabledProcess() const {
 	if (enabledProcesses.empty()) {
-		return NULL;
+		return nullptr;
 	}
 
-	int leastBusyProcessIndex = -1;
-	int lowestBusyness = 0;
-	unsigned int i, size = enabledProcessBusynessLevels.size(), highestGeneration = 0;
+	Process* bestProcess = nullptr;
+	unsigned long long bestProcessStartTime = 0;
+	unsigned int bestProcessGen = 0;
+	int bestProcessBusyness = 0;
+	unsigned int size = enabledProcessBusynessLevels.size();
 	const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
 
-	for (i = 0; i < size; i++) {
-		if (leastBusyProcessIndex == -1 ||
-			enabledProcessBusynessLevels[i] < lowestBusyness ||
-			(enabledProcessBusynessLevels[i] == lowestBusyness && enabledProcesses[i]->generation > highestGeneration)) {
-			highestGeneration = std::max(highestGeneration, enabledProcesses[i]->generation);
-			leastBusyProcessIndex = i;
-			lowestBusyness = enabledProcessBusynessLevels[i];
+	for (unsigned int i = 0; i < size; i++) {
+		Process *process = enabledProcesses.at(i).get();
+		unsigned int gen = process->generation;
+		unsigned long long startTime = process->spawnerCreationTime;
+		int busyness = enabledProcessBusynessLevels[i];
+		if (bestProcess == nullptr ||
+ 			gen > bestProcess->generation ||
+			(gen == bestProcessGen && startTime <  bestProcessStartTime) ||
+			(gen == bestProcessGen && startTime == bestProcessStartTime && busyness < bestProcessBusyness)
+		) {
+			bestProcess = process;
+			bestProcessGen = gen;
+			bestProcessBusyness = busyness;
+			bestProcessStartTime = startTime;
 		}
 	}
-	return enabledProcesses[leastBusyProcessIndex].get();
+	return bestProcess;
 }
 
 /**
