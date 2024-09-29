@@ -48,4 +48,13 @@ namespace tut {
 		string result = escapeHTML(s);
 		ensure_equals(result, "h?llo");
 	}
+
+	TEST_METHOD(5) {
+		set_test_name("endsWith works");
+		char* str1 = "abcdefghijklmnopqrstuvwxyz";
+		ensure(endsWith(str1, "xyz"));
+		ensure(endsWith("xyz", "xyz"));
+		ensure(!endsWith(str1, "zzz"));
+		ensure(!endsWith("xyz", "zzz"));
+	}
 }
