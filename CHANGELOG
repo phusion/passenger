@@ -1,6 +1,7 @@
 Release 6.0.24 (Not yet released)
 -------------
- *
+ * Update the order Passenger routes requests to app processes. Processes are now chosen based on being in the latest generation (Enterprise), then by newest process, then by oldest, then by
+busyness. Closes GH-2551.
 
 
 Release 6.0.23
