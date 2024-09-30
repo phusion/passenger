@@ -32,12 +32,7 @@ fi
 	export TEST_PORT_BASE
 fi
 
-if [[ "$OS" = macos ]]; then
-    if [ "${GITHUB_ACTIONS:-false}" = "false" ]; then
-	# Ensure that Homebrew tools can be found
-	eval "$(/usr/libexec/path_helper -s)"
-    fi
-else
+if [[ "$OS" != macos ]]; then
 	export LC_CTYPE=C.UTF-8
 fi
 
