@@ -151,7 +151,7 @@ class JSON
     private
 
     def generate_type(obj)
-      type = obj.is_a?(Numeric) ? :Numeric : obj.class.name
+      type = obj.is_a?(Numeric) ? :Numeric : obj.class.name.split('::').last
       begin send(:"generate_#{type}", obj)
       rescue NoMethodError; raise ArgumentError, "can't serialize #{type}"
       end
@@ -168,6 +168,10 @@ class JSON
 
     def generate_String(str)
       quote str.gsub(/[\r\n\f\t\b"\\]/) { "\\#{ESC_MAP[$&]}"}
+    end
+
+    def generate_VersionComparer(vc)
+      generate_String(vc)
     end
 
     def generate_simple(obj) obj.inspect end
