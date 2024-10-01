@@ -1,5 +1,6 @@
 Release 6.0.24 (Not yet released)
 -------------
+ * [Ruby] Specify rackup version to avoid broken 1.0 gem. Closes GH-2559.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
    - ccache 4.10.1 -> 4.10.2
    - cmake 3.30.1 -> 3.30.4
