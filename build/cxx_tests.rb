@@ -158,7 +158,15 @@ let(:test_cxx_include_paths) do
 end
 
 let(:test_cxx_flags) do
-  ['-include test/cxx/TestSupport.h'] + basic_test_cxx_flags
+  # Some flags are necessary to make precompiled headers play well with ccache (and possibly also sccache):
+  # https://ccache.dev/manual/4.8.2.html#_precompiled_headers
+  if PlatformInfo.cxx_is_gcc?
+    ['-include test/cxx/TestSupport.h', '-fpch-preprocess']
+  elsif PlatformInfo.cxx_is_clang?
+    ["-include-pch test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}", '-Xclang', '-fno-pch-timestamp']
+  else
+    ['-include test/cxx/TestSupport.h']
+  end + basic_test_cxx_flags
 end
 
 let(:test_cxx_ldflags) do
@@ -182,7 +190,7 @@ TEST_CXX_OBJECTS.each_pair do |object, source|
     lambda { {
       :include_paths => test_cxx_include_paths,
       :flags => test_cxx_flags,
-      :deps => 'test/cxx/TestSupport.h.gch'
+      :deps => "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}"
     } }
   )
 end
@@ -280,14 +288,15 @@ task 'test:cxx' => dependencies do
   end
 end
 
-file('test/cxx/TestSupport.h.gch' => generate_compilation_task_dependencies('test/cxx/TestSupport.h')) do
+file("test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" => generate_compilation_task_dependencies('test/cxx/TestSupport.h')) do
   compile_cxx(
-    'test/cxx/TestSupport.h.gch',
+    "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}",
     'test/cxx/TestSupport.h',
     :include_paths => test_cxx_include_paths,
     :flags => [
       "-x c++-header",
+      PlatformInfo.cxx_is_clang? ? "-Xclang -emit-pch" : nil,
       basic_test_cxx_flags
-    ].flatten
+    ].compact.flatten
   )
 end
