@@ -23,6 +23,12 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_APPLICATION_POOL_GROUP_LIFETIME_AND_BASICS_CPP_
+#define _PASSENGER_APPLICATION_POOL_GROUP_LIFETIME_AND_BASICS_CPP_
+
+#ifdef INTELLISENSE
+	#include <Core/ApplicationPool/Pool.h>
+#endif
 #include <Core/ApplicationPool/Group.h>
 
 /*************************************************************************
@@ -107,3 +113,5 @@ Group::getWrapperRegistry() const {
 
 } // namespace ApplicationPool2
 } // namespace Passenger
+
+#endif // _PASSENGER_APPLICATION_POOL_GROUP_LIFETIME_AND_BASICS_CPP_

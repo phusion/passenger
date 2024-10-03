@@ -23,6 +23,12 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_APPLICATION_POOL_GROUP_INITIALIZATION_AND_SHUTDOWN_CPP_
+#define _PASSENGER_APPLICATION_POOL_GROUP_INITIALIZATION_AND_SHUTDOWN_CPP_
+
+#ifdef INTELLISENSE
+	#include <Core/ApplicationPool/Pool.h>
+#endif
 #include <Core/ApplicationPool/Group.h>
 
 /*************************************************************************
@@ -179,3 +185,5 @@ Group::shutdown(const Callback &callback,
 
 } // namespace ApplicationPool2
 } // namespace Passenger
+
+#endif // _PASSENGER_APPLICATION_POOL_GROUP_INITIALIZATION_AND_SHUTDOWN_CPP_

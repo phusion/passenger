@@ -23,6 +23,12 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_APPLICATION_POOL_GROUP_SESSION_MANAGEMENT_CPP_
+#define _PASSENGER_APPLICATION_POOL_GROUP_SESSION_MANAGEMENT_CPP_
+
+#ifdef INTELLISENSE
+	#include <Core/ApplicationPool/Implementation.cpp>
+#endif
 #include <Core/ApplicationPool/Group.h>
 
 /*************************************************************************
@@ -336,3 +342,5 @@ Group::get(const Options &newOptions, const GetCallback &callback,
 
 } // namespace ApplicationPool2
 } // namespace Passenger
+
+#endif // _PASSENGER_APPLICATION_POOL_GROUP_SESSION_MANAGEMENT_CPP_
