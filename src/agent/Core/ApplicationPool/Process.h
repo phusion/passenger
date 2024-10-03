@@ -383,7 +383,7 @@ public:
 
 	/** Last time when a session was opened for this Process. */
 	unsigned long long lastUsed;
-    /** Which gereration of app processes this one belongs to,
+    /** Which generation of app processes this one belongs to,
         inherited from the app group, incremented when a restart
 		is initiated*/
 	const unsigned int generation;

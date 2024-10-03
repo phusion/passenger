@@ -632,7 +632,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(15) {
-	    // Test that the process generation increments when the group restarts
+	    set_test_name("Process generation increments when the group restarts");
 		Options options = createOptions();
 
 		// Spawn a process and opens a session with it.
