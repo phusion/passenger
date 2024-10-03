@@ -14,7 +14,6 @@ namespace tut {
 		SpawningKit::Context skContext;
 		Context context;
 		BasicGroupInfo groupInfo;
-		unsigned int generation;
 		vector<SpawningKit::Result::Socket> sockets;
 		Pipe stdinFd, stdoutAndErrFd;
 		FileDescriptor server1, server2, server3;
@@ -34,8 +33,6 @@ namespace tut {
 			groupInfo.context = &context;
 			groupInfo.group = NULL;
 			groupInfo.name = "test";
-
-			generation = 0;
 
 			struct sockaddr_in addr;
 			socklen_t len = sizeof(addr);
@@ -122,9 +119,8 @@ namespace tut {
 			args["spawner_creation_time"] = 0;
 
 			Process *p = context.processObjectPool.malloc();
-			p = new (p) Process(&groupInfo, generation, result, args);
+			p = new (p) Process(&groupInfo, 0, result, args);
 			ProcessPtr process(p, false);
-
 			process->shutdownNotRequired();
 			return process;
 		}
@@ -243,15 +239,4 @@ namespace tut {
 				&& contents.find("stdout and err 4\n") != string::npos;
 		);
 	}
-
-    TEST_METHOD(6) {
-        set_test_name("Test generation is inherited from pool at construction time");
-	    // this test is pointless b/c the process is made at line 123 of this file, not in the regular codebase
-	    ProcessPtr process1 = createProcess();
-		ensure_equals(process1->generation, generation);
-		generation++;
-		ProcessPtr process2 = createProcess();
-		ensure_equals(process2->generation, generation);
-		ensure(process1->generation != process2->generation);
-    }
 }
