@@ -68,8 +68,8 @@ Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
 			return process;
 		} else if (bestProcess == nullptr ||
 				   process->generation > bestProcess->generation ||
-				   (process->generation == bestProcess->generation && process->spawnerCreationTime < bestProcess->spawnerCreationTime) ||
-				   (process->generation == bestProcess->generation && process->spawnerCreationTime == bestProcess->spawnerCreationTime && process->busyness() < bestProcess->busyness())
+				   (process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime) ||
+				   (process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
 		) {
 			bestProcess = process;
 		}
@@ -91,8 +91,8 @@ Group::findBestProcess(const ProcessList &processes) const {
 
 		if (bestProcess == nullptr ||
 			process->generation > bestProcess->generation ||
-			(process->generation == bestProcess->generation && process->spawnerCreationTime < bestProcess->spawnerCreationTime) ||
-			(process->generation == bestProcess->generation && process->spawnerCreationTime == bestProcess->spawnerCreationTime && process->busyness() < bestProcess->busyness())
+			(process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime) ||
+			(process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
 		) {
 			bestProcess = process;
 		}
@@ -119,7 +119,7 @@ Group::findBestEnabledProcess() const {
 	for (unsigned int i = 0; i < size; i++) {
 		Process *process = enabledProcesses.at(i).get();
 		unsigned int gen = process->generation;
-		unsigned long long startTime = process->spawnerCreationTime;
+		unsigned long long startTime = process->spawnStartTime;
 		int busyness = enabledProcessBusynessLevels[i];
 		if (bestProcess == nullptr ||
  			gen > bestProcess->generation ||
