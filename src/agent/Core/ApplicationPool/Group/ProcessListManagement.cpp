@@ -66,11 +66,11 @@ Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
 		Process *process = (*it).get();
 		if (process->getStickySessionId() == id) {
 			return process;
-        } else if (bestProcess == nullptr ||
-                   process->generation > bestProcess->generation ||
+		} else if (bestProcess == nullptr ||
+				   process->generation > bestProcess->generation ||
 				   (process->generation == bestProcess->generation && process->spawnerCreationTime < bestProcess->spawnerCreationTime) ||
 				   (process->generation == bestProcess->generation && process->spawnerCreationTime == bestProcess->spawnerCreationTime && process->busyness() < bestProcess->busyness())
-        ) {
+		) {
 			bestProcess = process;
 		}
 	}
@@ -93,7 +93,7 @@ Group::findBestProcess(const ProcessList &processes) const {
 			process->generation > bestProcess->generation ||
 			(process->generation == bestProcess->generation && process->spawnerCreationTime < bestProcess->spawnerCreationTime) ||
 			(process->generation == bestProcess->generation && process->spawnerCreationTime == bestProcess->spawnerCreationTime && process->busyness() < bestProcess->busyness())
-        ) {
+		) {
 			bestProcess = process;
 		}
 	}
