@@ -217,8 +217,8 @@ dumpEnvvars(const string &workDir) {
 		NULL
 	};
 	SubprocessInfo info;
-	runCommand(command, info, true, true,
-		boost::bind(reopenStdout, fileno(f)));
+	int fd = fileno(f);
+	runCommand(command, info, true, true, [=]() { reopenStdout(fd); });
 	fclose(f);
 }
 
@@ -236,8 +236,8 @@ dumpUserInfo(const string &workDir) {
 		NULL
 	};
 	SubprocessInfo info;
-	runCommand(command, info, true, true,
-		boost::bind(reopenStdout, fileno(f)));
+	int fd = fileno(f);
+	runCommand(command, info, true, true, [=]() { reopenStdout(fd); });
 	fclose(f);
 }
 

@@ -400,8 +400,9 @@ private:
 			if (!req->bodyChannel.acceptingInput()) {
 				if (req->bodyChannel.mayAcceptInputLater()) {
 					client->input.stop();
-					req->bodyChannel.consumedCallback =
-						onRequestBodyChannelConsumed;
+					req->bodyChannel.consumedCallback = [](Channel *channel, unsigned int size) {
+						onRequestBodyChannelConsumed(channel, size);
+					};
 					return Channel::Result(0, false);
 				} else {
 					return Channel::Result(0, true);
@@ -436,8 +437,9 @@ private:
 				return Channel::Result(remaining, false);
 			} else if (req->bodyChannel.mayAcceptInputLater()) {
 				client->input.stop();
-				req->bodyChannel.consumedCallback =
-					onRequestBodyChannelConsumed;
+				req->bodyChannel.consumedCallback = [](Channel *channel, unsigned int size) {
+					onRequestBodyChannelConsumed(channel, size);
+				};
 				return Channel::Result(remaining, false);
 			} else {
 				return Channel::Result(remaining, true);
@@ -467,8 +469,9 @@ private:
 			if (!req->bodyChannel.acceptingInput()) {
 				if (req->bodyChannel.mayAcceptInputLater()) {
 					client->input.stop();
-					req->bodyChannel.consumedCallback =
-						onRequestBodyChannelConsumed;
+					req->bodyChannel.consumedCallback = [](Channel *channel, unsigned int size) {
+						onRequestBodyChannelConsumed(channel, size);
+					};
 					return Channel::Result(0, false);
 				} else {
 					return Channel::Result(0, true);
@@ -509,7 +512,9 @@ private:
 							req->bodyChannel.feed(MemoryKit::mbuf());
 						} else if (req->bodyChannel.mayAcceptInputLater()) {
 							client->input.stop();
-							req->bodyChannel.consumedCallback = onRequestBodyChannelConsumed;
+							req->bodyChannel.consumedCallback = [](Channel *channel, unsigned int size) {
+								onRequestBodyChannelConsumed(channel, size);
+							};
 						}
 					}
 				}
@@ -606,8 +611,9 @@ private:
 		} else if (req->bodyChannel.mayAcceptInputLater()) {
 			SKC_TRACE(client, 3, "BodyChannel currently busy; will feed "
 				"error to bodyChannel later");
-			req->bodyChannel.consumedCallback =
-				onRequestBodyChannelConsumed_onBodyError;
+			req->bodyChannel.consumedCallback =	[](Channel *channel, unsigned int size) {
+				onRequestBodyChannelConsumed_onBodyError(channel, size);
+			};
 			req->bodyError = errcode;
 			return Channel::Result(-1, false);
 		} else {
