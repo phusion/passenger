@@ -94,6 +94,7 @@ let(:cxx) { maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cxx) }
 let(:libext) { PlatformInfo.library_extension }
 
 USE_ASAN    = boolean_option('USE_ASAN')
+USE_UBSAN   = boolean_option('USE_UBSAN')
 USE_SELINUX = boolean_option('USE_SELINUX')
 OPTIMIZE    = boolean_option('OPTIMIZE')
 LTO         = OPTIMIZE && boolean_option('LTO')
@@ -113,6 +114,7 @@ let(:extra_cflags) do
   result = PlatformInfo.default_extra_cflags.dup
   result << " " << compiler_flag_option('EXTRA_CFLAGS') if !compiler_flag_option('EXTRA_CFLAGS').empty?
   result << " #{PlatformInfo.address_sanitizer_flag}" if USE_ASAN && PlatformInfo.address_sanitizer_flag
+  result << " #{PlatformInfo.undefined_behavior_sanitizer_flag}" if USE_UBSAN && PlatformInfo.undefined_behavior_sanitizer_flag
   result << " -fno-omit-frame-pointer" if USE_ASAN
   result << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
   result
@@ -121,6 +123,7 @@ let(:extra_cxxflags) do
   result = PlatformInfo.default_extra_cxxflags.dup
   result << " " << compiler_flag_option('EXTRA_CXXFLAGS') if !compiler_flag_option('EXTRA_CXXFLAGS').empty?
   result << " #{PlatformInfo.address_sanitizer_flag}" if USE_ASAN && PlatformInfo.address_sanitizer_flag
+  result << " #{PlatformInfo.undefined_behavior_sanitizer_flag}" if USE_UBSAN && PlatformInfo.undefined_behavior_sanitizer_flag
   result << " -fno-omit-frame-pointer" if USE_ASAN
   result << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
   result

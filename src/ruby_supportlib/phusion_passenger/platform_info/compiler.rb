@@ -504,6 +504,14 @@ module PhusionPassenger
     end
     memoize :address_sanitizer_flag
 
+    def self.undefined_behavior_sanitizer_flag
+      if cc_is_clang?
+        "-fsanitize=undefined"
+      else
+        nil
+      end
+    end
+
     def self.cxx_11_flag
       # C++11 support on FreeBSD 10.0 + Clang seems to be bugged.
       # http://llvm.org/bugs/show_bug.cgi?id=18310
