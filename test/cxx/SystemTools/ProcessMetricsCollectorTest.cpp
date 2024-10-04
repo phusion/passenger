@@ -95,22 +95,22 @@ namespace tut {
 		collector.measureRealMemory(child, pss, privateDirty, swap);
 		#ifdef __APPLE__
 			if (geteuid() == 0) {
-				ensure(pss > 50000 && pss < 60000);
-				ensure(privateDirty > 50000 && privateDirty < 60000);
-				ensure_equals(swap, (ssize_t) -1);
+				ensure("PSS is correct", pss > 50000 && pss < 60000);
+				ensure("Private dirty is correct", privateDirty > 50000 && privateDirty < 60000);
+				ensure_equals("Swap is correct", swap, (ssize_t) -1);
 			} else {
-				ensure_equals(pss, (ssize_t) -1);
-				ensure_equals(privateDirty, (ssize_t) -1);
-				ensure_equals(swap, (ssize_t) -1);
+				ensure_equals("PSS is correct", pss, (ssize_t) -1);
+				ensure_equals("Private dirty is correct", privateDirty, (ssize_t) -1);
+				ensure_equals("Swap is correct", swap, (ssize_t) -1);
 			}
 		#elif defined(__linux__)
 			ensure("PSS is correct", (pss > 50000 && pss < 60000) || pss == -1);
 			ensure("Private dirty is correct", privateDirty > 50000 && privateDirty < 60000);
 			ensure("Swap is correct", swap < 10000);
 		#else
-			ensure((pss > 50000 && pss < 60000) || pss == -1);
-			ensure((privateDirty > 50000 && privateDirty < 60000) || privateDirty == -1);
-			ensure(swap < 10000 || swap == -1);
+			ensure("PSS is correct", (pss > 50000 && pss < 60000) || pss == -1);
+			ensure("Private dirty is correct", (privateDirty > 50000 && privateDirty < 60000) || privateDirty == -1);
+			ensure("Swap is correct", (swap < 10000 || swap == -1));
 		#endif
 	}
 }
