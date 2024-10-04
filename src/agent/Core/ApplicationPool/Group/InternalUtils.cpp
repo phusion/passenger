@@ -30,7 +30,6 @@
 	#include <Core/ApplicationPool/Pool.h>
 #endif
 #include <Core/ApplicationPool/Group.h>
-#include <iterator>
 
 /*************************************************************************
  *
