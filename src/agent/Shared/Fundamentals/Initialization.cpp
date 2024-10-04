@@ -467,6 +467,7 @@ maybeInitializeAbortHandler() {
 	config->dumpWithCrashWatch = getEnvBool("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
 	config->beep = getEnvBool("PASSENGER_BEEP_ON_ABORT");
 	config->stopProcess = getEnvBool("PASSENGER_STOP_ON_ABORT");
+	config->forceTerminateProcess = getEnvBool("PASSENGER_FORCE_TERMINATE_ON_ABORT");
 
 	installAbortHandler(config);
 }
