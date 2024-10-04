@@ -5,6 +5,7 @@ env:
   RUST_LOG_STYLE: always
   DEFAULT_RUBY_VERSION: 3.1
   BUNDLE_CLEAN: true
+  USE_ASAN: true
 
 on:
   push: {}
@@ -145,18 +146,24 @@ jobs:
             os: ubuntu-24.04
             config_file: test/config.json.github-ci-linux
             extra_cflags: '-fdiagnostics-color'
+            address_sanitizer: true
             sccache_arch_and_os: x86_64-unknown-linux-musl
             sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
           - name: macOS
             os: macos-14
             config_file: test/config.json.github-ci-macos
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
+            # Using AddressSanitizer on dynamically loaded modules (like Apache modules)
+            # requires loading Apache with the AddressSanitizer runtime using DYLD_INSERT_LIBRARIES.
+            # That in turn requires disabling SIP, which is not possible on Github Actions.
+            address_sanitizer: false
             sccache_arch_and_os: aarch64-apple-darwin
             sccache_azure_key_prefix: sccache/cxx-macos-14-arm
     runs-on: ${{ matrix.os }}
     env:
       EXTRA_CFLAGS: ${{ matrix.extra_cflags }}
       EXTRA_CXXFLAGS: ${{ matrix.extra_cflags }}
+      USE_ASAN: ${{ matrix.address_sanitizer }}
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
       SCCACHE_CACHE_MULTIARCH: true
