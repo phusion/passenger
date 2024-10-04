@@ -494,7 +494,7 @@ module PhusionPassenger
     def self.address_sanitizer_flag
       if cc_is_clang?
         if `#{cc} --help` =~ /-fsanitize=/
-          "-fsanitize=address"
+          "-fsanitize=address -fsanitize-address-use-after-return=always"
         else
           "-faddress-sanitizer"
         end
