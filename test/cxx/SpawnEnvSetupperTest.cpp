@@ -25,6 +25,9 @@ namespace tut {
 			context.spawnDir = getSystemTempDir();
 			context.finalize();
 
+			string user = lookupSystemUsernameByUid(getuid());
+			string group = lookupSystemGroupnameByGid(getgid());
+
 			config.startCommand = "true";
 			config.appGroupName = "appgroup";
 			config.appRoot = "tmp.wsgi";
@@ -32,8 +35,8 @@ namespace tut {
 			config.appType = "wsgi";
 			config.spawnMethod = "direct";
 			config.bindAddress = "127.0.0.1";
-			config.user = lookupSystemUsernameByUid(getuid());
-			config.group = lookupSystemGroupnameByGid(getgid());
+			config.user = user;
+			config.group = group;
 			config.internStrings();
 		}
 
