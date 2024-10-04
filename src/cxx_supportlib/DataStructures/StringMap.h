@@ -27,7 +27,6 @@
 #define _PASSENGER_DATA_STRUCTURES_STRING_MAP_H_
 
 #include <string>
-#include <map>
 #include <utility>
 
 #include <StaticString.h>

@@ -142,8 +142,6 @@ module PhusionPassenger
     private_class_method :cc_or_cxx_supports_feliminate_unused_debug?
 
     def self.cc_or_cxx_supports_blocks?(language)
-      ext = detect_language_extension(language)
-      compiler_type_name = detect_compiler_type_name(language)
       command = create_compiler_command(language,"-E -dM",'- </dev/null')
       result = `#{command}`
       return result.include? "__BLOCKS__"

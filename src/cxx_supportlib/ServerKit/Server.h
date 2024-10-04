@@ -38,12 +38,6 @@
 #include <new>
 #include <ev++.h>
 
-// for std::swap()
-#if __cplusplus >= 201103L
-	#include <utility>
-#else
-	#include <algorithm>
-#endif
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>

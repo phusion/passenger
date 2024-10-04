@@ -5,7 +5,6 @@
 #include <FileTools/FileManip.h>
 #include <StrIntTools/StrIntUtils.h>
 #include <IOTools/MessageSerialization.h>
-#include <map>
 #include <vector>
 #include <cerrno>
 #include <signal.h>

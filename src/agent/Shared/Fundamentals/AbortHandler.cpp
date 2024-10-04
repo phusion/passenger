@@ -35,7 +35,6 @@
 #include <cstddef>
 #include <cstring>
 #include <cerrno>
-#include <cassert>
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
@@ -121,8 +120,6 @@ typedef void (*Callback)(AbortHandlerWorkingState &state, void *userData);
 
 
 static AbortHandlerContext *ctx = NULL;
-static const char digits[] = "0123456789";
-static const char hex_chars[] = "0123456789abcdef";
 
 
 static void

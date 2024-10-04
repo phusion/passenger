@@ -32,7 +32,6 @@
 #include <oxt/macros.hpp>
 #include <algorithm>
 #include <cstdio>
-#include <cmath>
 #include <cassert>
 #include <pthread.h>
 #include <LoggingKit/LoggingKit.h>

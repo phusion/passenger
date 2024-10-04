@@ -38,9 +38,8 @@
 #include <vector>
 
 #include <sys/types.h>
-#include <stdlib.h> // for srandom()
+#include <stdlib.h>
 #include <unistd.h>
-#include <signal.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

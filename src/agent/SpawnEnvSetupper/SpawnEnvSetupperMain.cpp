@@ -36,8 +36,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
-#include <cassert>
-#include <stdexcept>
+#include <exception>
 #include <string>
 #include <vector>
 
@@ -47,7 +46,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
-#include <limits.h>
+#include <limits.h> // IWYU pragma: keep (for PATH_MAX)
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
