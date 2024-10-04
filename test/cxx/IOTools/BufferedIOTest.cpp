@@ -117,7 +117,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(5) {
-		// It blocks until the acceptor function says it's done or until EOF.
+		set_test_name("It blocks until the acceptor function says it's done or until EOF");
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
 		Timer<> timer1;
 		ensure_equals(io.readUntil(a_twoBytesRead), 2u);
@@ -244,9 +244,11 @@ namespace tut {
 	/***** Test readAll() *****/
 
 	TEST_METHOD(20) {
-		// It reads everything until EOF.
-		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
-		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 40000));
+		set_test_name("It reads everything until EOF");
+		TempThread thr1([&]() {
+			writeAfterSomeTime(writer, 20000, "aa");
+			writer.close();
+		});
 		Timer<> timer;
 		ensure_equals(io.readAll(), "aa");
 		ensure_equals(io.getBuffer(), "");
