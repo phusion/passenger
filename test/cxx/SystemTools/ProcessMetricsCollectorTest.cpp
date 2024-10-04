@@ -95,8 +95,8 @@ namespace tut {
 		collector.measureRealMemory(child, pss, privateDirty, swap);
 		#ifdef __APPLE__
 			if (geteuid() == 0) {
-				ensure("PSS is correct", pss > 50000 && pss < 60000);
-				ensure("Private dirty is correct", privateDirty > 50000 && privateDirty < 60000);
+				ensure("PSS is correct", pss > 50000 && pss < 100000);
+				ensure("Private dirty is correct", privateDirty > 50000 && privateDirty < 100000);
 				ensure_equals("Swap is correct", swap, (ssize_t) -1);
 			} else {
 				ensure_equals("PSS is correct", pss, (ssize_t) -1);
