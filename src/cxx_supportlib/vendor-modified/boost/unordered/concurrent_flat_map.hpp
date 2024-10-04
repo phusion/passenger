@@ -1,7 +1,7 @@
 /* Fast open-addressing concurrent hashmap.
  *
  * Copyright 2023 Christian Mazakas.
- * Copyright 2023 Joaquin M Lopez Munoz.
+ * Copyright 2023-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -74,6 +74,10 @@ namespace boost {
       using const_pointer =
         typename boost::allocator_const_pointer<allocator_type>::type;
       static constexpr size_type bulk_visit_size = table_type::bulk_visit_size;
+
+#if defined(BOOST_UNORDERED_ENABLE_STATS)
+      using stats = typename table_type::stats;
+#endif
 
       concurrent_flat_map()
           : concurrent_flat_map(detail::foa::default_bucket_count)
@@ -713,6 +717,14 @@ namespace boost {
 
       void rehash(size_type n) { table_.rehash(n); }
       void reserve(size_type n) { table_.reserve(n); }
+
+#if defined(BOOST_UNORDERED_ENABLE_STATS)
+      /// Stats
+      ///
+      stats get_stats() const { return table_.get_stats(); }
+
+      void reset_stats() noexcept { table_.reset_stats(); }
+#endif
 
       /// Observers
       ///

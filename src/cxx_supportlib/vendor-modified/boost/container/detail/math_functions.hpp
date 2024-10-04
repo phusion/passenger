@@ -100,7 +100,7 @@ struct upper_power_of_2_loop_ct
    template <Integer I, Integer P>
    struct apply
    {
-      static const Integer value =
+      BOOST_STATIC_CONSTEXPR Integer value =
          upper_power_of_2_loop_ct<Integer, (I > P*2)>::template apply<I, P*2>::value;
    };
 };
@@ -111,14 +111,14 @@ struct upper_power_of_2_loop_ct<Integer, false>
    template <Integer I, Integer P>
    struct apply
    {
-      static const Integer value = P;
+      BOOST_STATIC_CONSTEXPR Integer value = P;
    };
 };
 
 template <typename Integer, Integer I>
 struct upper_power_of_2_ct
 {
-   static const Integer value = upper_power_of_2_loop_ct<Integer, (I > 1)>::template apply<I, 2>::value;
+   BOOST_STATIC_CONSTEXPR Integer value = upper_power_of_2_loop_ct<Integer, (I > 1)>::template apply<I, 2>::value;
 };
 
 //This function uses binary search to discover the
@@ -144,27 +144,27 @@ inline std::size_t floor_log2 (std::size_t x)
 template<std::size_t I1, std::size_t I2>
 struct gcd_ct
 {
-   static const std::size_t Max = I1 > I2 ? I1 : I2;
-   static const std::size_t Min = I1 < I2 ? I1 : I2;
-   static const std::size_t value = gcd_ct<Min, Max % Min>::value;
+   BOOST_STATIC_CONSTEXPR std::size_t Max = I1 > I2 ? I1 : I2;
+   BOOST_STATIC_CONSTEXPR std::size_t Min = I1 < I2 ? I1 : I2;
+   BOOST_STATIC_CONSTEXPR std::size_t value = gcd_ct<Min, Max % Min>::value;
 };
 
 template<std::size_t I1>
 struct gcd_ct<I1, 0>
 {
-   static const std::size_t value = I1;
+   BOOST_STATIC_CONSTEXPR std::size_t value = I1;
 };
 
 template<std::size_t I1>
 struct gcd_ct<0, I1>
 {
-   static const std::size_t value = I1;
+   BOOST_STATIC_CONSTEXPR std::size_t value = I1;
 };
 
 template<std::size_t I1, std::size_t I2>
 struct lcm_ct
 {
-   static const std::size_t value = I1 * I2 / gcd_ct<I1, I2>::value;
+   BOOST_STATIC_CONSTEXPR std::size_t value = I1 * I2 / gcd_ct<I1, I2>::value;
 };
 
 } // namespace dtl

@@ -52,8 +52,8 @@ enum tree_type_enum
 template<tree_type_enum TreeType, bool OptimizeSize>
 struct tree_opt
 {
-   static const boost::container::tree_type_enum tree_type = TreeType;
-   static const bool optimize_size = OptimizeSize;
+   BOOST_STATIC_CONSTEXPR boost::container::tree_type_enum tree_type = TreeType;
+   BOOST_STATIC_CONSTEXPR bool optimize_size = OptimizeSize;
 };
 
 typedef tree_opt<red_black_tree, true> tree_assoc_defaults;
@@ -116,10 +116,10 @@ using tree_assoc_options_t = typename boost::container::tree_assoc_options<Optio
 template<bool StoreHash, bool CacheBegin, bool LinearBuckets, bool FastmodBuckets>
 struct hash_opt
 {
-   static const bool store_hash  = StoreHash;
-   static const bool cache_begin = CacheBegin;
-   static const bool linear_buckets = LinearBuckets;
-   static const bool fastmod_buckets = FastmodBuckets;
+   BOOST_STATIC_CONSTEXPR bool store_hash  = StoreHash;
+   BOOST_STATIC_CONSTEXPR bool cache_begin = CacheBegin;
+   BOOST_STATIC_CONSTEXPR bool linear_buckets = LinearBuckets;
+   BOOST_STATIC_CONSTEXPR bool fastmod_buckets = FastmodBuckets;
 };
 
 typedef hash_opt<false, false, false, false> hash_assoc_defaults;
@@ -203,13 +203,13 @@ struct default_if_void<void, Default>
 template<std::size_t N, std::size_t DefaultN>
 struct default_if_zero
 {
-   static const std::size_t value = N;
+   BOOST_STATIC_CONSTEXPR std::size_t value = N;
 };
 
 template<std::size_t DefaultN>
 struct default_if_zero<0u, DefaultN>
 {
-   static const std::size_t value = DefaultN;
+   BOOST_STATIC_CONSTEXPR std::size_t value = DefaultN;
 };
 
 
@@ -364,7 +364,7 @@ template<class GrowthType, std::size_t InplaceAlignment>
 struct small_vector_opt
 {
    typedef GrowthType      growth_factor_type;
-   static const std::size_t inplace_alignment = InplaceAlignment;
+   BOOST_STATIC_CONSTEXPR std::size_t inplace_alignment = InplaceAlignment;
 };
 
 typedef small_vector_opt<void, 0u> small_vector_null_opt;
@@ -430,8 +430,8 @@ BOOST_INTRUSIVE_OPTION_CONSTANT(throw_on_overflow, bool, ThrowOnOverflow, throw_
 template<bool ThrowOnOverflow, std::size_t InplaceAlignment>
 struct static_vector_opt
 {
-   static const bool throw_on_overflow = ThrowOnOverflow;
-   static const std::size_t inplace_alignment = InplaceAlignment;
+   BOOST_STATIC_CONSTEXPR bool throw_on_overflow = ThrowOnOverflow;
+   BOOST_STATIC_CONSTEXPR std::size_t inplace_alignment = InplaceAlignment;
 };
 
 typedef static_vector_opt<true, 0u> static_vector_null_opt;
@@ -515,7 +515,7 @@ template<class GrowthType, class StoredSizeType, std::size_t FreeFraction>
 struct devector_opt
    : vector_opt<GrowthType, StoredSizeType>
 {
-   static const std::size_t free_fraction = FreeFraction;
+   BOOST_STATIC_CONSTEXPR std::size_t free_fraction = FreeFraction;
 };
 
 typedef devector_opt<void, void, 0u> devector_null_opt;
@@ -606,8 +606,8 @@ using devector_options_t = typename boost::container::devector_options<Options..
 template<std::size_t BlockBytes, std::size_t BlockSize>
 struct deque_opt
 {
-   static const std::size_t block_bytes = BlockBytes;
-   static const std::size_t block_size  = BlockSize;
+   BOOST_STATIC_CONSTEXPR std::size_t block_bytes = BlockBytes;
+   BOOST_STATIC_CONSTEXPR std::size_t block_size  = BlockSize;
    BOOST_CONTAINER_STATIC_ASSERT_MSG(!(block_bytes && block_size), "block_bytes and block_size can't be specified at the same time");
 };
 
@@ -617,7 +617,7 @@ typedef deque_opt<0u, 0u> deque_null_opt;
 
 //! Helper metafunction to combine options into a single type to be used
 //! by \c boost::container::deque.
-//! Supported options are: \c boost::container::block_bytes
+//! Supported options are: \c boost::container::block_bytes and \c boost::container::block_size
 #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED) || defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
 template<class ...Options>
 #else

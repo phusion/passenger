@@ -603,6 +603,14 @@ module PhusionPassenger
       end
     end
 
+    def self.precompiled_header_extension
+      if cxx_is_gcc?
+        'gch'
+      else
+        'pch'
+      end
+    end
+
 
     def self.make
       return string_env('MAKE', find_command('make'))

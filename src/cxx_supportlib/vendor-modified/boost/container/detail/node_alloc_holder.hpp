@@ -31,12 +31,14 @@
 #include <boost/container/detail/construct_in_place.hpp>
 #include <boost/container/detail/destroyers.hpp>
 #include <boost/move/detail/iterator_to_raw_pointer.hpp>
+#include <boost/move/detail/launder.hpp>
 #include <boost/container/detail/mpl.hpp>
 #include <boost/container/detail/placement_new.hpp>
 #include <boost/move/detail/to_raw_pointer.hpp>
 #include <boost/container/detail/type_traits.hpp>
 #include <boost/container/detail/version_type.hpp>
 #include <boost/container/detail/is_pair.hpp>
+#include <boost/container/detail/pair.hpp>
 // intrusive
 #include <boost/intrusive/detail/mpl.hpp>
 #include <boost/intrusive/options.hpp>
@@ -119,16 +121,16 @@ struct base_node
    }
 
    inline T &get_data()
-   {  return *move_detail::force_ptr<T*>(this->m_storage.data);   }
+   {  return *move_detail::force_ptr<T*>(&this->m_storage);   }
 
    inline const T &get_data() const
-   {  return *move_detail::force_ptr<const T*>(this->m_storage.data);  }
+   {  return *move_detail::launder_cast<const T*>(&this->m_storage);  }
 
    inline internal_type &get_real_data()
-   {  return *move_detail::force_ptr<internal_type*>(this->m_storage.data);   }
+   {  return *move_detail::launder_cast<internal_type*>(&this->m_storage);   }
 
    inline const internal_type &get_real_data() const
-   {  return *move_detail::force_ptr<const internal_type*>(this->m_storage.data);  }
+   {  return *move_detail::launder_cast<const internal_type*>(&this->m_storage);  }
 
    #if defined(BOOST_CONTAINER_DISABLE_ALIASING_WARNING)
       #pragma GCC diagnostic pop
@@ -532,6 +534,19 @@ struct node_alloc_holder
    {
       allocator_multialloc_chain_node_deallocator<NodeAlloc> chain_holder(this->node_alloc());
       return this->icont().erase_and_dispose(k, chain_holder.get_chain_builder());
+   }
+
+   template<class Key, class KeyCompare>
+   inline size_type erase_key(const Key& k, KeyCompare cmp, version_1)
+   {
+      return this->icont().erase_and_dispose(k, cmp, Destroyer(this->node_alloc()));
+   }
+
+   template<class Key, class KeyCompare>
+   inline size_type erase_key(const Key& k, KeyCompare cmp, version_2)
+   {
+      allocator_multialloc_chain_node_deallocator<NodeAlloc> chain_holder(this->node_alloc());
+      return this->icont().erase_and_dispose(k, cmp, chain_holder.get_chain_builder());
    }
 
    protected:

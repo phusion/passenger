@@ -78,7 +78,7 @@ public:
     {
       // The operation is being run on the worker io_context. Time to perform
       // the resolver operation.
-    
+
       // Perform the blocking endpoint resolution operation.
       char host_name[NI_MAXHOST] = "";
       char service_name[NI_MAXSERV] = "";

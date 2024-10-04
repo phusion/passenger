@@ -23,6 +23,9 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_APPLICATION_POOL_POOL_GARBAGE_COLLECTION_CPP_
+#define _PASSENGER_APPLICATION_POOL_POOL_GARBAGE_COLLECTION_CPP_
+
 #include <Core/ApplicationPool/Pool.h>
 
 /*************************************************************************
@@ -199,3 +202,5 @@ Pool::wakeupGarbageCollector() {
 
 } // namespace ApplicationPool2
 } // namespace Passenger
+
+#endif // _PASSENGER_APPLICATION_POOL_POOL_GARBAGE_COLLECTION_CPP_

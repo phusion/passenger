@@ -351,8 +351,10 @@ private:
     detail::span_store<T, E> s_;
 };
 
+#if defined(BOOST_NO_CXX17_INLINE_VARIABLES)
 template<class T, std::size_t E>
 constexpr std::size_t span<T, E>::extent;
+#endif
 
 #ifdef __cpp_deduction_guides
 template<class I, class L>

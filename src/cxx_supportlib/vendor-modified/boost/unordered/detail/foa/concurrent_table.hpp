@@ -469,6 +469,10 @@ public:
   using size_type=typename super::size_type;
   static constexpr std::size_t bulk_visit_size=16;
 
+#if defined(BOOST_UNORDERED_ENABLE_STATS)
+  using stats=typename super::stats;
+#endif
+
 private:
   template<typename Value,typename T>
   using enable_if_is_value_type=typename std::enable_if<
@@ -510,6 +514,7 @@ public:
     x.arrays=ah.release();
     x.size_ctrl.ml=x.initial_max_load();
     x.size_ctrl.size=0;
+    BOOST_UNORDERED_SWAP_STATS(this->cstats,x.cstats);
   }
 
   concurrent_table(compatible_nonconcurrent_table&& x):
@@ -965,6 +970,13 @@ public:
     super::reserve(n);
   }
 
+#if defined(BOOST_UNORDERED_ENABLE_STATS)
+  /* already thread safe */
+
+  using super::get_stats;
+  using super::reset_stats;
+#endif
+
   template<typename Predicate>
   friend std::size_t erase_if(concurrent_table& x,Predicate&& pr)
   {
@@ -1186,6 +1198,7 @@ private:
     GroupAccessMode access_mode,
     const Key& x,std::size_t pos0,std::size_t hash,F&& f)const
   {    
+    BOOST_UNORDERED_STATS_COUNTER(num_cmps);
     prober pb(pos0);
     do{
       auto pos=pb.get();
@@ -1197,19 +1210,27 @@ private:
         auto lck=access(access_mode,pos);
         do{
           auto n=unchecked_countr_zero(mask);
-          if(BOOST_LIKELY(
-            pg->is_occupied(n)&&bool(this->pred()(x,this->key_from(p[n]))))){
-            f(pg,n,p+n);
-            return 1;
+          if(BOOST_LIKELY(pg->is_occupied(n))){
+            BOOST_UNORDERED_INCREMENT_STATS_COUNTER(num_cmps);
+            if(BOOST_LIKELY(bool(this->pred()(x,this->key_from(p[n]))))){
+              f(pg,n,p+n);
+              BOOST_UNORDERED_ADD_STATS(
+                this->cstats.successful_lookup,(pb.length(),num_cmps));
+              return 1;
+            }
           }
           mask&=mask-1;
         }while(mask);
       }
       if(BOOST_LIKELY(pg->is_not_overflowed(hash))){
+        BOOST_UNORDERED_ADD_STATS(
+          this->cstats.unsuccessful_lookup,(pb.length(),num_cmps));
         return 0;
       }
     }
     while(BOOST_LIKELY(pb.next(this->arrays.groups_size_mask)));
+    BOOST_UNORDERED_ADD_STATS(
+      this->cstats.unsuccessful_lookup,(pb.length(),num_cmps));
     return 0;
   }
 
@@ -1244,6 +1265,7 @@ private:
 
     it=first;
     for(auto i=m;i--;++it){
+      BOOST_UNORDERED_STATS_COUNTER(num_cmps);
       auto          pos=positions[i];
       prober        pb(pos);
       auto          pg=this->arrays.groups()+pos;
@@ -1256,12 +1278,15 @@ private:
           auto lck=access(access_mode,pos);
           do{
             auto n=unchecked_countr_zero(mask);
-            if(BOOST_LIKELY(
-              pg->is_occupied(n)&&
-              bool(this->pred()(*it,this->key_from(p[n]))))){
-              f(cast_for(access_mode,type_policy::value_from(p[n])));
-              ++res;
-              goto next_key;
+            if(BOOST_LIKELY(pg->is_occupied(n))){
+              BOOST_UNORDERED_INCREMENT_STATS_COUNTER(num_cmps);
+              if(bool(this->pred()(*it,this->key_from(p[n])))){
+                f(cast_for(access_mode,type_policy::value_from(p[n])));
+                ++res;
+                BOOST_UNORDERED_ADD_STATS(
+                  this->cstats.successful_lookup,(pb.length(),num_cmps));
+                goto next_key;
+              }
             }
             mask&=mask-1;
           }while(mask);
@@ -1270,6 +1295,8 @@ private:
         do{
           if(BOOST_LIKELY(pg->is_not_overflowed(hashes[i]))||
              BOOST_UNLIKELY(!pb.next(this->arrays.groups_size_mask))){
+            BOOST_UNORDERED_ADD_STATS(
+              this->cstats.unsuccessful_lookup,(pb.length(),num_cmps));
             goto next_key;
           }
           pos=pb.get();
@@ -1490,6 +1517,7 @@ private:
             this->construct_element(p,std::forward<Args>(args)...);
             rslot.commit();
             rsize.commit();
+            BOOST_UNORDERED_ADD_STATS(this->cstats.insertion,(pb.length()));
             return 1;
           }
           pg->mark_overflow(hash);

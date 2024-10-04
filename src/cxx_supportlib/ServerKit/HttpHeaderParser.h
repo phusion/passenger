@@ -29,7 +29,6 @@
 #include <boost/cstdint.hpp>
 #include <oxt/backtrace.hpp>
 #include <cstddef>
-#include <cassert>
 #include <cstring>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/llhttp.h>

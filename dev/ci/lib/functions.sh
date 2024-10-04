@@ -80,8 +80,18 @@ function autodetect_environment()
 	if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
 		echo "Running in Github Actions: yes"
 		export CACHE_DIR="$RUNNER_TOOL_CACHE/$GITHUB_JOB/$RUNNER_OS"
+	elif [[ "$JENKINS_HOME" != "" ]]; then
+		echo "Running in Jenkins: yes"
+		export IN_JEKINS=true
+		if [ $OS = "linux" ]; then
+		    export CACHE_DIR="$JENKINS_HOME/cache/$JOB_NAME/executor-$EXECUTOR_NUMBER"
+		else
+			require_envvar WORKSPACE "$WORKSPACE"
+			export CACHE_DIR="$WORKSPACE/cache/$JOB_NAME/executor-$EXECUTOR_NUMBER"
+		fi
 	else
-		echo "Running in Github Actions: no"
+		echo "Running in CI: no"
+		export IN_JENKINS=false
 		export CACHE_DIR="$PASSENGER_ROOT/.ci_cache"
 	fi
 	echo "Cache directory: $CACHE_DIR"
@@ -89,20 +99,29 @@ function autodetect_environment()
 
 function sanity_check_environment()
 {
-	if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
+	if $IN_JENKINS; then
+		if [[ "$JOB_NAME" = "" ]]; then
+			echo "ERROR: Jenkins environment detected, but JOB_NAME environment variable not set." >&2
+			return 1
+		fi
+		if [[ "$EXECUTOR_NUMBER" = "" ]]; then
+			echo "ERROR: Jenkins environment detected, but EXECUTOR_NUMBER environment variable not set." >&2
+			return 1
+		fi
+	elif [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
 		if [ -z "$GITHUB_JOB" ]; then
 			echo "ERROR: Github Actions environment detected, but GITHUB_JOB environment variable not set." >&2
 			return 1
-                else
-                    export "JOB_NAME=$GITHUB_JOB"
+		else
+			export "JOB_NAME=$GITHUB_JOB"
 		fi
 		if [ -z "$GITHUB_RUN_ID" ]; then
 			echo "ERROR: Github Actions environment detected, but GITHUB_RUN_ID environment variable not set." >&2
 			return 1
-                else
-                    export "EXECUTOR_NUMBER=$GITHUB_RUN_ID"
+		else
+			export "EXECUTOR_NUMBER=$GITHUB_RUN_ID"
 		fi
-	fi
+    fi
 }
 
 # The following is necessary to make the C++ tests work.
@@ -112,7 +131,7 @@ function sanity_check_environment()
 function add_bundler_path_to_gem_path()
 {
 	local bundle_path
-
+	
 	if bundle_path=$(bundle show rake); then
 		bundle_path=$(dirname "$bundle_path")
 		bundle_path=$(dirname "$bundle_path")

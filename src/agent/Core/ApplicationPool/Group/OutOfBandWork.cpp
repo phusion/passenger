@@ -23,6 +23,13 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+
+#ifndef _PASSENGER_APPLICATION_POOL_GROUP_OUT_OF_BAND_WORK_CPP_
+#define _PASSENGER_APPLICATION_POOL_GROUP_OUT_OF_BAND_WORK_CPP_
+
+#ifdef INTELLISENSE
+	#include <Core/ApplicationPool/Pool.h>
+#endif
 #include <Core/ApplicationPool/Group.h>
 #include <IOTools/MessageSerialization.h>
 
@@ -322,3 +329,5 @@ Group::requestOOBW(const ProcessPtr &process) {
 
 } // namespace ApplicationPool2
 } // namespace Passenger
+
+#endif // _PASSENGER_APPLICATION_POOL_GROUP_OUT_OF_BAND_WORK_CPP_

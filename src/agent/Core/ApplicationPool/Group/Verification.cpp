@@ -23,6 +23,12 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_APPLICATION_POOL_GROUP_VERIFICATION_CPP_
+#define _PASSENGER_APPLICATION_POOL_GROUP_VERIFICATION_CPP_
+
+#ifdef INTELLISENSE
+	#include <Core/ApplicationPool/Implementation.cpp>
+#endif
 #include <Core/ApplicationPool/Group.h>
 
 /*************************************************************************
@@ -158,3 +164,5 @@ Group::verifyNoRequestsOnGetWaitlistAreRoutable() const {
 
 } // namespace ApplicationPool2
 } // namespace Passenger
+
+#endif // _PASSENGER_APPLICATION_POOL_GROUP_VERIFICATION_CPP_

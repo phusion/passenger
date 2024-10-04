@@ -5,14 +5,8 @@ env:
   COMPILE_CONCURRENCY: 4
 
 on:
-  push:
-    branches:
-      - 'stable-*'
-      - 'feature/*'
-  pull_request:
-    branches:
-      - 'stable-*'
-      - 'feature/*'
+  push: {}
+  pull_request: {}
 
 jobs:
   cxx:

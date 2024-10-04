@@ -34,7 +34,7 @@ task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:node', 'test:integrati
 desc "Clean all compiled test files"
 task 'test:clean' do
   sh("rm -rf #{TEST_OUTPUT_DIR}")
-  sh("rm -f test/cxx/*.gch")
+  sh("rm -f test/cxx/*.#{PlatformInfo.precompiled_header_extension} test/cxx/*.gch test/cxx/*.pch")
 end
 
 task :clean => 'test:clean'

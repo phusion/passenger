@@ -24,30 +24,40 @@ export CCACHE_LOGFILE="$(pwd)/buildout/testlogs/ccache.log"
 export NOEXEC_DISABLE=1
 
 if [[ "$EXECUTOR_NUMBER" != "" ]]; then
+if [ "${GITHUB_ACTIONS:-false}" = "false" ]; then
+	(( TEST_PORT_BASE=64000+EXECUTOR_NUMBER*10 ))
+else
 	(( TEST_PORT_BASE=64000 ))
+fi
 	export TEST_PORT_BASE
 fi
 
-if [[ "$OS" != macos ]]; then
+if [[ "$OS" = macos ]]; then
+    if [ "${GITHUB_ACTIONS:-false}" = "false" ]; then
+	# Ensure that Homebrew tools can be found
+	eval "$(/usr/libexec/path_helper -s)"
+    fi
+else
 	export LC_CTYPE=C.UTF-8
 fi
 
 if [[ -f ~/.rvm/scripts/rvm ]]; then
-    # shellcheck source=/dev/null
-    source ~/.rvm/scripts/rvm
+	# shellcheck source=/dev/null
+	source ~/.rvm/scripts/rvm
 elif [[ -f /usr/local/rvm/scripts/rvm ]]; then
-    # shellcheck source=/dev/null
-    source /usr/local/rvm/scripts/rvm
+	# shellcheck source=/dev/null
+	source /usr/local/rvm/scripts/rvm
 fi
 
 if command -v rvm; then
-    if [[ "$TEST_RUBY_VERSION" != "" ]]; then
-        header2 "Using Ruby version $TEST_RUBY_VERSION"
-        run rvm use "$TEST_RUBY_VERSION"
-        echo
-    fi
-    # RVM's cd override causes problems (probably thanks to bash
-    # error handling being weird and quirky:
-    # https://news.ycombinator.com/item?id=14321213)
-    unset cd
+if [[ "$TEST_RUBY_VERSION" != "" ]]; then
+	header2 "Using Ruby version $TEST_RUBY_VERSION"
+	run rvm use "$TEST_RUBY_VERSION"
+	echo
+fi
+
+# RVM's cd override causes problems (probably thanks to bash
+# error handling being weird and quirky:
+# https://news.ycombinator.com/item?id=14321213)
+unset cd
 fi

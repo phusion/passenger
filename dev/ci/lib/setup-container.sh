@@ -18,9 +18,16 @@ header2 "Creating test/config.json"
 if [[ "$OS" = linux ]]; then
 	run cp test/config.json.travis test/config.json
 else
+
+    if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
+        KEYCHAIN_PATH='/Library/Keychains/System.keychain'
+    else
+        KEYCHAIN_PATH='~/Library/Keychains/login.keychain-db'
+    fi
+
     sed \
         -e "s/_AUTHORITY_/Developer/" \
-        -e "s|_KEYCHAIN_|/Library/Keychains/System.keychain|" \
+        -e "s|_KEYCHAIN_|$KEYCHAIN_PATH|" \
         -e "s/_USER_/$USER/" \
         test/config.json.travis-osx > test/config.json
 fi

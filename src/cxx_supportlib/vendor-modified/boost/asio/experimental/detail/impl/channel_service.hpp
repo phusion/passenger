@@ -518,7 +518,8 @@ bool channel_service<Mutex>::try_receive(
       }
       lock.unlock();
       boost::asio::detail::non_const_lvalue<Handler> handler2(handler);
-      channel_handler<payload_type, decay_t<Handler>>(
+      boost::asio::detail::completion_payload_handler<
+        payload_type, decay_t<Handler>>(
           static_cast<payload_type&&>(payload), handler2.value)();
       return true;
     }
@@ -533,7 +534,8 @@ bool channel_service<Mutex>::try_receive(
       send_op->post();
       lock.unlock();
       boost::asio::detail::non_const_lvalue<Handler> handler2(handler);
-      channel_handler<payload_type, decay_t<Handler>>(
+      boost::asio::detail::completion_payload_handler<
+        payload_type, decay_t<Handler>>(
           static_cast<payload_type&&>(payload), handler2.value)();
       return true;
     }

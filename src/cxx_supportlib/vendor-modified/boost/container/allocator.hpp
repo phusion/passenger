@@ -115,7 +115,7 @@ class allocator
    template<class T2, unsigned int Version2, unsigned int AllocationDisableMask2>
    allocator& operator=(const allocator<T2, Version2, AllocationDisableMask2>&);
 
-   static const unsigned int ForbiddenMask =
+   BOOST_STATIC_CONSTEXPR unsigned int ForbiddenMask =
       BOOST_CONTAINER_ALLOCATE_NEW | BOOST_CONTAINER_EXPAND_BWD | BOOST_CONTAINER_EXPAND_FWD ;
 
    //The mask can't disable all the allocation types

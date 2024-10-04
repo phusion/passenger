@@ -23,6 +23,7 @@
 #include <boost/container/detail/workaround.hpp>
 #include <boost/container/detail/placement_new.hpp>
 #include <boost/move/detail/to_raw_pointer.hpp>
+#include <boost/move/detail/launder.hpp>
 #include <boost/container/allocator_traits.hpp>
 #include <boost/container/detail/mpl.hpp>
 
@@ -146,7 +147,7 @@ class node_handle
    }
 
    void destroy_alloc() BOOST_NOEXCEPT
-   {  static_cast<nallocator_type*>((void*)m_nalloc_storage.data)->~nallocator_type();  }
+   {  move_detail::launder_cast<nallocator_type*>(&m_nalloc_storage)->~nallocator_type();  }
 
    node_pointer &get_node_pointer() BOOST_NOEXCEPT
    {  return m_ptr;  }
@@ -231,7 +232,7 @@ class node_handle
       if(was_nh_non_null){
          if(was_this_non_null){
             this->destroy_deallocate_node();
-            if(nator_traits::propagate_on_container_move_assignment::value){
+            BOOST_IF_CONSTEXPR(nator_traits::propagate_on_container_move_assignment::value){
                this->node_alloc() = ::boost::move(nh.node_alloc());
             }
          }
@@ -335,7 +336,7 @@ class node_handle
 
       if(was_nh_non_null){
          if(was_this_non_null){
-            if(nator_traits::propagate_on_container_swap::value){
+            BOOST_IF_CONSTEXPR(nator_traits::propagate_on_container_swap::value){
                ::boost::adl_move_swap(this->node_alloc(), nh.node_alloc());
             }
          }
@@ -381,7 +382,7 @@ class node_handle
    nallocator_type &node_alloc() BOOST_NOEXCEPT
    {
       BOOST_ASSERT(!empty());
-      return *static_cast<nallocator_type*>((void*)m_nalloc_storage.data);
+      return *move_detail::launder_cast<nallocator_type*>(&m_nalloc_storage);
    }
 
 
@@ -391,7 +392,7 @@ class node_handle
    const nallocator_type &node_alloc() const BOOST_NOEXCEPT
    {
       BOOST_ASSERT(!empty());
-      return *static_cast<const nallocator_type*>((const void*)m_nalloc_storage.data);
+      return *move_detail::launder_cast<const nallocator_type*>(&m_nalloc_storage);
    }
 
    //! <b>Effects</b>: x.swap(y).

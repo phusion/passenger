@@ -55,18 +55,7 @@ inline const volatile T* to_address(const volatile T* p) { return p; }
 inline void* align(std::size_t alignment,
     std::size_t size, void*& ptr, std::size_t& space)
 {
-#if defined(BOOST_ASIO_HAS_STD_ALIGN)
   return std::align(alignment, size, ptr, space);
-#else // defined(BOOST_ASIO_HAS_STD_ALIGN)
-	const uintptr_t intptr = reinterpret_cast<uintptr_t>(ptr);
-	const uintptr_t aligned = (intptr - 1u + alignment) & -alignment;
-	const std::size_t padding = aligned - intptr;
-	if (size + padding > space)
-    return 0;
-	space -= padding;
-	ptr = reinterpret_cast<void*>(aligned);
-  return ptr;
-#endif // defined(BOOST_ASIO_HAS_STD_ALIGN)
 }
 
 } // namespace detail

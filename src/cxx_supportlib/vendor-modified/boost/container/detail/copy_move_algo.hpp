@@ -50,7 +50,7 @@
 #     pragma GCC diagnostic ignored "-Wstringop-overflow"
 #  endif
 //GCC 12 seems a bit confused about array access error with small_vector
-#  if defined(BOOST_GCC) && ((BOOST_GCC >= 120000) && (BOOST_GCC < 130000))
+#  if defined(BOOST_GCC) && (BOOST_GCC >= 110000)
 #     pragma GCC diagnostic ignored "-Wstringop-overread"
 #     pragma GCC diagnostic ignored "-Wstringop-overflow"
 #  endif
@@ -64,7 +64,7 @@ namespace dtl {
 template<class I>
 struct are_elements_contiguous
 {
-   static const bool value = false;
+   BOOST_STATIC_CONSTEXPR bool value = false;
 };
 
 /////////////////////////
@@ -74,7 +74,7 @@ struct are_elements_contiguous
 template<class T>
 struct are_elements_contiguous<T*>
 {
-   static const bool value = true;
+   BOOST_STATIC_CONSTEXPR bool value = true;
 };
 
 /////////////////////////
@@ -115,7 +115,7 @@ namespace dtl {
 template <class Pointer, bool IsConst>
 struct are_elements_contiguous<boost::container::vec_iterator<Pointer, IsConst> >
 {
-   static const bool value = true;
+   BOOST_STATIC_CONSTEXPR bool value = true;
 };
 
 
@@ -126,7 +126,7 @@ struct are_elements_contiguous<boost::container::vec_iterator<Pointer, IsConst> 
 template <class PointedType, class DifferenceType, class OffsetType, std::size_t OffsetAlignment>
 struct are_elements_contiguous< ::boost::interprocess::offset_ptr<PointedType, DifferenceType, OffsetType, OffsetAlignment> >
 {
-   static const bool value = true;
+   BOOST_STATIC_CONSTEXPR bool value = true;
 };
 
 template <typename I, typename O>
@@ -185,20 +185,20 @@ private:
    template <class U> static two test(int, ...);
    template <class U> static char test(int, const wrapper<U::single_value>*);
 public:
-   static const bool value = sizeof(test<T>(0, 0)) == 1;
+   BOOST_STATIC_CONSTEXPR bool value = sizeof(test<T>(0, 0)) == 1;
    void dummy() {}
 };
 
 template<class InsertionProxy, bool = has_single_value<InsertionProxy>::value>
 struct is_single_value_proxy_impl
 {
-   static const bool value = InsertionProxy::single_value;
+   BOOST_STATIC_CONSTEXPR bool value = InsertionProxy::single_value;
 };
 
 template<class InsertionProxy>
 struct is_single_value_proxy_impl<InsertionProxy, false>
 {
-   static const bool value = false;
+   BOOST_STATIC_CONSTEXPR bool value = false;
 };
 
 template<class InsertionProxy>
@@ -293,7 +293,7 @@ template <typename O>
 struct is_memzero_initializable
 {
    typedef typename ::boost::container::iterator_traits<O>::value_type value_type;
-   static const bool value = are_elements_contiguous<O>::value &&
+   BOOST_STATIC_CONSTEXPR bool value = are_elements_contiguous<O>::value &&
       (  dtl::is_integral<value_type>::value || dtl::is_enum<value_type>::value
       #if defined(BOOST_CONTAINER_MEMZEROED_POINTER_IS_NULL)
       || dtl::is_pointer<value_type>::value
@@ -1111,7 +1111,7 @@ inline typename dtl::disable_if_memtransfer_copy_assignable<F, G, void>::type
    boost::container::destroy_alloc_n(a, large_range_f, std::size_t(n_j - n_i));
 }
 
-static const std::size_t DeepSwapAllocNMaxStorage = std::size_t(1) << std::size_t(11); //2K bytes
+BOOST_CONTAINER_CONSTANT_VAR std::size_t DeepSwapAllocNMaxStorage = std::size_t(1) << std::size_t(11); //2K bytes
 
 template
    <std::size_t MaxTmpBytes
@@ -1496,8 +1496,8 @@ void expand_backward_forward_and_insert_alloc_move_backward
 {
    typedef std::size_t size_type;
    typedef typename allocator_traits<Allocator>::value_type value_type;
-   static const bool trivial_dctr_after_move = has_trivial_destructor_after_move<value_type>::value;
-   static const bool trivial_dctr = dtl::is_trivially_destructible<value_type>::value;
+   BOOST_STATIC_CONSTEXPR bool trivial_dctr_after_move = has_trivial_destructor_after_move<value_type>::value;
+   BOOST_STATIC_CONSTEXPR bool trivial_dctr = dtl::is_trivially_destructible<value_type>::value;
 
    typedef typename dtl::if_c
       <trivial_dctr
@@ -1796,8 +1796,8 @@ inline void expand_backward_forward_and_insert_alloc_move_forward
 {
    typedef std::size_t size_type;
    typedef typename allocator_traits<Allocator>::value_type value_type;
-   static const bool trivial_dctr_after_move = has_trivial_destructor_after_move<value_type>::value;
-   static const bool trivial_dctr = dtl::is_trivially_destructible<value_type>::value;
+   BOOST_STATIC_CONSTEXPR bool trivial_dctr_after_move = has_trivial_destructor_after_move<value_type>::value;
+   BOOST_STATIC_CONSTEXPR bool trivial_dctr = dtl::is_trivially_destructible<value_type>::value;
 
    typedef typename dtl::if_c
       <trivial_dctr

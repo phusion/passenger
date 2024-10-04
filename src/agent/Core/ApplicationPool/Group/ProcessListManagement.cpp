@@ -23,6 +23,12 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_APPLICATION_POOL_GROUP_PROCESS_LIST_MANAGEMENT_CPP_
+#define _PASSENGER_APPLICATION_POOL_GROUP_PROCESS_LIST_MANAGEMENT_CPP_
+
+#ifdef INTELLISENSE
+	#include <Core/ApplicationPool/Pool.h>
+#endif
 #include <Core/ApplicationPool/Group.h>
 
 /*************************************************************************
@@ -232,6 +238,7 @@ void
 Group::removeFromDisableWaitlist(const ProcessPtr &p, DisableResult result,
 	boost::container::vector<Callback> &postLockActions)
 {
+	const deque<DisableWaiter> &disableWaitlist = this->disableWaitlist;
 	deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
 	deque<DisableWaiter> newList;
 	for (it = disableWaitlist.begin(); it != end; it++) {
@@ -243,7 +250,7 @@ Group::removeFromDisableWaitlist(const ProcessPtr &p, DisableResult result,
 			newList.push_back(waiter);
 		}
 	}
-	disableWaitlist = newList;
+	this->disableWaitlist = newList;
 }
 
 void
@@ -438,6 +445,7 @@ Group::attach(const ProcessPtr &process,
 	/* Now that there are enough resources, relevant processes in
 	 * 'disableWaitlist' can be disabled.
 	 */
+	const deque<DisableWaiter> &disableWaitlist = this->disableWaitlist;
 	deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
 	deque<DisableWaiter> newDisableWaitlist;
 	for (it = disableWaitlist.begin(); it != end; it++) {
@@ -461,7 +469,7 @@ Group::attach(const ProcessPtr &process,
 			newDisableWaitlist.push_back(waiter);
 		}
 	}
-	disableWaitlist = newDisableWaitlist;
+	this->disableWaitlist = newDisableWaitlist;
 
 	// Update GC sleep timer.
 	wakeUpGarbageCollector();
@@ -626,3 +634,5 @@ Group::disable(const ProcessPtr &process, const DisableCallback &callback) {
 
 } // namespace ApplicationPool2
 } // namespace Passenger
+
+#endif // _PASSENGER_APPLICATION_POOL_GROUP_PROCESS_LIST_MANAGEMENT_CPP_

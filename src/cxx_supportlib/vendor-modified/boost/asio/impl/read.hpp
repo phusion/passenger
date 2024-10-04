@@ -65,6 +65,9 @@ std::size_t read(SyncReadStream& s, const MutableBufferSequence& buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
     constraint_t<
       is_mutable_buffer_sequence<MutableBufferSequence>::value
+    >,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     >)
 {
   return detail::read_buffer_seq(s, buffers,
@@ -100,6 +103,9 @@ inline std::size_t read(SyncReadStream& s, const MutableBufferSequence& buffers,
     CompletionCondition completion_condition,
     constraint_t<
       is_mutable_buffer_sequence<MutableBufferSequence>::value
+    >,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     >)
 {
   boost::system::error_code ec;
@@ -121,6 +127,9 @@ std::size_t read(SyncReadStream& s,
     >,
     constraint_t<
       !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     >)
 {
   decay_t<DynamicBuffer_v1> b(
@@ -189,6 +198,9 @@ inline std::size_t read(SyncReadStream& s,
     >,
     constraint_t<
       !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    >,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     >)
 {
   boost::system::error_code ec;
@@ -206,7 +218,10 @@ template <typename SyncReadStream, typename Allocator,
     typename CompletionCondition>
 inline std::size_t read(SyncReadStream& s,
     boost::asio::basic_streambuf<Allocator>& b,
-    CompletionCondition completion_condition, boost::system::error_code& ec)
+    CompletionCondition completion_condition, boost::system::error_code& ec,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
+    >)
 {
   return read(s, basic_streambuf_ref<Allocator>(b),
       static_cast<CompletionCondition&&>(completion_condition), ec);
@@ -231,7 +246,10 @@ template <typename SyncReadStream, typename Allocator,
     typename CompletionCondition>
 inline std::size_t read(SyncReadStream& s,
     boost::asio::basic_streambuf<Allocator>& b,
-    CompletionCondition completion_condition)
+    CompletionCondition completion_condition,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
+    >)
 {
   return read(s, basic_streambuf_ref<Allocator>(b),
       static_cast<CompletionCondition&&>(completion_condition));
@@ -247,6 +265,9 @@ std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
     constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
+    >,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     >)
 {
   DynamicBuffer_v2& b = buffers;
@@ -305,6 +326,9 @@ inline std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition,
     constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
+    >,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     >)
 {
   boost::system::error_code ec;
@@ -498,47 +522,6 @@ struct associator<Associator,
 
 #endif // !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream,
-    typename MutableBufferSequence, typename CompletionCondition,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadToken>
-inline auto async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
-    CompletionCondition completion_condition, ReadToken&& token,
-    constraint_t<
-      is_mutable_buffer_sequence<MutableBufferSequence>::value
-    >)
-  -> decltype(
-    async_initiate<ReadToken,
-      void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_read<AsyncReadStream>>(), token, buffers,
-        static_cast<CompletionCondition&&>(completion_condition)))
-{
-  return async_initiate<ReadToken,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read<AsyncReadStream>(s), token, buffers,
-      static_cast<CompletionCondition&&>(completion_condition));
-}
-
-template <typename AsyncReadStream, typename MutableBufferSequence,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadToken>
-inline auto async_read(AsyncReadStream& s,
-    const MutableBufferSequence& buffers, ReadToken&& token,
-    constraint_t<
-      is_mutable_buffer_sequence<MutableBufferSequence>::value
-    >)
-  -> decltype(
-    async_initiate<ReadToken,
-      void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_read<AsyncReadStream>>(),
-        token, buffers, transfer_all()))
-{
-  return async_initiate<ReadToken,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read<AsyncReadStream>(s),
-      token, buffers, transfer_all());
-}
-
 #if !defined(BOOST_ASIO_NO_DYNAMIC_BUFFER_V1)
 
 namespace detail
@@ -723,97 +706,6 @@ struct associator<Associator,
 
 #endif // !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncReadStream, typename DynamicBuffer_v1,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadToken>
-inline auto async_read(AsyncReadStream& s,
-    DynamicBuffer_v1&& buffers, ReadToken&& token,
-    constraint_t<
-      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
-    >,
-    constraint_t<
-      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
-    >)
-  -> decltype(
-    async_initiate<ReadToken,
-      void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_read_dynbuf_v1<AsyncReadStream>>(),
-        token, static_cast<DynamicBuffer_v1&&>(buffers), transfer_all()))
-{
-  return async_initiate<ReadToken,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_dynbuf_v1<AsyncReadStream>(s),
-      token, static_cast<DynamicBuffer_v1&&>(buffers), transfer_all());
-}
-
-template <typename AsyncReadStream,
-    typename DynamicBuffer_v1, typename CompletionCondition,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadToken>
-inline auto async_read(AsyncReadStream& s, DynamicBuffer_v1&& buffers,
-    CompletionCondition completion_condition, ReadToken&& token,
-    constraint_t<
-      is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
-    >,
-    constraint_t<
-      !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
-    >)
-  -> decltype(
-    async_initiate<ReadToken,
-      void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_read_dynbuf_v1<AsyncReadStream>>(),
-        token, static_cast<DynamicBuffer_v1&&>(buffers),
-        static_cast<CompletionCondition&&>(completion_condition)))
-{
-  return async_initiate<ReadToken,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_dynbuf_v1<AsyncReadStream>(s),
-      token, static_cast<DynamicBuffer_v1&&>(buffers),
-      static_cast<CompletionCondition&&>(completion_condition));
-}
-
-#if !defined(BOOST_ASIO_NO_EXTENSIONS)
-#if !defined(BOOST_ASIO_NO_IOSTREAM)
-
-template <typename AsyncReadStream, typename Allocator,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadToken>
-inline auto async_read(AsyncReadStream& s,
-    basic_streambuf<Allocator>& b, ReadToken&& token)
-  -> decltype(
-    async_initiate<ReadToken,
-      void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_read_dynbuf_v1<AsyncReadStream>>(),
-        token, basic_streambuf_ref<Allocator>(b), transfer_all()))
-{
-  return async_initiate<ReadToken,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_dynbuf_v1<AsyncReadStream>(s),
-      token, basic_streambuf_ref<Allocator>(b), transfer_all());
-}
-
-template <typename AsyncReadStream,
-    typename Allocator, typename CompletionCondition,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadToken>
-inline auto async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
-    CompletionCondition completion_condition, ReadToken&& token)
-  -> decltype(
-    async_initiate<ReadToken,
-      void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_read_dynbuf_v1<AsyncReadStream>>(),
-        token, basic_streambuf_ref<Allocator>(b),
-        static_cast<CompletionCondition&&>(completion_condition)))
-{
-  return async_initiate<ReadToken,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_dynbuf_v1<AsyncReadStream>(s),
-      token, basic_streambuf_ref<Allocator>(b),
-      static_cast<CompletionCondition&&>(completion_condition));
-}
-
-#endif // !defined(BOOST_ASIO_NO_IOSTREAM)
-#endif // !defined(BOOST_ASIO_NO_EXTENSIONS)
 #endif // !defined(BOOST_ASIO_NO_DYNAMIC_BUFFER_V1)
 
 namespace detail
@@ -1003,49 +895,6 @@ struct associator<Associator,
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
-
-template <typename AsyncReadStream, typename DynamicBuffer_v2,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadToken>
-inline auto async_read(AsyncReadStream& s,
-    DynamicBuffer_v2 buffers, ReadToken&& token,
-    constraint_t<
-      is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >)
-  -> decltype(
-    async_initiate<ReadToken,
-      void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_read_dynbuf_v2<AsyncReadStream>>(),
-        token, static_cast<DynamicBuffer_v2&&>(buffers), transfer_all()))
-{
-  return async_initiate<ReadToken,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_dynbuf_v2<AsyncReadStream>(s),
-      token, static_cast<DynamicBuffer_v2&&>(buffers), transfer_all());
-}
-
-template <typename AsyncReadStream,
-    typename DynamicBuffer_v2, typename CompletionCondition,
-    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadToken>
-inline auto async_read(AsyncReadStream& s, DynamicBuffer_v2 buffers,
-    CompletionCondition completion_condition, ReadToken&& token,
-    constraint_t<
-      is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >)
-  -> decltype(
-    async_initiate<ReadToken,
-      void (boost::system::error_code, std::size_t)>(
-        declval<detail::initiate_async_read_dynbuf_v2<AsyncReadStream>>(),
-        token, static_cast<DynamicBuffer_v2&&>(buffers),
-        static_cast<CompletionCondition&&>(completion_condition)))
-{
-  return async_initiate<ReadToken,
-    void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_read_dynbuf_v2<AsyncReadStream>(s),
-      token, static_cast<DynamicBuffer_v2&&>(buffers),
-      static_cast<CompletionCondition&&>(completion_condition));
-}
 
 } // namespace asio
 } // namespace boost

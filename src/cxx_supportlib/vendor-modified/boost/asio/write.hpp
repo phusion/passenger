@@ -185,6 +185,9 @@ std::size_t write(SyncWriteStream& s, const ConstBufferSequence& buffers,
     CompletionCondition completion_condition,
     constraint_t<
       is_const_buffer_sequence<ConstBufferSequence>::value
+    > = 0,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     > = 0);
 
 /// Write a certain amount of data to a stream before returning.
@@ -232,6 +235,9 @@ std::size_t write(SyncWriteStream& s, const ConstBufferSequence& buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
     constraint_t<
       is_const_buffer_sequence<ConstBufferSequence>::value
+    > = 0,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     > = 0);
 
 #if !defined(BOOST_ASIO_NO_DYNAMIC_BUFFER_V1)
@@ -357,6 +363,9 @@ std::size_t write(SyncWriteStream& s,
     > = 0,
     constraint_t<
       !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    > = 0,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     > = 0);
 
 /// Write a certain amount of data to a stream before returning.
@@ -406,6 +415,9 @@ std::size_t write(SyncWriteStream& s,
     > = 0,
     constraint_t<
       !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    > = 0,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     > = 0);
 
 #if !defined(BOOST_ASIO_NO_EXTENSIONS)
@@ -508,7 +520,10 @@ std::size_t write(SyncWriteStream& s, basic_streambuf<Allocator>& b,
 template <typename SyncWriteStream, typename Allocator,
     typename CompletionCondition>
 std::size_t write(SyncWriteStream& s, basic_streambuf<Allocator>& b,
-    CompletionCondition completion_condition);
+    CompletionCondition completion_condition,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
+    > = 0);
 
 /// Write a certain amount of data to a stream before returning.
 /**
@@ -549,7 +564,10 @@ std::size_t write(SyncWriteStream& s, basic_streambuf<Allocator>& b,
 template <typename SyncWriteStream, typename Allocator,
     typename CompletionCondition>
 std::size_t write(SyncWriteStream& s, basic_streambuf<Allocator>& b,
-    CompletionCondition completion_condition, boost::system::error_code& ec);
+    CompletionCondition completion_condition, boost::system::error_code& ec,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
+    > = 0);
 
 #endif // !defined(BOOST_ASIO_NO_IOSTREAM)
 #endif // !defined(BOOST_ASIO_NO_EXTENSIONS)
@@ -664,6 +682,9 @@ std::size_t write(SyncWriteStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition,
     constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
+    > = 0,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     > = 0);
 
 /// Write a certain amount of data to a stream before returning.
@@ -709,6 +730,9 @@ std::size_t write(SyncWriteStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
     constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
+    > = 0,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     > = 0);
 
 /*@}*/
@@ -763,7 +787,7 @@ std::size_t write(SyncWriteStream& s, DynamicBuffer_v2 buffers,
  * Regardless of whether the asynchronous operation completes immediately or
  * not, the completion handler will not be invoked from within this function.
  * On immediate completion, invocation of the handler will be performed in a
- * manner equivalent to using boost::asio::post().
+ * manner equivalent to using boost::asio::async_immediate().
  *
  * @par Completion Signature
  * @code void(boost::system::error_code, std::size_t) @endcode
@@ -792,17 +816,26 @@ template <typename AsyncWriteStream, typename ConstBufferSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken
         = default_completion_token_t<typename AsyncWriteStream::executor_type>>
-auto async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
+inline auto async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
     WriteToken&& token
       = default_completion_token_t<typename AsyncWriteStream::executor_type>(),
     constraint_t<
       is_const_buffer_sequence<ConstBufferSequence>::value
+    > = 0,
+    constraint_t<
+      !is_completion_condition<decay_t<WriteToken>>::value
     > = 0)
   -> decltype(
     async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
         declval<detail::initiate_async_write<AsyncWriteStream>>(),
-        token, buffers, transfer_all()));
+        token, buffers, transfer_all()))
+{
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write<AsyncWriteStream>(s),
+      token, buffers, transfer_all());
+}
 
 /// Start an asynchronous operation to write a certain amount of data to a
 /// stream.
@@ -861,7 +894,7 @@ auto async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
  * Regardless of whether the asynchronous operation completes immediately or
  * not, the completion handler will not be invoked from within this function.
  * On immediate completion, invocation of the handler will be performed in a
- * manner equivalent to using boost::asio::post().
+ * manner equivalent to using boost::asio::async_immediate().
  *
  * @par Completion Signature
  * @code void(boost::system::error_code, std::size_t) @endcode
@@ -890,19 +923,31 @@ auto async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
 template <typename AsyncWriteStream,
     typename ConstBufferSequence, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) WriteToken>
-auto async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
+      std::size_t)) WriteToken
+        = default_completion_token_t<typename AsyncWriteStream::executor_type>>
+inline auto async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
     CompletionCondition completion_condition,
-    WriteToken&& token,
+    WriteToken&& token
+      = default_completion_token_t<typename AsyncWriteStream::executor_type>(),
     constraint_t<
       is_const_buffer_sequence<ConstBufferSequence>::value
+    > = 0,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     > = 0)
   -> decltype(
     async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
         declval<detail::initiate_async_write<AsyncWriteStream>>(),
         token, buffers,
-        static_cast<CompletionCondition&&>(completion_condition)));
+        static_cast<CompletionCondition&&>(completion_condition)))
+{
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write<AsyncWriteStream>(s),
+      token, buffers,
+      static_cast<CompletionCondition&&>(completion_condition));
+}
 
 #if !defined(BOOST_ASIO_NO_DYNAMIC_BUFFER_V1)
 
@@ -949,7 +994,7 @@ auto async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
  * Regardless of whether the asynchronous operation completes immediately or
  * not, the completion handler will not be invoked from within this function.
  * On immediate completion, invocation of the handler will be performed in a
- * manner equivalent to using boost::asio::post().
+ * manner equivalent to using boost::asio::async_immediate().
  *
  * @par Completion Signature
  * @code void(boost::system::error_code, std::size_t) @endcode
@@ -969,7 +1014,7 @@ template <typename AsyncWriteStream, typename DynamicBuffer_v1,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken
         = default_completion_token_t<typename AsyncWriteStream::executor_type>>
-auto async_write(AsyncWriteStream& s, DynamicBuffer_v1&& buffers,
+inline auto async_write(AsyncWriteStream& s, DynamicBuffer_v1&& buffers,
     WriteToken&& token
       = default_completion_token_t<typename AsyncWriteStream::executor_type>(),
     constraint_t<
@@ -977,13 +1022,23 @@ auto async_write(AsyncWriteStream& s, DynamicBuffer_v1&& buffers,
     > = 0,
     constraint_t<
       !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    > = 0,
+    constraint_t<
+      !is_completion_condition<decay_t<WriteToken>>::value
     > = 0)
   -> decltype(
     async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
         declval<detail::initiate_async_write_dynbuf_v1<AsyncWriteStream>>(),
         token, static_cast<DynamicBuffer_v1&&>(buffers),
-        transfer_all()));
+        transfer_all()))
+{
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write_dynbuf_v1<AsyncWriteStream>(s),
+      token, static_cast<DynamicBuffer_v1&&>(buffers),
+      transfer_all());
+}
 
 /// Start an asynchronous operation to write a certain amount of data to a
 /// stream.
@@ -1042,7 +1097,7 @@ auto async_write(AsyncWriteStream& s, DynamicBuffer_v1&& buffers,
  * Regardless of whether the asynchronous operation completes immediately or
  * not, the completion handler will not be invoked from within this function.
  * On immediate completion, invocation of the handler will be performed in a
- * manner equivalent to using boost::asio::post().
+ * manner equivalent to using boost::asio::async_immediate().
  *
  * @par Completion Signature
  * @code void(boost::system::error_code, std::size_t) @endcode
@@ -1061,21 +1116,34 @@ auto async_write(AsyncWriteStream& s, DynamicBuffer_v1&& buffers,
 template <typename AsyncWriteStream,
     typename DynamicBuffer_v1, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) WriteToken>
-auto async_write(AsyncWriteStream& s, DynamicBuffer_v1&& buffers,
-    CompletionCondition completion_condition, WriteToken&& token,
+      std::size_t)) WriteToken
+        = default_completion_token_t<typename AsyncWriteStream::executor_type>>
+inline auto async_write(AsyncWriteStream& s, DynamicBuffer_v1&& buffers,
+    CompletionCondition completion_condition,
+    WriteToken&& token
+      = default_completion_token_t<typename AsyncWriteStream::executor_type>(),
     constraint_t<
       is_dynamic_buffer_v1<decay_t<DynamicBuffer_v1>>::value
     > = 0,
     constraint_t<
       !is_dynamic_buffer_v2<decay_t<DynamicBuffer_v1>>::value
+    > = 0,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     > = 0)
   -> decltype(
     async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
         declval<detail::initiate_async_write_dynbuf_v1<AsyncWriteStream>>(),
         token, static_cast<DynamicBuffer_v1&&>(buffers),
-        static_cast<CompletionCondition&&>(completion_condition)));
+        static_cast<CompletionCondition&&>(completion_condition)))
+{
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write_dynbuf_v1<AsyncWriteStream>(s),
+      token, static_cast<DynamicBuffer_v1&&>(buffers),
+      static_cast<CompletionCondition&&>(completion_condition));
+}
 
 #if !defined(BOOST_ASIO_NO_EXTENSIONS)
 #if !defined(BOOST_ASIO_NO_IOSTREAM)
@@ -1121,7 +1189,7 @@ auto async_write(AsyncWriteStream& s, DynamicBuffer_v1&& buffers,
  * Regardless of whether the asynchronous operation completes immediately or
  * not, the completion handler will not be invoked from within this function.
  * On immediate completion, invocation of the handler will be performed in a
- * manner equivalent to using boost::asio::post().
+ * manner equivalent to using boost::asio::async_immediate().
  *
  * @par Completion Signature
  * @code void(boost::system::error_code, std::size_t) @endcode
@@ -1141,14 +1209,23 @@ template <typename AsyncWriteStream, typename Allocator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken
         = default_completion_token_t<typename AsyncWriteStream::executor_type>>
-auto async_write(AsyncWriteStream& s, basic_streambuf<Allocator>& b,
+inline auto async_write(AsyncWriteStream& s, basic_streambuf<Allocator>& b,
     WriteToken&& token
-      = default_completion_token_t<typename AsyncWriteStream::executor_type>())
+      = default_completion_token_t<typename AsyncWriteStream::executor_type>(),
+    constraint_t<
+      !is_completion_condition<decay_t<WriteToken>>::value
+    > = 0)
   -> decltype(
     async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
         declval<detail::initiate_async_write_dynbuf_v1<AsyncWriteStream>>(),
-        token, basic_streambuf_ref<Allocator>(b), transfer_all()));
+        token, basic_streambuf_ref<Allocator>(b), transfer_all()))
+{
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write_dynbuf_v1<AsyncWriteStream>(s),
+      token, basic_streambuf_ref<Allocator>(b), transfer_all());
+}
 
 /// Start an asynchronous operation to write a certain amount of data to a
 /// stream.
@@ -1205,7 +1282,7 @@ auto async_write(AsyncWriteStream& s, basic_streambuf<Allocator>& b,
  * Regardless of whether the asynchronous operation completes immediately or
  * not, the completion handler will not be invoked from within this function.
  * On immediate completion, invocation of the handler will be performed in a
- * manner equivalent to using boost::asio::post().
+ * manner equivalent to using boost::asio::async_immediate().
  *
  * @par Completion Signature
  * @code void(boost::system::error_code, std::size_t) @endcode
@@ -1224,15 +1301,28 @@ auto async_write(AsyncWriteStream& s, basic_streambuf<Allocator>& b,
 template <typename AsyncWriteStream,
     typename Allocator, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) WriteToken>
-auto async_write(AsyncWriteStream& s, basic_streambuf<Allocator>& b,
-    CompletionCondition completion_condition, WriteToken&& token)
+      std::size_t)) WriteToken
+        = default_completion_token_t<typename AsyncWriteStream::executor_type>>
+inline auto async_write(AsyncWriteStream& s, basic_streambuf<Allocator>& b,
+    CompletionCondition completion_condition,
+    WriteToken&& token
+      = default_completion_token_t<typename AsyncWriteStream::executor_type>(),
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
+    > = 0)
   -> decltype(
     async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
         declval<detail::initiate_async_write_dynbuf_v1<AsyncWriteStream>>(),
         token, basic_streambuf_ref<Allocator>(b),
-        static_cast<CompletionCondition&&>(completion_condition)));
+        static_cast<CompletionCondition&&>(completion_condition)))
+{
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write_dynbuf_v1<AsyncWriteStream>(s),
+      token, basic_streambuf_ref<Allocator>(b),
+      static_cast<CompletionCondition&&>(completion_condition));
+}
 
 #endif // !defined(BOOST_ASIO_NO_IOSTREAM)
 #endif // !defined(BOOST_ASIO_NO_EXTENSIONS)
@@ -1281,7 +1371,7 @@ auto async_write(AsyncWriteStream& s, basic_streambuf<Allocator>& b,
  * Regardless of whether the asynchronous operation completes immediately or
  * not, the completion handler will not be invoked from within this function.
  * On immediate completion, invocation of the handler will be performed in a
- * manner equivalent to using boost::asio::post().
+ * manner equivalent to using boost::asio::async_immediate().
  *
  * @par Completion Signature
  * @code void(boost::system::error_code, std::size_t) @endcode
@@ -1301,18 +1391,28 @@ template <typename AsyncWriteStream, typename DynamicBuffer_v2,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken
         = default_completion_token_t<typename AsyncWriteStream::executor_type>>
-auto async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
+inline auto async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
     WriteToken&& token
       = default_completion_token_t<typename AsyncWriteStream::executor_type>(),
     constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
+    > = 0,
+    constraint_t<
+      !is_completion_condition<decay_t<WriteToken>>::value
     > = 0)
   -> decltype(
     async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
         declval<detail::initiate_async_write_dynbuf_v2<AsyncWriteStream>>(),
         token, static_cast<DynamicBuffer_v2&&>(buffers),
-        transfer_all()));
+        transfer_all()))
+{
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write_dynbuf_v2<AsyncWriteStream>(s),
+      token, static_cast<DynamicBuffer_v2&&>(buffers),
+      transfer_all());
+}
 
 /// Start an asynchronous operation to write a certain amount of data to a
 /// stream.
@@ -1371,7 +1471,7 @@ auto async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
  * Regardless of whether the asynchronous operation completes immediately or
  * not, the completion handler will not be invoked from within this function.
  * On immediate completion, invocation of the handler will be performed in a
- * manner equivalent to using boost::asio::post().
+ * manner equivalent to using boost::asio::async_immediate().
  *
  * @par Completion Signature
  * @code void(boost::system::error_code, std::size_t) @endcode
@@ -1390,19 +1490,31 @@ auto async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
 template <typename AsyncWriteStream,
     typename DynamicBuffer_v2, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) WriteToken>
-auto async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
+      std::size_t)) WriteToken
+        = default_completion_token_t<typename AsyncWriteStream::executor_type>>
+inline auto async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition,
-    WriteToken&& token,
+    WriteToken&& token
+      = default_completion_token_t<typename AsyncWriteStream::executor_type>(),
     constraint_t<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
+    > = 0,
+    constraint_t<
+      is_completion_condition<CompletionCondition>::value
     > = 0)
   -> decltype(
     async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
         declval<detail::initiate_async_write_dynbuf_v2<AsyncWriteStream>>(),
         token, static_cast<DynamicBuffer_v2&&>(buffers),
-        static_cast<CompletionCondition&&>(completion_condition)));
+        static_cast<CompletionCondition&&>(completion_condition)))
+{
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write_dynbuf_v2<AsyncWriteStream>(s),
+      token, static_cast<DynamicBuffer_v2&&>(buffers),
+      static_cast<CompletionCondition&&>(completion_condition));
+}
 
 /*@}*/
 

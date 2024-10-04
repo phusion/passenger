@@ -19,7 +19,7 @@ if [[ "$OS" = macos && "$1" = "" ]]; then
 	exit 1
 fi
 
-if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
+if [ "${CI:-false}" = "true" ]; then
 	# Relax permissions. Necessary for unit tests which test permissions.
 	header2 "Relaxing file permissions"
 	echo "+ Setting umask"
@@ -31,9 +31,10 @@ if [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
 	find ./* -type d -print0 | xargs -0 -n 512 chmod g+rx,o+rx
 
 	# Create this file now because otherwise it would be owned by root,
+	# which CI runner cannot remove.
 	run touch test/test.log
 
-        if [ "$OS" = "macos" ]; then
+        if [ "${GITHUB_ACTIONS:-false}" = "true" ] && [ "$OS" = "macos" ]; then
             brew update
             brew install ccache
             sudo security authorizationdb write com.apple.trust-settings.admin allow

@@ -71,10 +71,10 @@ class adaptive_pool
          BOOST_CONTAINER_DOCIGN(BOOST_MOVE_I Version)
          >   self_t;
 
-   static const std::size_t nodes_per_block        = NodesPerBlock;
-   static const std::size_t max_free_blocks        = MaxFreeBlocks;
-   static const std::size_t overhead_percent       = OverheadPercent;
-   static const std::size_t real_nodes_per_block   = NodesPerBlock;
+   BOOST_STATIC_CONSTEXPR std::size_t nodes_per_block        = NodesPerBlock;
+   BOOST_STATIC_CONSTEXPR std::size_t max_free_blocks        = MaxFreeBlocks;
+   BOOST_STATIC_CONSTEXPR std::size_t overhead_percent       = OverheadPercent;
+   BOOST_STATIC_CONSTEXPR std::size_t real_nodes_per_block   = NodesPerBlock;
 
    BOOST_CONTAINER_DOCIGN(BOOST_CONTAINER_STATIC_ASSERT((Version <=2)));
 
@@ -384,10 +384,10 @@ class private_adaptive_pool
          BOOST_CONTAINER_DOCIGN(BOOST_MOVE_I Version)
          >   self_t;
 
-   static const std::size_t nodes_per_block        = NodesPerBlock;
-   static const std::size_t max_free_blocks        = MaxFreeBlocks;
-   static const std::size_t overhead_percent       = OverheadPercent;
-   static const std::size_t real_nodes_per_block   = NodesPerBlock;
+   BOOST_STATIC_CONSTEXPR std::size_t nodes_per_block        = NodesPerBlock;
+   BOOST_STATIC_CONSTEXPR std::size_t max_free_blocks        = MaxFreeBlocks;
+   BOOST_STATIC_CONSTEXPR std::size_t overhead_percent       = OverheadPercent;
+   BOOST_STATIC_CONSTEXPR std::size_t real_nodes_per_block   = NodesPerBlock;
 
    BOOST_CONTAINER_DOCIGN(BOOST_CONTAINER_STATIC_ASSERT((Version <=2)));
 

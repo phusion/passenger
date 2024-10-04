@@ -107,16 +107,42 @@ public:
   CompletionToken token_;
 };
 
-/// Adapt a @ref completion_token to specify that the completion handler
-/// arguments should be combined into a single tuple argument.
-template <typename CompletionToken>
-BOOST_ASIO_NODISCARD inline
-constexpr as_tuple_t<decay_t<CompletionToken>>
-as_tuple(CompletionToken&& completion_token)
+/// A function object type that adapts a @ref completion_token to specify that
+/// the completion handler arguments should be combined into a single tuple
+/// argument.
+/**
+ * May also be used directly as a completion token, in which case it adapts the
+ * asynchronous operation's default completion token (or boost::asio::deferred
+ * if no default is available).
+ */
+struct partial_as_tuple
 {
-  return as_tuple_t<decay_t<CompletionToken>>(
-      static_cast<CompletionToken&&>(completion_token));
-}
+  /// Default constructor.
+  constexpr partial_as_tuple()
+  {
+  }
+
+  /// Adapt a @ref completion_token to specify that the completion handler
+  /// arguments should be combined into a single tuple argument.
+  template <typename CompletionToken>
+  BOOST_ASIO_NODISCARD inline
+  constexpr as_tuple_t<decay_t<CompletionToken>>
+  operator()(CompletionToken&& completion_token) const
+  {
+    return as_tuple_t<decay_t<CompletionToken>>(
+        static_cast<CompletionToken&&>(completion_token));
+  }
+};
+
+/// A function object that adapts a @ref completion_token to specify that the
+/// completion handler arguments should be combined into a single tuple
+/// argument.
+/**
+ * May also be used directly as a completion token, in which case it adapts the
+ * asynchronous operation's default completion token (or boost::asio::deferred
+ * if no default is available).
+ */
+BOOST_ASIO_INLINE_VARIABLE constexpr partial_as_tuple as_tuple;
 
 } // namespace asio
 } // namespace boost

@@ -51,7 +51,7 @@ namespace dtl {
 template <class Container>
 struct is_contiguous_container
 {
-   static const bool value =
+   BOOST_STATIC_CONSTEXPR bool value =
       boost::container::is_contiguous_container_detail::
          has_member_function_callable_with_data<Container>::value && 
       boost::container::is_contiguous_container_detail::

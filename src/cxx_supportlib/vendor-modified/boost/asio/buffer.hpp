@@ -2731,7 +2731,7 @@ struct literal<'0', 'X', Chars...> :
 } // namespace detail
 
 /// Literal operator for creating const_buffer objects from string literals.
-inline BOOST_ASIO_CONST_BUFFER operator"" _buf(const char* data, std::size_t n)
+inline BOOST_ASIO_CONST_BUFFER operator ""_buf(const char* data, std::size_t n)
 {
   return BOOST_ASIO_CONST_BUFFER(data, n);
 }
@@ -2739,7 +2739,7 @@ inline BOOST_ASIO_CONST_BUFFER operator"" _buf(const char* data, std::size_t n)
 /// Literal operator for creating const_buffer objects from unbounded binary or
 /// hexadecimal integer literals.
 template <char... Chars>
-inline BOOST_ASIO_CONST_BUFFER operator"" _buf()
+inline BOOST_ASIO_CONST_BUFFER operator ""_buf()
 {
   return BOOST_ASIO_CONST_BUFFER(
       +detail::literal<Chars...>::data,

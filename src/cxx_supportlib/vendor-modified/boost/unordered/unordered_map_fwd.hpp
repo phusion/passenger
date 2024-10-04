@@ -1,6 +1,7 @@
 
 // Copyright (C) 2008-2011 Daniel James.
 // Copyright (C) 2022-2023 Christian Mazakas
+// Copyright (C) 2024 Braden Ganetsky
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -15,6 +16,10 @@
 #include <boost/container_hash/hash_fwd.hpp>
 #include <functional>
 #include <memory>
+
+#ifndef BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
+#include <memory_resource>
+#endif
 
 namespace boost {
   namespace unordered {
@@ -58,6 +63,20 @@ namespace boost {
 
     template <class N, class K, class T, class A> class node_handle_map;
     template <class Iter, class NodeType> struct insert_return_type_map;
+
+#ifndef BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
+    namespace pmr {
+      template <class K, class T, class H = boost::hash<K>,
+        class P = std::equal_to<K> >
+      using unordered_map = boost::unordered::unordered_map<K, T, H, P,
+        std::pmr::polymorphic_allocator<std::pair<const K, T> > >;
+
+      template <class K, class T, class H = boost::hash<K>,
+        class P = std::equal_to<K> >
+      using unordered_multimap = boost::unordered::unordered_multimap<K, T, H,
+        P, std::pmr::polymorphic_allocator<std::pair<const K, T> > >;
+    } // namespace pmr
+#endif
   } // namespace unordered
 
   using boost::unordered::unordered_map;

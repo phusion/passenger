@@ -969,6 +969,23 @@ class map
    inline size_type erase(const key_type& x)
       { return this->base_t::erase_unique(x); }
 
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Effects</b>: If present, erases the element in the container with key equivalent to x.
+   //!
+   //! <b>Returns</b>: Returns the number of erased elements (0/1).
+   template <class K>
+   inline BOOST_CONTAINER_DOC1ST
+         (size_type
+         , typename dtl::enable_if_c<
+            dtl::is_transparent<key_compare>::value &&                  //transparent
+            !dtl::is_convertible<K BOOST_MOVE_I iterator>::value &&     //not convertible to iterator
+            !dtl::is_convertible<K BOOST_MOVE_I const_iterator>::value  //not convertible to const_iterator
+            BOOST_MOVE_I size_type>::type)
+      erase(const K& x)
+      { return this->base_t::erase_unique(x); }
+
    #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 
    //! <b>Effects</b>: Erases the element pointed to by p.
@@ -1376,7 +1393,7 @@ template <class Key, class T, class Compare, class Allocator, class Options>
 struct has_trivial_destructor_after_move<boost::container::map<Key, T, Compare, Allocator, Options> >
 {
    typedef ::boost::container::dtl::tree<std::pair<const Key, T>, int, Compare, Allocator, Options> tree;
-   static const bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
+   BOOST_STATIC_CONSTEXPR bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
 };
 
 namespace container {
@@ -2298,7 +2315,7 @@ template <class Key, class T, class Compare, class Allocator, class Options>
 struct has_trivial_destructor_after_move<boost::container::multimap<Key, T, Compare, Allocator, Options> >
 {
    typedef ::boost::container::dtl::tree<std::pair<const Key, T>, int, Compare, Allocator, Options> tree;
-   static const bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
+   BOOST_STATIC_CONSTEXPR bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
 };
 
 namespace container {

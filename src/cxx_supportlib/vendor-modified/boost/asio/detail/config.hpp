@@ -127,29 +127,7 @@
 # define BOOST_ASIO_HAS_USER_DEFINED_LITERALS 1
 # define BOOST_ASIO_HAS_ALIGNOF 1
 # define BOOST_ASIO_ALIGNOF(T) alignof(T)
-// Standard library support for std::align.
-#if !defined(BOOST_ASIO_HAS_STD_ALIGN)
-# if !defined(BOOST_ASIO_DISABLE_STD_ALIGN)
-#  if defined(__clang__)
-#   if defined(BOOST_ASIO_HAS_CLANG_LIBCXX)
-#    define BOOST_ASIO_HAS_STD_ALIGN 1
-#   elif (__cplusplus >= 201103)
-#    define BOOST_ASIO_HAS_STD_ALIGN 1
-#   endif // (__cplusplus >= 201103)
-#  elif defined(__GNUC__)
-#   if (__GNUC__ >= 6)
-#    if (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
-#     define BOOST_ASIO_HAS_STD_ALIGN 1
-#    endif // (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
-#   endif // (__GNUC__ >= 6)
-#  endif // defined(__GNUC__)
-#  if defined(BOOST_ASIO_MSVC)
-#   if (_MSC_VER >= 1700)
-#    define BOOST_ASIO_HAS_STD_ALIGN 1
-#   endif // (_MSC_VER >= 1700)
-#  endif // defined(BOOST_ASIO_MSVC)
-# endif // !defined(BOOST_ASIO_DISABLE_STD_ALIGN)
-#endif // !defined(BOOST_ASIO_HAS_STD_ALIGN)
+# define BOOST_ASIO_HAS_STD_ALIGN 1
 # define BOOST_ASIO_HAS_STD_SYSTEM_ERROR 1
 # define BOOST_ASIO_ERROR_CATEGORY_NOEXCEPT noexcept(true)
 # define BOOST_ASIO_HAS_STD_ARRAY 1
@@ -363,6 +341,19 @@
 # endif // !defined(BOOST_ASIO_DISABLE_VARIADIC_LAMBDA_CAPTURES)
 #endif // !defined(BOOST_ASIO_HAS_VARIADIC_LAMBDA_CAPTURES)
 
+// Support for inline variables.
+#if !defined(BOOST_ASIO_HAS_INLINE_VARIABLES)
+# if !defined(BOOST_ASIO_DISABLE_INLINE_VARIABLES)
+#  if (__cplusplus >= 201703) && (__cpp_inline_variables >= 201606)
+#   define BOOST_ASIO_HAS_INLINE_VARIABLES 1
+#   define BOOST_ASIO_INLINE_VARIABLE inline
+#  endif // (__cplusplus >= 201703) && (__cpp_inline_variables >= 201606)
+# endif // !defined(BOOST_ASIO_DISABLE_INLINE_VARIABLES)
+#endif // !defined(BOOST_ASIO_HAS_INLINE_VARIABLES)
+#if !defined(BOOST_ASIO_INLINE_VARIABLE)
+# define BOOST_ASIO_INLINE_VARIABLE
+#endif // !defined(BOOST_ASIO_INLINE_VARIABLE)
+
 // Default alignment.
 #if defined(__STDCPP_DEFAULT_NEW_ALIGNMENT__)
 # define BOOST_ASIO_DEFAULT_ALIGN __STDCPP_DEFAULT_NEW_ALIGNMENT__
@@ -384,7 +375,9 @@
 #    if defined(BOOST_ASIO_HAS_CLANG_LIBCXX)
 #     if (_LIBCPP_STD_VER > 14) && defined(_LIBCPP_HAS_ALIGNED_ALLOC) \
         && !defined(_LIBCPP_MSVCRT) && !defined(__MINGW32__)
-#      if defined(__APPLE__)
+#      if defined(__ANDROID__) && (__ANDROID_API__ >= 28)
+#        define BOOST_ASIO_HAS_STD_ALIGNED_ALLOC 1
+#      elif defined(__APPLE__)
 #       if defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
 #        if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 101500)
 #         define BOOST_ASIO_HAS_STD_ALIGNED_ALLOC 1
@@ -554,9 +547,9 @@
 #    define BOOST_ASIO_HAS_STD_INVOKE_RESULT 1
 #   endif // (_MSC_VER >= 1911 && _MSVC_LANG >= 201703)
 #  else // defined(BOOST_ASIO_MSVC)
-#   if (__cplusplus >= 201703)
+#   if (__cplusplus >= 201703) && (__cpp_lib_is_invocable >= 201703)
 #    define BOOST_ASIO_HAS_STD_INVOKE_RESULT 1
-#   endif // (__cplusplus >= 201703)
+#   endif // (__cplusplus >= 201703) && (__cpp_lib_is_invocable >= 201703)
 #  endif // defined(BOOST_ASIO_MSVC)
 # endif // !defined(BOOST_ASIO_DISABLE_STD_INVOKE_RESULT)
 #endif // !defined(BOOST_ASIO_HAS_STD_INVOKE_RESULT)
@@ -1297,7 +1290,10 @@
 // Support the co_await keyword on compilers known to allow it.
 #if !defined(BOOST_ASIO_HAS_CO_AWAIT)
 # if !defined(BOOST_ASIO_DISABLE_CO_AWAIT)
-#  if defined(BOOST_ASIO_MSVC)
+#  if (__cplusplus >= 202002) \
+     && (__cpp_impl_coroutine >= 201902) && (__cpp_lib_coroutine >= 201902)
+#   define BOOST_ASIO_HAS_CO_AWAIT 1
+#  elif defined(BOOST_ASIO_MSVC)
 #   if (_MSC_VER >= 1928) && (_MSVC_LANG >= 201705) && !defined(__clang__)
 #    define BOOST_ASIO_HAS_CO_AWAIT 1
 #   elif (_MSC_FULL_VER >= 190023506)
@@ -1408,11 +1404,9 @@
 // Standard library support for snprintf.
 #if !defined(BOOST_ASIO_HAS_SNPRINTF)
 # if !defined(BOOST_ASIO_DISABLE_SNPRINTF)
-#  if defined(__apple_build_version__)
-#    if (__clang_major__ >= 14)
-#     define BOOST_ASIO_HAS_SNPRINTF 1
-#    endif // (__clang_major__ >= 14)
-#  endif // defined(__apple_build_version__)
+#  if defined(__APPLE__)
+#   define BOOST_ASIO_HAS_SNPRINTF 1
+#  endif // defined(__APPLE__)
 # endif // !defined(BOOST_ASIO_DISABLE_SNPRINTF)
 #endif // !defined(BOOST_ASIO_HAS_SNPRINTF)
 

@@ -2,6 +2,7 @@
  *
  * Copyright 2023 Christian Mazakas.
  * Copyright 2023 Joaquin M Lopez Munoz.
+ * Copyright 2024 Braden Ganetsky.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -12,10 +13,15 @@
 #ifndef BOOST_UNORDERED_CONCURRENT_FLAT_SET_FWD_HPP
 #define BOOST_UNORDERED_CONCURRENT_FLAT_SET_FWD_HPP
 
+#include <boost/config.hpp>
 #include <boost/container_hash/hash_fwd.hpp>
 
 #include <functional>
 #include <memory>
+
+#ifndef BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
+#include <memory_resource>
+#endif
 
 namespace boost {
   namespace unordered {
@@ -43,6 +49,15 @@ namespace boost {
     template <class K, class H, class P, class A, class Predicate>
     typename concurrent_flat_set<K, H, P, A>::size_type erase_if(
       concurrent_flat_set<K, H, P, A>& c, Predicate pred);
+
+#ifndef BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
+    namespace pmr {
+      template <class Key, class Hash = boost::hash<Key>,
+        class Pred = std::equal_to<Key> >
+      using concurrent_flat_set = boost::unordered::concurrent_flat_set<Key,
+        Hash, Pred, std::pmr::polymorphic_allocator<Key> >;
+    } // namespace pmr
+#endif
 
   } // namespace unordered
 

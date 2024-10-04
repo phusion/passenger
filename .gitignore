@@ -8,6 +8,7 @@ autom4te.cache
 *.pyc
 *.dSYM
 *.gch
+*.pch
 *.swp
 *~.nib
 *.pbxuser
