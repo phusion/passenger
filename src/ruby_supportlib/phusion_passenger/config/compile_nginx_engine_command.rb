@@ -71,7 +71,7 @@ module PhusionPassenger
           opts.on("--nginx-tarball PATH", String, "Use the given Nginx tarball instead of#{nl}" +
             "downloading it. You MUST also specify the#{nl}" +
             "Nginx version with --nginx-version") do |val|
-            options[:nginx_tarball] = val
+            options[:nginx_tarball] = File.absolute_path(val)
           end
           opts.on("-f", "--force", "Skip sanity checks") do
             options[:force] = true
