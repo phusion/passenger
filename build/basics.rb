@@ -113,18 +113,20 @@ EXTRA_PRE_CXXFLAGS = compiler_flag_option('EXTRA_PRE_CXXFLAGS')
 let(:extra_cflags) do
   result = PlatformInfo.default_extra_cflags.dup
   result << " " << compiler_flag_option('EXTRA_CFLAGS') if !compiler_flag_option('EXTRA_CFLAGS').empty?
-  result << " #{PlatformInfo.address_sanitizer_flag}" if USE_ASAN && PlatformInfo.address_sanitizer_flag
-  result << " #{PlatformInfo.undefined_behavior_sanitizer_flag}" if USE_UBSAN && PlatformInfo.undefined_behavior_sanitizer_flag
+  result << " #{PlatformInfo.address_sanitizer_flags}" if USE_ASAN && PlatformInfo.address_sanitizer_flags
+  result << " #{PlatformInfo.undefined_behavior_sanitizer_flags}" if USE_UBSAN && PlatformInfo.undefined_behavior_sanitizer_flags
   result << " -fno-omit-frame-pointer" if USE_ASAN
+  result << " -fno-optimize-sibling-calls" if USE_ASAN && PlatformInfo.cc_supports_fno_optimize_sibling_calls_flag?
   result << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
   result
 end
 let(:extra_cxxflags) do
   result = PlatformInfo.default_extra_cxxflags.dup
   result << " " << compiler_flag_option('EXTRA_CXXFLAGS') if !compiler_flag_option('EXTRA_CXXFLAGS').empty?
-  result << " #{PlatformInfo.address_sanitizer_flag}" if USE_ASAN && PlatformInfo.address_sanitizer_flag
-  result << " #{PlatformInfo.undefined_behavior_sanitizer_flag}" if USE_UBSAN && PlatformInfo.undefined_behavior_sanitizer_flag
+  result << " #{PlatformInfo.address_sanitizer_flags}" if USE_ASAN && PlatformInfo.address_sanitizer_flags
+  result << " #{PlatformInfo.undefined_behavior_sanitizer_flags}" if USE_UBSAN && PlatformInfo.undefined_behavior_sanitizer_flags
   result << " -fno-omit-frame-pointer" if USE_ASAN
+  result << " -fno-optimize-sibling-calls" if USE_ASAN && PlatformInfo.cxx_supports_fno_optimize_sibling_calls_flag?
   result << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
   result
 end
@@ -138,7 +140,7 @@ EXTRA_PRE_CXX_LDFLAGS = compiler_flag_option('EXTRA_PRE_LDFLAGS') + " " +
 # These should be included last in the command string, even after portability_*_ldflags.
 let(:extra_c_ldflags) do
   result = []
-  result << PlatformInfo.address_sanitizer_flag if USE_ASAN
+  result << PlatformInfo.address_sanitizer_flags if USE_ASAN
   result << compiler_flag_option('EXTRA_LDFLAGS')
   result << compiler_flag_option('EXTRA_C_LDFLAGS')
   result.compact!
@@ -146,7 +148,7 @@ let(:extra_c_ldflags) do
 end
 let(:extra_cxx_ldflags) do
   result = []
-  result << PlatformInfo.address_sanitizer_flag if USE_ASAN
+  result << PlatformInfo.address_sanitizer_flags if USE_ASAN
   result << compiler_flag_option('EXTRA_LDFLAGS')
   result << compiler_flag_option('EXTRA_CXX_LDFLAGS')
   result.compact!
