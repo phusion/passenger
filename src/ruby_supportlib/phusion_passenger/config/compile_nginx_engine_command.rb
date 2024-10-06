@@ -39,7 +39,8 @@ module PhusionPassenger
           :colorize => :auto,
           :force_tip => true,
           :connect_timeout => 30,
-          :idle_timeout => 30
+          :idle_timeout => 30,
+          :address_sanitizer => false,
         }
         parse_options
         initialize_objects
@@ -87,6 +88,9 @@ module PhusionPassenger
           end
           opts.on("--idle-timeout SECONDS", Integer, "The maximum idle read time. Default: 30") do |val|
             options[:idle_timeout] = val
+          end
+          opts.on("--address-sanitizer", "Compile with AddressSanitizer support") do
+            options[:address_sanitizer] = true
           end
           opts.on("-h", "--help", "Show this help") do
             options[:help] = true

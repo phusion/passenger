@@ -272,10 +272,20 @@ module PhusionPassenger
             args << "--nginx-tarball"
             args << @options[:nginx_tarball]
           end
+          # The agent and the support libraries are compiled through Rake, which
+          # already supports $USE_ASAN, so it makes sense to use that environment
+          # variable here as well rather than introducing a CLI flag.
+          if boolean_option('USE_ASAN')
+            args << "--address-sanitizer"
+          end
           CompileNginxEngineCommand.new(args).run
         else
           abort "No precompiled Nginx engine could be downloaded. Refusing to compile because --no-compile is given."
         end
+      end
+
+      def boolean_option(env_name)
+        ["true", "on", "yes", "1"].include?(ENV[env_name])
       end
     end
 
