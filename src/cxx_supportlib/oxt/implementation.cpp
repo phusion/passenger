@@ -26,6 +26,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <pthread.h>
 #include "tracable_exception.hpp"
 #include "backtrace.hpp"
 #include "initialize.hpp"
@@ -394,9 +395,19 @@ thread::make_thread_name(const string &given_name) {
 	}
 }
 
+static void
+set_native_thread_name(const string &name) {
+	#if defined(__linux__)
+		pthread_setname_np(pthread_self(), name.c_str());
+	#elif defined(__APPLE__) || defined(__FreeBSD__)
+		pthread_setname_np(name.c_str());
+	#endif
+}
+
 void
 thread::thread_main(const boost::function<void ()> func, thread_local_context_ptr ctx) {
 	set_thread_local_context(ctx);
+	set_native_thread_name(ctx->thread_name);
 
 	if (OXT_LIKELY(global_context != NULL)) {
 		boost::lock_guard<boost::mutex> l(global_context->thread_registration_mutex);
