@@ -1,4 +1,5 @@
 #include <TestSupport.h>
+#include <mutex>
 #include <BackgroundEventLoop.h>
 #include <ServerKit/Channel.h>
 #include <Constants.h>
@@ -18,7 +19,7 @@ namespace tut {
 		ServerKit::Schema skSchema;
 		ServerKit::Context context;
 		Channel channel;
-		boost::mutex syncher;
+		std::recursive_mutex syncher;
 		string log;
 		int toConsume;
 		bool endConsume;
@@ -60,7 +61,7 @@ namespace tut {
 
 		static Channel::Result dataCallback(Channel *channel, const mbuf &buffer, int errcode) {
 			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks;
-			boost::lock_guard<boost::mutex> l(self->syncher);
+			std::lock_guard<std::recursive_mutex> l(self->syncher);
 			if (errcode == 0) {
 				self->counter++;
 				if (buffer.empty()) {
@@ -81,7 +82,7 @@ namespace tut {
 
 		static void consumedCallback(Channel *channel, unsigned int size) {
 			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks;
-			boost::lock_guard<boost::mutex> l(self->syncher);
+			std::lock_guard<std::recursive_mutex> l(self->syncher);
 			self->bytesConsumed += size;
 			if (channel->isIdle()) {
 				self->idleCount++;
@@ -91,7 +92,7 @@ namespace tut {
 		}
 
 		unsigned int getCounter() {
-			boost::lock_guard<boost::mutex> l(syncher);
+			std::lock_guard<std::recursive_mutex> l(syncher);
 			return counter;
 		}
 
@@ -136,6 +137,7 @@ namespace tut {
 		}
 
 		void realFeedChannel(string data) {
+			std::lock_guard<std::recursive_mutex> l(syncher);
 			assert(data.size() < context.mbuf_pool.mbuf_block_chunk_size);
 			mbuf buf = mbuf_get(&context.mbuf_pool);
 			memcpy(buf.start, data.data(), data.size());
@@ -149,6 +151,7 @@ namespace tut {
 		}
 
 		void realFeedChannelError(int errcode) {
+			std::lock_guard<std::recursive_mutex> l(syncher);
 			channel.feedError(errcode);
 		}
 
@@ -215,18 +218,18 @@ namespace tut {
 		}
 
 		void logChannelState() {
-			boost::lock_guard<boost::mutex> l(syncher);
+			std::lock_guard<std::recursive_mutex> l(syncher);
 			log.append("State: " + toString((int) channel.getState()) + "\n");
 		}
 
 		void feedSomeDataAndWaitForConsumption() {
 			feedChannel("aaabbb");
 			EVENTUALLY(5,
-				boost::lock_guard<boost::mutex> l(syncher);
+				std::lock_guard<std::recursive_mutex> l(syncher);
 				result = !log.empty();
 			);
 			{
-				boost::lock_guard<boost::mutex> l(syncher);
+				std::lock_guard<std::recursive_mutex> l(syncher);
 				ensure_equals(log, "Data: aaabbb\n");
 			}
 			EVENTUALLY(5,
@@ -235,13 +238,13 @@ namespace tut {
 		}
 	};
 
-	#define LOCK() boost::unique_lock<boost::mutex> l(syncher)
+	#define LOCK() std::unique_lock<std::recursive_mutex> l(syncher)
 	#define UNLOCK() l.unlock()
 
 	#define DEFINE_DATA_CALLBACK_METHOD(name, code) \
 		static Channel::Result name(Channel *channel, const mbuf &buffer, int errcode) { \
 			ServerKit_ChannelTest *self = (ServerKit_ChannelTest *) channel->hooks; \
-			boost::mutex &syncher = self->syncher; \
+			std::recursive_mutex &syncher = self->syncher; \
 			/* Shut up compiler warning */  \
 			(void) syncher; \
 			code \
@@ -645,7 +648,7 @@ namespace tut {
 		self->channel.stop();
 		self->channel.start();
 		{
-			boost::mutex &syncher = self->syncher;
+			std::recursive_mutex &syncher = self->syncher;
 			LOCK();
 			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
 		}
@@ -669,7 +672,7 @@ namespace tut {
 		self->channel.stop();
 		self->channel.start();
 		{
-			boost::mutex &syncher = self->syncher;
+			std::recursive_mutex &syncher = self->syncher;
 			LOCK();
 			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
 		}
@@ -696,7 +699,7 @@ namespace tut {
 		self->channel.stop();
 		self->channel.start();
 		{
-			boost::mutex &syncher = self->syncher;
+			std::recursive_mutex &syncher = self->syncher;
 			LOCK();
 			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
 		}
@@ -723,7 +726,7 @@ namespace tut {
 		self->channel.stop();
 		self->channel.start();
 		{
-			boost::mutex &syncher = self->syncher;
+			std::recursive_mutex &syncher = self->syncher;
 			LOCK();
 			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
 		}
@@ -1121,7 +1124,7 @@ namespace tut {
 		self->channel.stop();
 		self->channel.start();
 		{
-			boost::mutex &syncher = self->syncher;
+			std::recursive_mutex &syncher = self->syncher;
 			LOCK();
 			self->counter++;
 			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
@@ -1252,7 +1255,7 @@ namespace tut {
 	static void test_64_start_channel(ServerKit_ChannelTest *self) {
 		self->channel.start();
 		{
-			boost::mutex &syncher = self->syncher;
+			std::recursive_mutex &syncher = self->syncher;
 			LOCK();
 			self->counter++;
 			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
@@ -1326,7 +1329,7 @@ namespace tut {
 	static void test_66_start_channel(ServerKit_ChannelTest *self) {
 		self->channel.start();
 		{
-			boost::mutex &syncher = self->syncher;
+			std::recursive_mutex &syncher = self->syncher;
 			LOCK();
 			self->counter++;
 			self->log.append("Channel state: " + toString(self->channel.getState()) + "\n");
