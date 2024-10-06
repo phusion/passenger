@@ -3,53 +3,39 @@
         "configurations": [
             {
                 "name": "(lldb) Launch CxxTestMain",
-                "type": "cppdbg",
+                "type": "lldb",
                 "request": "launch",
                 "program": "${workspaceFolder}/buildout/test/cxx/main",
-                "args": [],
-                // Pass -g here if you want to run a specific test, for example:
-                //"args": ["-g", "Core_SpawningKit_SmartSpawnerTest:1"],
-                "preLaunchTask": "Build CxxTestMain",
-                "stopAtEntry": true,
-                "cwd": "${workspaceFolder}/test",
-                "environment": [
-                    { "name": "LLDB", "value": "true" }
+                "args": [
+                    // Pass -g here if you want to run a specific test, for example:
+                    // "-g", "Core_SpawningKit_SmartSpawnerTest:1"
                 ],
-                "logging": {
-                    "moduleLoad": false
+                "preLaunchTask": "Build CxxTestMain",
+                "stopOnEntry": true,
+                "cwd": "${workspaceFolder}/test",
+                "env": {
+                    "PASSENGER_ABORT_HANDLER": "false",
                 },
-                "MIMode": "lldb",
-                "osx": {
-                    "MIMode": "lldb",
-                    "setupCommands": [
-                        { "text": "settings set target.x86-disassembly-flavor intel" },
-                        { "text": "b malloc_error_break" },
-                        { "text": "b Passenger::breakpoint" },
-                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'" },
-                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'" }
-                    ]
-                }
+                "postRunCommands": [
+                    // Uncomment on macOS:
+                    // "b malloc_error_break",
+                    "b Passenger::breakpoint",
+                    "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'",
+                    "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'",
+                ],
             },
             {
                 "name": "(lldb) Attach to CxxTestMain",
-                "type": "cppdbg",
+                "type": "lldb",
                 "request": "attach",
                 "program": "${workspaceFolder}/buildout/test/cxx/main",
-                "processId": "${command:pickProcess}",
-                "logging": {
-                    "moduleLoad": false
-                },
-                "MIMode": "lldb",
-                "osx": {
-                    "MIMode": "lldb",
-                    "setupCommands": [
-                        { "text": "settings set target.x86-disassembly-flavor intel" },
-                        { "text": "b malloc_error_break" },
-                        { "text": "b Passenger::breakpoint" },
-                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'" },
-                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'" }
-                    ]
-                }
+                "postRunCommands": [
+                    // Uncomment on macOS:
+                    // "b malloc_error_break",
+                    "b Passenger::breakpoint",
+                    "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'",
+                    "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'",
+                ],
             },
             {
                 // When using this debug target, make sure that your Nginx config
@@ -58,82 +44,43 @@
                 //   master_process off;
                 //   daemon off;
                 "name": "(lldb) Launch Nginx",
-                "type": "cppdbg",
+                "type": "lldb",
                 "request": "launch",
                 "program": "${workspaceFolder}/external/nginx/objs/nginx",
                 "preLaunchTask": "Build Nginx",
-                "stopAtEntry": true,
+                "stopOnEntry": true,
                 "cwd": "${workspaceFolder}/buildout",
-                "environment": [],
-                "logging": {
-                    "moduleLoad": false
-                },
-                "MIMode": "lldb",
-                "osx": {
-                    "MIMode": "lldb",
-                    "setupCommands": [
-                        { "text": "settings set target.x86-disassembly-flavor intel" },
-                        { "text": "b malloc_error_break" }
-                    ]
-                }
+                "postRunCommands": [
+                    // Uncomment on macOS:
+                    // "b malloc_error_break",
+                ],
             },
             {
                 "name": "(lldb) Attach to PassengerAgent",
-                "type": "cppdbg",
+                "type": "lldb",
                 "request": "attach",
                 "program": "${workspaceRoot}/buildout/support-binaries/PassengerAgent",
-                "processId": "${command:pickProcess}",
-                "logging": {
-                    "moduleLoad": false
-                },
-                "osx": {
-                    "MIMode": "lldb",
-                    "setupCommands": [
-                        { "text": "settings set target.x86-disassembly-flavor intel" },
-                        { "text": "b malloc_error_break" },
-                        { "text": "b Passenger::breakpoint" },
-                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'" },
-                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'" }
-                    ]
-                },
-                "linux": {
-                    "MIMode": "gdb",
-                    "setupCommands": [
-                        { "text": "set print thread-events off" },
-                        { "text": "set disassembly-flavor intel" },
-                        { "text": "break Passenger::breakpoint" },
-                        { "text": "handle SIGUSR1 noprint pass" },
-                        { "text": "handle SIGPIPE noprint pass" }
-                    ]
-                }
+                "postRunCommands": [
+                    // Uncomment on macOS:
+                    // "b malloc_error_break",
+                    "b Passenger::breakpoint",
+                    "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'",
+                    "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'",
+                ],
             },
             {
                 "name": "(lldb) Attach to Nginx",
-                "type": "cppdbg",
+                "type": "lldb",
                 "request": "attach",
                 "program": "${workspaceRoot}/external/nginx/objs/nginx",
-                "processId": "${command:pickProcess}",
-                "logging": {
-                    "moduleLoad": false
-                },
-                "osx": {
-                    "MIMode": "lldb",
-                    "setupCommands": [
-                        { "text": "settings set target.x86-disassembly-flavor intel" },
-                        { "text": "b malloc_error_break" },
-                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'" },
-                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'" }
-                    ]
-                },
-                "linux": {
-                    "MIMode": "gdb",
-                    "setupCommands": [
-                        { "text": "set print thread-events off" },
-                        { "text": "set disassembly-flavor intel" },
-                        { "text": "handle SIGUSR1 noprint pass" },
-                        { "text": "handle SIGPIPE noprint pass" }
-                    ]
-                }
+                "pid": "${command:pickProcess}",
+                "postRunCommands": [
+                    // Uncomment on macOS:
+                    // "b malloc_error_break",
+                    "b Passenger::breakpoint",
+                    "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'",
+                    "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'",
+                ],
             }
         ]
     }
