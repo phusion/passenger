@@ -40,6 +40,7 @@ pipeline {
     booleanParam(name: 'focal',  defaultValue: true, description: 'Test Ubuntu 20.04 packages')
     booleanParam(name: 'jammy',  defaultValue: true, description: 'Test Ubuntu 22.04 packages')
     booleanParam(name: 'noble',  defaultValue: true, description: 'Test Ubuntu 24.04 packages')
+    booleanParam(name: 'oracular',  defaultValue: true, description: 'Test Ubuntu 24.10 packages')
 
     booleanParam(name: 'bullseye',defaultValue: true, description: 'Test Debian 11 packages')
     booleanParam(name: 'bookworm',defaultValue: true, description: 'Test Debian 12 packages')

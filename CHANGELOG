@@ -1,5 +1,6 @@
 Release 6.0.24 (Not yet released)
 -------------
+ * [Ubuntu] Add packages for Ubuntu 24.10 "oracular".
  * [Ruby] Specify rackup version to avoid broken 1.0 gem. Closes GH-2559.
  * Upgrades Boost from 1.85 -> 1.86.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
