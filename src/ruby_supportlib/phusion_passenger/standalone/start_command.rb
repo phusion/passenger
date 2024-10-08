@@ -93,15 +93,11 @@ module PhusionPassenger
       ################# Configuration loading, option parsing and initialization ###################
 
       def self.create_option_parser(options)
-        logical_pwd = Dir.logical_pwd
-
         # If you add or change an option, make sure to update the following places too:
         # - src/ruby_supportlib/phusion_passenger/standalone/start_command/builtin_engine.rb,
         #   function #build_daemon_controller_options
         # - resources/templates/standalone/config.erb
         OptionParser.new do |opts|
-          defaults = CONFIG_DEFAULTS
-          nl = "\n" + ' ' * 37
           opts.banner = "Usage: passenger start [DIRECTORY] [OPTIONS]\n"
           opts.separator "Starts #{PROGRAM_NAME} Standalone and serve one or more web applications."
           opts.separator ""

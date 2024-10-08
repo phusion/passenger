@@ -28,10 +28,8 @@
 
 #include <ev++.h>
 #include <vector>
-#include <list>
 #include <memory>
 #include <boost/thread.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/bind/bind.hpp>
@@ -82,7 +80,7 @@ private:
 	}
 
 	static void timeoutHandler(int revents, void *arg) {
-		boost::scoped_ptr<Callback> callback((Callback *) arg);
+		std::unique_ptr<Callback> callback((Callback *) arg);
 		(*callback)();
 	}
 
