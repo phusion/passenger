@@ -328,8 +328,10 @@ namespace tut {
 
 	TEST_METHOD(30) {
 		// It blocks until a line can be read or until EOF.
-		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "hello"));
-		TempThread thr2(boost::bind(writeAfterSomeTime, writer, 35000, "\nworld\n."));
+		TempThread thr([&]() {
+			writeAfterSomeTime(writer, 20000, "hello");
+			writeAfterSomeTime(writer, 15000, "\nworld\n.");
+		});
 		Timer<> timer1;
 		ensure_equals(io.readLine(), "hello\n");
 		ensure_equals(io.getBuffer(), "world\n.");
