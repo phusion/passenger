@@ -30,9 +30,7 @@
 #include <boost/thread.hpp>
 #include <boost/scoped_array.hpp>
 #include <string>
-#include <vector>
-#include <stdexcept>
-#include <algorithm>
+#include <exception>
 #include <utility>
 #include <cerrno>
 #include <cstddef>
@@ -45,7 +43,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <unistd.h>
-#include <limits.h>
 
 #include <jsoncpp/json.h>
 
@@ -349,55 +346,6 @@ private:
 			return value.toStyledString();
 		}
 	}
-
-	#if 0
-	void inferApplicationInfo() const {
-		TRACE_POINT();
-		session.result.codeRevision = readFromRevisionFile();
-		if (session.result.codeRevision.empty()) {
-			session.result.codeRevision = inferCodeRevisionFromCapistranoSymlink();
-		}
-	}
-
-	string readFromRevisionFile() const {
-		TRACE_POINT();
-		string filename = config->appRoot + "/REVISION";
-		try {
-			if (fileExists(filename)) {
-				return strip(readAll(filename));
-			}
-		} catch (const SystemException &e) {
-			P_WARN("Cannot access " << filename << ": " << e.what());
-		}
-		return string();
-	}
-
-	string inferCodeRevisionFromCapistranoSymlink() const {
-		TRACE_POINT();
-		if (extractBaseName(config->appRoot) == "current") {
-			string appRoot = config->appRoot.toString(); // null terminate string
-			char buf[PATH_MAX + 1];
-			ssize_t ret;
-
-			do {
-				ret = readlink(appRoot.c_str(), buf, PATH_MAX);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				if (errno == EINVAL) {
-					return string();
-				} else {
-					int e = errno;
-					P_WARN("Cannot read symlink " << appRoot << ": " << strerror(e));
-				}
-			}
-
-			buf[ret] = '\0';
-			return extractBaseName(buf);
-		} else {
-			return string();
-		}
-	}
-	#endif
 
 	void findFreePortOrSocketFile() {
 		TRACE_POINT();

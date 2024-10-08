@@ -31,11 +31,12 @@
 #include <cerrno>
 
 #include <sys/types.h>
-#include <limits.h>
+#include <limits.h> // IWYU pragma: keep; for PATH_MAX
 #include <unistd.h>
 
 #include <Exceptions.h>
 #include <Utils.h>
+#include <FileTools/FileManip.h>
 #include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
@@ -108,7 +109,7 @@ public:
 		// dropping root privileges).
 		boost::this_thread::disable_interruption di;
 		boost::this_thread::disable_syscall_interruption dsi;
-		syscalls::chown(path.c_str(), uid, gid);
+		oxt::syscalls::chown(path.c_str(), uid, gid);
 	}
 };
 
