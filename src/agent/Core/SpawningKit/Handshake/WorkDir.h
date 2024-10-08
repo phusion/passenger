@@ -79,6 +79,8 @@ public:
 
 	~HandshakeWorkDir() {
 		if (!path.empty()) {
+			boost::this_thread::disable_interruption di;
+			boost::this_thread::disable_syscall_interruption dsi;
 			removeDirTree(path);
 		}
 	}
