@@ -27,7 +27,7 @@
 #define _PASSENGER_APPLICATION_POOL_GROUP_VERIFICATION_CPP_
 
 #ifdef INTELLISENSE
-	#include <Core/ApplicationPool/Implementation.cpp>
+	#include <Core/ApplicationPool/Pool.h>
 #endif
 #include <Core/ApplicationPool/Group.h>
 

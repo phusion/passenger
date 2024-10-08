@@ -27,7 +27,7 @@
 #define _PASSENGER_APPLICATION_POOL_GROUP_SPAWNING_AND_RESTARTING_CPP_
 
 #ifdef INTELLISENSE
-	#include <Core/ApplicationPool/Implementation.cpp>
+	#include <Core/ApplicationPool/Pool.h>
 #endif
 #include <Core/ApplicationPool/Group.h>
 

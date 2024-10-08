@@ -66,6 +66,10 @@
 #include <Core/SpawningKit/Handshake/Perform.h>
 #include <Core/SpawningKit/Handshake/BackgroundIOCapturer.h>
 
+#ifdef INTELLISENSE
+	#include <Core/ApplicationPool/Options.h>
+#endif
+
 namespace Passenger {
 namespace SpawningKit {
 
