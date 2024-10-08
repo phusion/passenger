@@ -1,2 +1,5 @@
 CompileFlags:
-  Add: -DINTELLISENSE -ferror-limit=0
+  Add:
+    - -xc++-header
+    - -DINTELLISENSE
+    - -ferror-limit=0
