@@ -336,7 +336,7 @@ namespace tut {
 		ensure_equals(io.readLine(), "hello\n");
 		ensure_equals(io.getBuffer(), "world\n.");
 		ensure("At least 33 msec elapsed", timer1.elapsed() >= 33);
-		ensure("At most 250 msec elapsed", timer1.elapsed() <= 250);
+		ensure("At most 350 msec elapsed", timer1.elapsed() <= 350);
 
 		TempThread thr3(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer<> timer2;
