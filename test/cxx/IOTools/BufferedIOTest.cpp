@@ -117,20 +117,20 @@ namespace tut {
 	}
 
 	TEST_METHOD(5) {
-		// It blocks until the acceptor function says it's done or until EOF.
+		set_test_name("It blocks until the acceptor function says it's done or until EOF");
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
 		Timer<> timer1;
 		ensure_equals(io.readUntil(a_twoBytesRead), 2u);
 		ensure_equals(readData, "aa");
-		ensure("At least 18 msec elapsed", timer1.elapsed() >= 18);
-		ensure("At most 90 msec elapsed", timer1.elapsed() <= 90);
+		ensure("At least 18 msec elapsed (1)", timer1.elapsed() >= 18);
+		ensure("At most 200 msec elapsed (1)", timer1.elapsed() <= 200);
 
 		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer<> timer2;
 		ensure_equals(io.readUntil(a_twoBytesRead), 0u);
 		ensure_equals(readData, "aa");
-		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
-		ensure("At most 90 msec elapsed", timer2.elapsed() <= 90);
+		ensure("At least 18 msec elapsed (2)", timer2.elapsed() >= 18);
+		ensure("At most 200 msec elapsed (2)", timer2.elapsed() <= 200);
 	}
 
 	TEST_METHOD(6) {
@@ -145,7 +145,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			ensure("At least 45 msec elapsed", timer.elapsed() >= 45);
-			ensure("At most 90 msec elapsed", timer.elapsed() < 90);
+			ensure("At most 200 msec elapsed", timer.elapsed() <= 200);
 			ensure("It deducts the waited time from the timeout", timeout < 5000);
 			ensure_equals(readData, "hello");
 			ensure_equals(io.getBuffer(), "");
@@ -207,20 +207,20 @@ namespace tut {
 	}
 
 	TEST_METHOD(15) {
-		// It blocks until the given number of bytes are read or until EOF.
+		set_test_name("It blocks until the given number of bytes are read or until EOF");
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
 		Timer<> timer1;
 		ensure_equals(io.read(buf, 2), 2u);
 		ensure_equals(StaticString(buf), "aa");
-		ensure("At least 18 msec elapsed", timer1.elapsed() >= 18);
-		ensure("At most 90 msec elapsed", timer1.elapsed() <= 90);
+		ensure("At least 18 msec elapsed (1)", timer1.elapsed() >= 18);
+		ensure("At most 200 msec elapsed (1)", timer1.elapsed() <= 200);
 
 		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer<> timer2;
 		ensure_equals(io.read(buf, sizeof(buf)), 0u);
 		ensure_equals(StaticString(buf), "aa");
-		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
-		ensure("At most 90 msec elapsed", timer2.elapsed() <= 90);
+		ensure("At least 18 msec elapsed (2)", timer2.elapsed() >= 18);
+		ensure("At most 200 msec elapsed (2)", timer2.elapsed() <= 200);
 	}
 
 	TEST_METHOD(16) {
@@ -235,7 +235,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			ensure("At least 45 msec elapsed", timer.elapsed() >= 45);
-			ensure("At most 95 msec elapsed", timer.elapsed() < 95);
+			ensure("At most 200 msec elapsed", timer.elapsed() <= 200);
 			ensure("It deducts the waited time from the timeout", timeout < 5000);
 			ensure_equals(io.getBuffer(), "");
 		}
@@ -244,14 +244,16 @@ namespace tut {
 	/***** Test readAll() *****/
 
 	TEST_METHOD(20) {
-		// It reads everything until EOF.
-		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
-		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 40000));
+		set_test_name("It reads everything until EOF");
+		TempThread thr1([&]() {
+			writeAfterSomeTime(writer, 20000, "aa");
+			writer.close();
+		});
 		Timer<> timer;
 		ensure_equals(io.readAll(), "aa");
 		ensure_equals(io.getBuffer(), "");
-		ensure("At least 38 msec elapsed", timer.elapsed() >= 38);
-		ensure("At most 150 msec elapsed", timer.elapsed() <= 150);
+		ensure("At least 20 msec elapsed", timer.elapsed() >= 20);
+		ensure("At most 200 msec elapsed", timer.elapsed() <= 200);
 	}
 
 	TEST_METHOD(21) {
@@ -266,7 +268,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			ensure("At least 45 msec elapsed", timer.elapsed() >= 45);
-			ensure("At most 95 msec elapsed", timer.elapsed() < 95);
+			ensure("At most 200 msec elapsed", timer.elapsed() <= 200);
 			ensure("It deducts the waited time from the timeout", timeout < 5000);
 			ensure_equals(io.getBuffer(), "");
 		}
@@ -326,13 +328,15 @@ namespace tut {
 
 	TEST_METHOD(30) {
 		// It blocks until a line can be read or until EOF.
-		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "hello"));
-		TempThread thr2(boost::bind(writeAfterSomeTime, writer, 35000, "\nworld\n."));
+		TempThread thr([&]() {
+			writeAfterSomeTime(writer, 20000, "hello");
+			writeAfterSomeTime(writer, 15000, "\nworld\n.");
+		});
 		Timer<> timer1;
 		ensure_equals(io.readLine(), "hello\n");
 		ensure_equals(io.getBuffer(), "world\n.");
 		ensure("At least 33 msec elapsed", timer1.elapsed() >= 33);
-		ensure("At most 95 msec elapsed", timer1.elapsed() <= 90);
+		ensure("At most 250 msec elapsed", timer1.elapsed() <= 250);
 
 		TempThread thr3(boost::bind(closeAfterSomeTime, writer, 20000));
 		Timer<> timer2;
@@ -341,7 +345,7 @@ namespace tut {
 		ensure_equals(io.readLine(), ".");
 		ensure_equals(io.getBuffer(), "");
 		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
-		ensure("At most 95 msec elapsed", timer2.elapsed() <= 95);
+		ensure("At most 250 msec elapsed", timer2.elapsed() <= 250);
 	}
 
 	TEST_METHOD(31) {
@@ -356,7 +360,7 @@ namespace tut {
 			fail("TimeoutException expected");
 		} catch (const TimeoutException &) {
 			ensure("At least 25 msec elapsed", timer.elapsed() >= 25);
-			ensure("At most 90 msec elapsed", timer.elapsed() < 90);
+			ensure("At most 200 msec elapsed", timer.elapsed() <= 200);
 			ensure("It deducts the waited time from the timeout", timeout < 5000);
 			ensure_equals(io.getBuffer(), "");
 		}

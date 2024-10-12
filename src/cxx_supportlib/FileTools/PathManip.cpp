@@ -27,7 +27,7 @@
 #include <sys/param.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <limits.h>
+#include <limits.h> // IWYU pragma: keep; for PATH_MAX
 #include <libgen.h>
 
 #ifdef __has_include

@@ -3,10 +3,7 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <iostream>
 #include <string>
-#include <vector>
-#include <exception>
 #include <cstdio>
 #include <cerrno>
 #include <cstring>
@@ -18,7 +15,7 @@
 #include <oxt/tracable_exception.hpp>
 #include <uv.h>
 
-#include "../tut/tut.h"
+#include "../tut/tut.h" // IWYU pragma: keep
 #include <ResourceLocator.h>
 #include <InstanceDirectory.h>
 #include <BackgroundEventLoop.h>

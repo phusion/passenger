@@ -35,7 +35,7 @@
 #include <string>
 #include <list>
 #include <unistd.h>
-#include <limits.h>  // for PTHREAD_STACK_MIN
+#include <limits.h> // IWYU pragma: keep; for PTHREAD_STACK_MIN
 
 namespace oxt {
 

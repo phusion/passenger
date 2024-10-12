@@ -35,6 +35,9 @@ namespace tut {
 			context.integrationMode = "standalone";
 			context.spawnDir = getSystemTempDir();
 
+			string user = lookupSystemUsernameByUid(getuid());
+			string group = lookupSystemGroupnameByGid(getgid());
+
 			config.appGroupName = "appgroup";
 			config.appRoot = "/tmp/myapp";
 			config.startCommand = "echo hi";
@@ -42,8 +45,8 @@ namespace tut {
 			config.appType = "wsgi";
 			config.spawnMethod = "direct";
 			config.bindAddress = "127.0.0.1";
-			config.user = lookupSystemUsernameByUid(getuid());
-			config.group = lookupSystemGroupnameByGid(getgid());
+			config.user = user;
+			config.group = group;
 			config.internStrings();
 		}
 

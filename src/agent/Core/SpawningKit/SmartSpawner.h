@@ -33,12 +33,12 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <stdexcept>
+#include <exception>
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
-#include <signal.h>
+#include <signal.h> // IWYU pragma: keep; for signal constants
 #include <unistd.h>
 #include <cstring>
 #include <cassert>
@@ -65,6 +65,10 @@
 #include <Core/SpawningKit/Handshake/Prepare.h>
 #include <Core/SpawningKit/Handshake/Perform.h>
 #include <Core/SpawningKit/Handshake/BackgroundIOCapturer.h>
+
+#ifdef INTELLISENSE
+	#include <Core/ApplicationPool/Options.h>
+#endif
 
 namespace Passenger {
 namespace SpawningKit {

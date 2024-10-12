@@ -61,13 +61,13 @@ struct RefGuard {
 		  file(_file),
 		  line(_line)
 	{
-		if (_hooks != NULL && _hooks->impl != NULL) {
+		if (_hooks != nullptr && _hooks->impl != nullptr) {
 			_hooks->impl->hook_ref(_hooks, _source, _file, _line);
 		}
 	}
 
 	~RefGuard() {
-		if (hooks != NULL && hooks->impl != NULL) {
+		if (hooks != nullptr && hooks->impl != nullptr) {
 			hooks->impl->hook_unref(hooks, source, file, line);
 		}
 	}

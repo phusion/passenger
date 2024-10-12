@@ -38,9 +38,8 @@
 #include <vector>
 
 #include <sys/types.h>
-#include <stdlib.h> // for srandom()
+#include <stdlib.h>
 #include <unistd.h>
-#include <signal.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -468,6 +467,7 @@ maybeInitializeAbortHandler() {
 	config->dumpWithCrashWatch = getEnvBool("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
 	config->beep = getEnvBool("PASSENGER_BEEP_ON_ABORT");
 	config->stopProcess = getEnvBool("PASSENGER_STOP_ON_ABORT");
+	config->forceTerminateProcess = getEnvBool("PASSENGER_FORCE_TERMINATE_ON_ABORT");
 
 	installAbortHandler(config);
 }

@@ -35,7 +35,6 @@
 #include <cstddef>
 #include <cstring>
 #include <cerrno>
-#include <cassert>
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
@@ -121,8 +120,6 @@ typedef void (*Callback)(AbortHandlerWorkingState &state, void *userData);
 
 
 static AbortHandlerContext *ctx = NULL;
-static const char digits[] = "0123456789";
-static const char hex_chars[] = "0123456789abcdef";
 
 
 static void
@@ -267,6 +264,61 @@ appendSignalReason(char *buf, const char *end, siginfo_t *info) {
 	buf = ASSU::appendInteger<boost::uintptr_t, 16>(buf, end, (boost::uintptr_t) info->si_addr);
 
 	return buf;
+}
+
+static bool
+resumeOriginalProcess(AbortHandlerWorkingState &state) {
+	const char *end = state.messageBuf + sizeof(state.messageBuf);
+	char *pos = state.messageBuf;
+	pos = ASSU::appendData(pos, end, state.messagePrefix);
+	pos = ASSU::appendData(pos, end, " ] Triggering original signal handler");
+	pos = ASSU::appendData(pos, end, "\n");
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+
+	int e = kill(state.pid, SIGCONT);
+	if (e == -1) {
+		int e = errno;
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] Could not resume original process: kill() failed with errno=");
+		pos = ASSU::appendInteger<int, 10>(pos, end, e);
+		pos = ASSU::appendData(pos, end, "\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+
+		return false;
+	} {
+		return true;
+	}
+}
+
+static void
+forceTerminateOriginalProcess(AbortHandlerWorkingState &state) {
+	const char *end = state.messageBuf + sizeof(state.messageBuf);
+	char *pos = state.messageBuf;
+	pos = ASSU::appendData(pos, end, state.messagePrefix);
+	pos = ASSU::appendData(pos, end, " ] Force terminating original process");
+	pos = ASSU::appendData(pos, end, "\n");
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+
+	int ret	= kill(state.pid, SIGKILL);
+	if (ret == -1) {
+		int e = errno;
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] Could not force terminate original process: kill() failed with errno=");
+		pos = ASSU::appendInteger<int, 10>(pos, end, e);
+		pos = ASSU::appendData(pos, end, "\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+	}
+}
+
+static void
+resumeOrForceTerminateOriginalProcess(AbortHandlerWorkingState &state) {
+	if (ctx->config->forceTerminateProcess) {
+		forceTerminateOriginalProcess(state);
+	} else if (!resumeOriginalProcess(state)) {
+		forceTerminateOriginalProcess(state);
+	}
 }
 
 static int
@@ -1083,19 +1135,19 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 			// with SIGPIPE as a result, so we ignore SIGPIPE again.
 			ignoreSigpipe();
 			dumpDiagnostics(state);
-			// The child process may or may or may not resume the original process.
-			// We do it ourselves just to be sure.
-			kill(state.pid, SIGCONT);
+			resumeOrForceTerminateOriginalProcess(state);
 			_exit(0);
 
 		} else if (child == -1) {
 			int e = errno;
 			pos = state.messageBuf;
 			pos = ASSU::appendData(pos, end, state.messagePrefix);
-			pos = ASSU::appendData(pos, end, "] Could not fork a child process for dumping diagnostics: fork() failed with errno=");
+			pos = ASSU::appendData(pos, end, " ] Could not fork a child process for dumping diagnostics: fork() failed with errno=");
 			pos = ASSU::appendInteger<int, 10>(pos, end, e);
 			pos = ASSU::appendData(pos, end, "\n");
 			write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+
+			resumeOrForceTerminateOriginalProcess(state);
 			_exit(1);
 
 		} else {
@@ -1111,6 +1163,8 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 		pos = ASSU::appendInteger<int, 10>(pos, end, e);
 		pos = ASSU::appendData(pos, end, "\n");
 		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+
+		resumeOrForceTerminateOriginalProcess(state);
 
 	} else {
 		raise(SIGSTOP);

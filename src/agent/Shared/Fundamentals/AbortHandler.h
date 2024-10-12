@@ -62,6 +62,7 @@ struct AbortHandlerConfig {
 	bool dumpWithCrashWatch;
 	bool beep;
 	bool stopProcess;
+	bool forceTerminateProcess;
 	ResourceLocator *resourceLocator;
 	DiagnosticsDumper diagnosticsDumpers[MAX_DIAGNOSTICS_DUMPERS];
 
@@ -72,6 +73,7 @@ struct AbortHandlerConfig {
 		  dumpWithCrashWatch(false),
 		  beep(false),
 		  stopProcess(false),
+		  forceTerminateProcess(false),
 		  resourceLocator(NULL)
 		{ }
 };

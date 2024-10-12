@@ -89,6 +89,9 @@ struct HandshakeSession {
 		{ }
 
 	~HandshakeSession() {
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
+
 		if (workDirFd != -1) {
 			safelyClose(workDirFd, true);
 		}

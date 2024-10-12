@@ -39,6 +39,7 @@ require 'digest/sha2'
 require 'optparse'
 require 'fileutils'
 require 'tmpdir'
+PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'platform_info/openssl'
 PhusionPassenger.require_passenger_lib 'abstract_installer'
@@ -542,8 +543,18 @@ private
   end
 
   def build_nginx_configure_command(prefix, extra_configure_flags = nil)
-    extra_cflags = "-Wno-error #{PlatformInfo.openssl_extra_cflags}".strip
-    extra_ldflags = PlatformInfo.openssl_extra_ldflags
+    # When USE_ASAN is set, we compile our own code with AddressSanitizer but not Nginx.
+    # It's a third-party codebase we don't control so enabling AddressSanitizer for
+    # Nginx as well is more likely to hurt than help.
+    extra_cflags = [
+      "-Wno-error",
+      PlatformInfo.openssl_extra_cflags,
+    ].compact.join(" ").strip
+
+    extra_ldflags = [
+      PlatformInfo.openssl_extra_ldflags,
+      boolean_option('USE_ASAN') ? PlatformInfo.address_sanitizer_flags : nil,
+    ].compact.join(" ").strip
 
     command = "sh ./configure --prefix='#{prefix}' "
     command << "--with-http_ssl_module "
@@ -600,6 +611,10 @@ private
       end
     end
     return digest.hexdigest
+  end
+
+  def boolean_option(name)
+    ["1", "on", "true", "yes"].include?(ENV[name])
   end
 end
 

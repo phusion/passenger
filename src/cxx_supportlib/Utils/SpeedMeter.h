@@ -26,9 +26,6 @@
 #ifndef _PASSENGER_SPEED_METER_H_
 #define _PASSENGER_SPEED_METER_H_
 
-#include <cstdio>
-#include <cstdlib>
-#include <cassert>
 #include <limits>
 #include <SystemTools/SystemTime.h>
 

@@ -51,7 +51,7 @@ namespace tut {
 
 	TEST_METHOD(5) {
 		set_test_name("endsWith works");
-		char* str1 = "abcdefghijklmnopqrstuvwxyz";
+		const char *str1 = "abcdefghijklmnopqrstuvwxyz";
 		ensure(endsWith(str1, "xyz"));
 		ensure(endsWith("xyz", "xyz"));
 		ensure(!endsWith(str1, "zzz"));

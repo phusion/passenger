@@ -38,6 +38,10 @@
 #include <Core/SpawningKit/Result.h>
 #include <Core/SpawningKit/UserSwitchingRules.h>
 
+#ifdef INTELLISENSE
+	#include <Core/ApplicationPool/Options.h>
+#endif
+
 namespace Passenger {
 namespace SpawningKit {
 

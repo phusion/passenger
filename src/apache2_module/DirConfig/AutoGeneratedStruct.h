@@ -29,6 +29,9 @@
 #ifdef INTELLISENSE
 	// These includes do nothing, but keep IntelliSense happy.
 	#include <ap_config.h>
+	#include <set>
+	#include <Constants.h>
+	#include <StaticString.h>
 	#include "../ConfigGeneral/Common.h"
 #endif
 

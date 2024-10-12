@@ -142,8 +142,6 @@ module PhusionPassenger
     private_class_method :cc_or_cxx_supports_feliminate_unused_debug?
 
     def self.cc_or_cxx_supports_blocks?(language)
-      ext = detect_language_extension(language)
-      compiler_type_name = detect_compiler_type_name(language)
       command = create_compiler_command(language,"-E -dM",'- </dev/null')
       result = `#{command}`
       return result.include? "__BLOCKS__"
@@ -360,6 +358,13 @@ module PhusionPassenger
     end
     memoize :cc_supports_fno_limit_debug_info_flag?
 
+    def self.cc_supports_fno_optimize_sibling_calls_flag?
+      try_compile_with_warning_flag(
+        "Checking for C compiler '-fno-optimize-sibling-calls' support",
+        :c, '', '-fno-optimize-sibling-calls')
+    end
+    memoize :cc_supports_fno_optimize_sibling_calls_flag?
+
     def self.cxx_supports_visibility_flag?
       return false if os_name_simple == "aix"
       return try_compile("Checking for C++ compiler '-fvisibility' support",
@@ -430,6 +435,13 @@ module PhusionPassenger
     end
     memoize :cxx_supports_fno_limit_debug_info_flag?
 
+    def self.cxx_supports_fno_optimize_sibling_calls_flag?
+      try_compile_with_warning_flag(
+        "Checking for C++ compiler '-fno-optimize-sibling-calls' support",
+        :cxx, '', '-fno-optimize-sibling-calls')
+    end
+    memoize :cxx_supports_fno_optimize_sibling_calls_flag?
+
     def self.cc_supports_no_tls_direct_seg_refs_option?
       return try_compile("Checking for C compiler '-mno-tls-direct-seg-refs' support",
         :c, '', '-mno-tls-direct-seg-refs')
@@ -493,10 +505,10 @@ module PhusionPassenger
     end
     memoize :cxx_visibility_flag_generates_warnings?, true
 
-    def self.address_sanitizer_flag
+    def self.address_sanitizer_flags
       if cc_is_clang?
         if `#{cc} --help` =~ /-fsanitize=/
-          "-fsanitize=address"
+          "-fsanitize=address -fsanitize-address-use-after-return=always -fsanitize-address-use-after-scope"
         else
           "-faddress-sanitizer"
         end
@@ -504,7 +516,14 @@ module PhusionPassenger
         nil
       end
     end
-    memoize :address_sanitizer_flag
+
+    def self.undefined_behavior_sanitizer_flags
+      if cc_is_clang?
+        "-fsanitize=undefined"
+      else
+        nil
+      end
+    end
 
     def self.cxx_11_flag
       # C++11 support on FreeBSD 10.0 + Clang seems to be bugged.
