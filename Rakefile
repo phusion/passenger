@@ -28,13 +28,17 @@ $LOAD_PATH.unshift("#{SOURCE_ROOT}/src/ruby_supportlib")
 if defined?(Bundler)
   clean_env = nil
 
-  if Bundler.method_defined?(:with_unbundled_env)
+  if Bundler.respond_to?(:with_original_env)
+    Bundler.with_original_env do
+      clean_env = ENV.to_hash.dup
+    end
+  elsif Bundler.respond_to?(:with_unbundled_env)
     Bundler.with_unbundled_env do
-      clean_env = ENV.to_hash
+      clean_env = ENV.to_hash.dup
     end
   else
     Bundler.with_clean_env do
-      clean_env = ENV.to_hash
+      clean_env = ENV.to_hash.dup
     end
   end
   ENV.replace(clean_env)
