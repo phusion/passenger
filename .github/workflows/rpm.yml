@@ -1,7 +1,8 @@
 name: Passenger RPM packaging tests
 
 env:
-  ENTERPRISE: 0
+  FORCE_COLOR: 1
+  RUST_LOG_STYLE: always
 
 on:
   push: {}
