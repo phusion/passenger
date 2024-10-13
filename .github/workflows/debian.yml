@@ -21,7 +21,7 @@ jobs:
         run: echo "distros=[$(awk -F= '/DEFAULT_DISTROS/{print $2}' packaging/debian/internal/lib/distro_info.sh | sed -e 's/ /", "/g')]" >> "$GITHUB_OUTPUT"
 
   test:
-    name: "Test ${{ matrix.distro }} ${{ matrix.arch.name }} packages"
+    name: ${{ matrix.distro }} ${{ matrix.arch.name }}
     needs: define-matrix
     strategy:
       fail-fast: false
@@ -39,12 +39,55 @@ jobs:
       CACHE_DIR: ${{ github.workspace }}/cache/debian-test/${{ matrix.distro }}-${{ matrix.arch.name }}
       DISTRIBUTION: ${{ matrix.distro }}
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - uses: docker/setup-buildx-action@v3
-    - run: ./dev/ci/tests/debian/run
-    - uses: actions/upload-artifact@v4
-      with:
-        name: debian-${{ matrix.distro }}-${{ matrix.arch.name }}
-        path: 'output/${{ matrix.distro }}/*'
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - run: mkdir work cache output
+
+      - name: Fetch cache
+        run: ./dev/ci/fetch-cache-az-blob-storage
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+          BLOB_NAME: "binaries/debian-cache-${{ matrix.distro }}-${{ matrix.arch.name }}.tar.zstd"
+          CACHE_PATH: packaging/debian/cache
+          SUDO: true
+
+      - name: Build
+        run: ./build -w work -c cache -o output -p "$WORKSPACE" -d "$DISTRIBUTION" -a "$ARCHITECTURE" -R pkg:all
+        env:
+          WORKSPACE: ${{ github.workspace }}
+          DISTRIBUTION: ${{ matrix.distro }}
+          ARCHITECTURE: ${{ matrix.arch.name }}
+        working-directory: packaging/debian
+
+      - name: Test
+        run: >
+          ./test
+          -p "$WORKSPACE"
+          -d "output/$DISTRIBUTION"
+          -c cache
+          -x "$DISTRIBUTION"
+          -a "$ARCHITECTURE"
+          -j
+        env:
+          WORKSPACE: ${{ github.workspace }}
+          DISTRIBUTION: ${{ matrix.distro }}
+          ARCHITECTURE: ${{ matrix.arch.name }}
+        working-directory: packaging/debian
+
+      - name: Update cache
+        run: ./dev/ci/update-cache-az-blob-storage
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+          BLOB_NAME: "binaries/debian-cache-${{ matrix.distro }}-${{ matrix.arch.name }}.tar.zstd"
+          CACHE_PATH: packaging/debian/cache
+          SUDO: true
+        if: always()
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debian-${{ matrix.distro }}-${{ matrix.arch.name }}
+          path: packaging/debian/output/${{ matrix.distro }}/*
