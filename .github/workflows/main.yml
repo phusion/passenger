@@ -68,6 +68,8 @@ jobs:
         with:
           name: cxx-test-logs-macos
           path: 'buildout/testlogs/*'
+          if-no-files-found: ignore
+        if: '!cancelled()'
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
@@ -131,6 +133,8 @@ jobs:
         with:
           name: cxx-test-logs-macos
           path: 'buildout/testlogs/*'
+          if-no-files-found: ignore
+        if: '!cancelled()'
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
@@ -282,6 +286,8 @@ jobs:
         with:
           name: apache-test-logs-${{ matrix.os }}
           path: 'buildout/testlogs/*'
+          if-no-files-found: ignore
+        if: '!cancelled()'
 
   nginx:
     name: "Nginx tests on ${{ matrix.name }}"
@@ -363,6 +369,8 @@ jobs:
         with:
           name: nginx-test-logs-${{ matrix.os }}
           path: 'buildout/testlogs/*'
+          if-no-files-found: ignore
+        if: '!cancelled()'
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
