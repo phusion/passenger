@@ -65,9 +65,16 @@ oxt::setup_syscall_interruption_support() {
 	do {
 		ret = sigaction(INTERRUPTION_SIGNAL, &action, NULL);
 	} while (ret == -1 && errno == EINTR);
-	do {
-		ret = siginterrupt(INTERRUPTION_SIGNAL, 1);
-	} while (ret == -1 && errno == EINTR);
+	#if !defined(__linux__)
+		// On Linux, siginterrupt() is deprecated. System call interruption works
+		// by merely calling sigaction() with sa_flags without SA_RESTART.
+		// Unfortunately, this does not seem to be the case on other operationg systems.
+		// For example, on macOS, we need to call *both* sigaction() without SA_RESTART,
+		// *and* siginterrupt().
+		do {
+			ret = siginterrupt(INTERRUPTION_SIGNAL, 1);
+		} while (ret == -1 && errno == EINTR);
+	#endif
 }
 
 void
