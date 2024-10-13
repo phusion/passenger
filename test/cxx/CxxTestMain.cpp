@@ -196,8 +196,6 @@ main(int argc, char *argv[]) {
 	resourceLocator = Agent::Fundamentals::context->resourceLocator;
 	loadConfigFile();
 
-	abort();
-
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {
 		tut::runner.get().run_tests();

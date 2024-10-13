@@ -1,3 +1,4 @@
+#include <Exceptions.h>
 #include <TestSupport.h>
 #include <cstring>
 #include <StrIntTools/DateParsing.h>
@@ -34,6 +35,7 @@ namespace tut {
 		ensure_equals(tm.tm_min, 20);
 		ensure_equals(tm.tm_sec, 46);
 		ensure_equals(zone, 0);
+		throw new SystemException("test", 1);
 		ensure_equals(parsedDateToTimestamp(tm, zone), 1420734046);
 	}
 
