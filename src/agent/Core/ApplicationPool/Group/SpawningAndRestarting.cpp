@@ -26,6 +26,7 @@
 #ifndef _PASSENGER_APPLICATION_POOL_GROUP_SPAWNING_AND_RESTARTING_CPP_
 #define _PASSENGER_APPLICATION_POOL_GROUP_SPAWNING_AND_RESTARTING_CPP_
 
+#include "Exceptions.h"
 #ifdef INTELLISENSE
 	#include <Core/ApplicationPool/Pool.h>
 #endif
@@ -94,6 +95,8 @@ Group::spawnThreadRealMain(const SpawningKit::SpawnerPtr &spawner,
 			MessagePtr message = debug->messages->recvAny(cases);
 			shouldFail = message->name == "Fail spawn loop iteration " + iteration;
 		}
+
+		throw new SystemException("test", 1);
 
 		ProcessPtr process;
 		ExceptionPtr exception;

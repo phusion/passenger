@@ -1,4 +1,3 @@
-#include <Exceptions.h>
 #include <TestSupport.h>
 #include <modp_b64.h>
 
@@ -18,7 +17,6 @@ namespace tut {
 
 	/***** Valid base64 *****/
 	TEST_METHOD(1) {
-		throw new SystemException("test", 1);
 		ensure_equals(decode(""),"");
 	}
 	TEST_METHOD(2) {
