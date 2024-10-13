@@ -525,6 +525,12 @@ storeArgvCopy(int argc, char *argv[]) {
 	for (int i = 0; i < argc; i++) {
 		context->origArgv[i] = strdup(argv[i]);
 	}
+
+	if (abortHandlerInstalled()) {
+		// Let AbortHandler use the copy.
+		context->abortHandlerConfig.origArgv = context->origArgv;
+		abortHandlerConfigChanged();
+	}
 }
 
 static void
@@ -558,7 +564,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 {
 	const char *seedStr;
 
-	context = new Context();
+	context = new Context(argc, *argv);
 
 	seedStr = getEnvString("PASSENGER_RANDOM_SEED");
 	if (seedStr == NULL) {

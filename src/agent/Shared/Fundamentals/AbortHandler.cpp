@@ -29,6 +29,7 @@
 #include <boost/cstdint.hpp>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <sys/select.h>
 #include <cstdio>
 #include <cstdlib>
@@ -685,11 +686,25 @@ dumpWithCrashWatch(AbortHandlerWorkingState &state) {
 				close(p[0]);
 				backtrace_symbols_fd(backtraceStore, frames, p[1]);
 				close(p[1]);
-				if (waitpid(pid, &status, 0) == -1 || status != 0) {
+
+				int ret = waitpid(pid, &status, 0);
+				if (ret == -1 || status != 0) {
+					int e = errno;
 					pos = state.messageBuf;
 					pos = ASSU::appendData(pos, end, "ERROR: cannot execute '");
 					pos = ASSU::appendData(pos, end, ctx->backtraceSanitizerCommand);
-					pos = ASSU::appendData(pos, end, "' for sanitizing the backtrace, writing to stderr directly...\n");
+					pos = ASSU::appendData(pos, end, "' for sanitizing the backtrace (");
+					if (ret == -1) {
+						pos = ASSU::appendData(pos, end, "waitpid() failed, errno=");
+						pos = ASSU::appendInteger<int, 10>(pos, end, e);
+					} else if (WIFSIGNALED(status)) {
+						pos = ASSU::appendData(pos, end, "exited with signal ");
+						pos = ASSU::appendInteger<int, 10>(pos, end, WTERMSIG(status));
+					} else {
+						pos = ASSU::appendData(pos, end, "exit status ");
+						pos = ASSU::appendInteger<int, 10>(pos, end, WEXITSTATUS(status));
+					}
+					pos = ASSU::appendData(pos, end, "), writing to stderr directly...\n");
 					write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 					backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 				}
@@ -1261,6 +1276,12 @@ abortHandlerConfigChanged() {
 	char *oldTmpDir = ctx->tmpDir;
 	char *oldCrashWatchCommand = ctx->crashWatchCommand;
 	char *oldBacktraceSanitizerCommand = ctx->backtraceSanitizerCommand;
+
+	if (config->origArgv == NULL) {
+		fprintf(stderr, "AbortHandler requires config->origArgv!\n");
+		fflush(stderr);
+		abort();
+	}
 
 	if (config->resourceLocator != NULL) {
 		string path;

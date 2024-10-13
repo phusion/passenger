@@ -48,11 +48,11 @@ struct Context {
 	bool feedbackFdAvailable;
 	AbortHandlerConfig abortHandlerConfig;
 
-	Context()
+	Context(int argc, char *argv[])
 		: resourceLocator(NULL),
 		  randomSeed(0),
-		  origArgc(0),
-		  origArgv(NULL),
+		  origArgc(argc),
+		  origArgv(argv),
 		  feedbackFdAvailable(false)
 		{ }
 };
