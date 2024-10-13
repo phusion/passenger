@@ -129,7 +129,7 @@ jobs:
           GEM_PATH="$GEM_PATH"
           PASSENGER_DUMP_WITH_CRASH_WATCH=false
           PASSENGER_FORCE_TERMINATE_ON_ABORT=true
-          gtimeout --signal KILL --verbose 600
+          gtimeout --signal KILL --verbose 30
           ../buildout/test/cxx/main
         working-directory: test
 
