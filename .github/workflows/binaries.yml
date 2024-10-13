@@ -18,26 +18,72 @@ jobs:
         include:
           - runner: ubuntu-24.04
             arch: x86_64
+            docker_arch: amd64
           - runner: passenger-ubuntu-24.04-arm64-4cpu
-            arch: arm64
+            arch: aarch64
+            docker_arch: arm64
     runs-on: ${{ matrix.runner }}
-    env:
-      WORKSPACE: ${{ github.workspace }}
-      OUTPUT_DIR: ${{ github.workspace }}/output-linux-${{ matrix.arch }}
-      ARCHITECTURE: ${{ matrix.arch }}
-      CACHE_DIR: ${{ github.workspace }}/cache/linux-${{ matrix.arch }}/executor-${{ github.run_id }}
-      RUNTIME_DIR: ${{ github.workspace }}/cache/linux-${{ matrix.arch }}/executor-${{ github.run_id }}/runtime
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - uses: docker/setup-buildx-action@v3
-    - run: ./dev/ci/tests/binaries/build-linux
-    - uses: actions/upload-artifact@v4
-      with:
-        name: binaries-linux-${{ matrix.arch }}
-        path: 'output-linux-${{ matrix.arch }}/**/*'
-    - run: ./dev/ci/tests/binaries/test-linux
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - run: mkdir cache output
+        working-directory: packaging/binaries/linux
+
+      - name: Fetch cache
+        run: ./dev/ci/fetch-cache-az-blob-storage
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+          BLOB_NAME: "binaries/linux-binaries-cache-${{ hashFiles('packaging/binaries/linux/docker_image/Dockerfile') }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd"
+          CACHE_PATH: packaging/binaries/linux/cache
+
+      - name: Build
+        run: >
+          ./build
+          -p "$WORKSPACE"
+          -c cache
+          -o output
+          -A "$DOCKER_ARCH"
+          -j 2
+          passenger nginx
+        env:
+          WORKSPACE: ${{ github.workspace }}
+          DOCKER_ARCH: ${{ matrix.docker_arch }}
+        working-directory: packaging/binaries/linux
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux-${{ matrix.arch }}
+          path: packages/binaries/linux/output/**/*
+
+      - name: Update cache
+        run: ./dev/ci/update-cache-az-blob-storage
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+          BLOB_NAME: "binaries/linux-binaries-cache-${{ hashFiles('packaging/binaries/linux/docker_image/Dockerfile') }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd"
+          CACHE_PATH: packaging/binaries/linux/cache
+        if: always()
+
+      - name: Package
+        run: ./package -i output -o output -a "$ARCHITECTURE"
+        env:
+          ARCHITECTURE: ${{ matrix.arch }}
+        working-directory: packaging/binaries/linux
+
+      - name: Test
+        run: >
+          ./test
+          -p "$WORKSPACE"
+          -i output
+          -I output
+          -A "$DOCKER_ARCH"
+        env:
+          WORKSPACE: ${{ github.workspace }}
+          DOCKER_ARCH: ${{ matrix.docker_arch }}
+        working-directory: packaging/binaries/linux
 
   build_macos:
     name: Binaries macOS ${{ matrix.arch }}

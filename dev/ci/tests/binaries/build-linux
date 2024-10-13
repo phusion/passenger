@@ -6,6 +6,7 @@
 #
 #   WORKSPACE
 #   ARCHITECTURE
+#   DOCKER_ARCH
 #
 # Optional environment variables:
 #
@@ -21,6 +22,7 @@ source "./shared/lib/library.sh"
 
 require_envvar WORKSPACE "$WORKSPACE"
 require_envvar ARCHITECTURE "$ARCHITECTURE"
+require_envvar DOCKER_ARCH "$DOCKER_ARCH"
 
 PASSENGER_ROOT="${PASSENGER_ROOT:-$WORKSPACE}"
 OUTPUT_DIR="${OUTPUT_DIR:-$WORKSPACE/output}"
@@ -33,6 +35,6 @@ run ./linux/build \
 	-p "$PASSENGER_ROOT" \
 	-c "$CACHE_DIR" \
 	-o "$OUTPUT_DIR" \
-	-a "$ARCHITECTURE" \
+	-A "$DOCKER_ARCH" \
 	-j 1 \
 	passenger nginx
