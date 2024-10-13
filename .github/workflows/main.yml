@@ -71,7 +71,7 @@ jobs:
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
-        if: always()
+        if: '!cancelled()'
 
   cxx-macos:
     name: C++ tests on macOS
@@ -134,7 +134,7 @@ jobs:
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
-        if: always()
+        if: '!cancelled()'
 
   apache2:
     name: "Apache2 tests on ${{ matrix.name }}"
@@ -253,7 +253,7 @@ jobs:
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
-        if: always()
+        if: '!cancelled()'
 
 
       - name: Setup sccache as root
@@ -269,7 +269,7 @@ jobs:
 
       - name: Teardown sccache as root
         run: ./dev/ci/teardown-sccache
-        if: always()
+        if: '!cancelled()'
         env:
           SUDO: true
 
@@ -366,7 +366,7 @@ jobs:
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
-        if: always()
+        if: '!cancelled()'
 
   nginx_dynamic:
     name: "Nginx dynamic module tests on ${{ matrix.name }}"
@@ -442,7 +442,7 @@ jobs:
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
-        if: always()
+        if: '!cancelled()'
 
   standalone:
     name: "Passenger Standalone tests on ${{ matrix.name }}"
@@ -500,7 +500,7 @@ jobs:
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
-        if: always()
+        if: '!cancelled()'
 
   ruby:
     name: "Ruby tests on ${{ matrix.name }}"
@@ -565,7 +565,7 @@ jobs:
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
-        if: always()
+        if: '!cancelled()'
 
   nodejs:
     name: "Node.js tests on ${{ matrix.name }}"

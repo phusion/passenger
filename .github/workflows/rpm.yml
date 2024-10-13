@@ -97,7 +97,7 @@ jobs:
           BLOB_NAME: "binaries/rpm-cache-${{ matrix.distro }}-${{ matrix.arch.rpm_arch }}.tar.zstd"
           CACHE_PATH: packaging/rpm/cache
           SUDO: true
-        if: always()
+        if: '!cancelled()'
 
       - uses: actions/upload-artifact@v4
         with:

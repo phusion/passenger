@@ -64,7 +64,7 @@ jobs:
           CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
           BLOB_NAME: "binaries/linux-binaries-cache-${{ hashFiles('packaging/binaries/linux/docker_image/Dockerfile') }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd"
           CACHE_PATH: packaging/binaries/linux/cache
-        if: always()
+        if: '!cancelled()'
 
       - name: Package
         run: ./package -i output -o output -a "$ARCHITECTURE"
@@ -209,7 +209,7 @@ jobs:
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
-        if: always()
+        if: '!cancelled()'
 
       - name: Archive configure logs
         uses: actions/upload-artifact@v4
