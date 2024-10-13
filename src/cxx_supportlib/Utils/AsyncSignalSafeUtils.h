@@ -189,6 +189,8 @@ limitedStrerror(int e, const char *defaultResult = "Unknown error") {
 		return "Operation not permitted";
 	case ETXTBSY:
 		return "Text file busy";
+	case ESRCH:
+		return "Process does not exist";
 	default:
 		return defaultResult;
 	}
