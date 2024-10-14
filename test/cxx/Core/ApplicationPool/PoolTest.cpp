@@ -644,12 +644,15 @@ namespace tut {
 
 		// Close the session so that the process is now idle.
 		ProcessPtr process = currentSession->getProcess()->shared_from_this();
+		pid_t pid = process->getPid();
 		currentSession.reset();
 		unsigned int gen1 = process->generation;
 
 		ensure(pool->restartGroupByName(options.appRoot));
 		EVENTUALLY(5,
-			result = pool->getProcessCount() == 1;
+				   LockGuard l(pool->syncher);
+				   vector<ProcessPtr> processes = pool->getProcesses(false);
+				   processes.size() > 0 && processes[0]->getPid() != pid;
 		);
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
