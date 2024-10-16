@@ -173,7 +173,7 @@ using namespace std;
  *   single_app_mode_app_start_command                               string             -          read_only
  *   single_app_mode_app_type                                        string             -          read_only
  *   single_app_mode_startup_file                                    string             -          read_only
- *   spawn_dir                                                       string             required   read_only
+ *   spawn_dir                                                       string             -          default,read_only
  *   standalone_engine                                               string             -          default
  *   stat_throttle_rate                                              unsigned integer   -          default(10)
  *   telemetry_collector_ca_certificate_path                         string             -          -
@@ -238,6 +238,10 @@ private:
 			}
 		}
 		return 80;
+	}
+
+	static Json::Value getDefaultSpawnDir(const ConfigKit::Store &store) {
+		return getSystemTempDir();
 	}
 
 	static Json::Value getDefaultThreads(const ConfigKit::Store &store) {
@@ -488,7 +492,7 @@ public:
 		overrideWithDynamicDefault("default_server_port", UINT_TYPE, OPTIONAL, getDefaultServerPort);
 
 		add("passenger_root", STRING_TYPE, REQUIRED | READ_ONLY);
-		add("spawn_dir", STRING_TYPE, REQUIRED | READ_ONLY);
+		addWithDynamicDefault("spawn_dir", STRING_TYPE, OPTIONAL | READ_ONLY | CACHE_DEFAULT_VALUE, getDefaultSpawnDir);
 		add("config_manifest", OBJECT_TYPE, OPTIONAL | READ_ONLY);
 		add("pid_file", STRING_TYPE, OPTIONAL | READ_ONLY);
 		add("web_server_version", STRING_TYPE, OPTIONAL | READ_ONLY);

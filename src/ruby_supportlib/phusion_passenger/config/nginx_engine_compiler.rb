@@ -44,11 +44,19 @@ module PhusionPassenger
     class NginxEngineCompiler < AbstractInstaller
       include InstallationUtils
 
-      def self.configure_script_options
-        extra_cflags = "-Wno-error #{PlatformInfo.openssl_extra_cflags} #{PlatformInfo.pcre_extra_cflags}".strip
+      def self.configure_script_options(address_sanitizer: false)
+        extra_cflags = [
+          "-Wno-error",
+          PlatformInfo.openssl_extra_cflags,
+          PlatformInfo.pcre_extra_cflags,
+        ].compact.join(" ").strip
         result = "--with-cc-opt=#{Shellwords.escape extra_cflags} "
 
-        extra_ldflags = "#{PlatformInfo.openssl_extra_ldflags} #{PlatformInfo.pcre_extra_ldflags}".strip
+        extra_ldflags = [
+          PlatformInfo.openssl_extra_ldflags,
+          PlatformInfo.pcre_extra_ldflags,
+          address_sanitizer ? PlatformInfo.address_sanitizer_flags : nil,
+        ].compact.join(" ").strip
         if !extra_ldflags.empty?
           result << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
         end
@@ -339,7 +347,7 @@ module PhusionPassenger
         # work around the problem by configure Nginx with prefix
         # /tmp.
         command << "#{shell} ./configure --prefix=/tmp " +
-          "#{self.class.configure_script_options} " +
+          "#{self.class.configure_script_options(address_sanitizer: @address_sanitizer)} " +
           "--add-module=#{Shellwords.escape PhusionPassenger.nginx_module_source_dir}"
         run_command_yield_activity(command) do
           yield

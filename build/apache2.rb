@@ -126,7 +126,7 @@ file(APACHE2_TARGET => dependencies) do
       PlatformInfo.apache2_module_cxx_ldflags,
       PlatformInfo.portability_cxx_ldflags,
       OPTIMIZE ? '-O' : nil,
-      USE_ASAN ? "-shared-libasan" : nil
+      USE_ASAN ? PlatformInfo.address_sanitizer_flags : nil,
     ].compact
   )
 end

@@ -889,8 +889,8 @@
          "type" : "string"
       },
       "spawn_dir" : {
+         "has_default_value" : "dynamic",
          "read_only" : true,
-         "required" : true,
          "type" : "string"
       },
       "standalone_engine" : {

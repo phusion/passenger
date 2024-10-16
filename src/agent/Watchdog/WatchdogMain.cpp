@@ -836,13 +836,10 @@ parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 		}
 	}
 
-	if (!updates.empty()) {
-		vector<ConfigKit::Error> errors;
-		if (!config.update(updates, errors)) {
-			P_BUG("Unable to set initial configuration: " <<
-				ConfigKit::toString(errors) << "\n"
-				"Raw initial configuration: " << updates.toStyledString());
-		}
+	vector<ConfigKit::Error> errors;
+	if (!config.update(updates, errors)) {
+		P_ERROR("*** Error in options: " << ConfigKit::toString(errors));
+		std::exit(1);
 	}
 }
 

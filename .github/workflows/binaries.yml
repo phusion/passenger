@@ -1,7 +1,8 @@
-name: Passenger generic binaries tests CI tests
+name: Passenger generic binaries CI
 
 env:
-  ENTERPRISE: 0
+  FORCE_COLOR: 1
+  RUST_LOG_STYLE: always
 
 on:
   push: {}
@@ -9,59 +10,211 @@ on:
 
 jobs:
   build_linux:
-    name: "Binary automation Linux-${{ matrix.arch }}"
+    name: Binaries Linux ${{ matrix.arch }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            runner: passenger-ubuntu-24.04-arm64-2cpu
+          - runner: ubuntu-24.04
+            arch: x86_64
+            docker_arch: amd64
+          - runner: passenger-ubuntu-24.04-arm64-4cpu
+            arch: aarch64
+            docker_arch: arm64
     runs-on: ${{ matrix.runner }}
-    env:
-      WORKSPACE: ${{ github.workspace }}
-      OUTPUT_DIR: ${{ github.workspace }}/output-linux-${{ matrix.arch }}
-      ARCHITECTURE: ${{ matrix.arch }}
-      CACHE_DIR: ${{ github.workspace }}/cache/linux-${{ matrix.arch }}/executor-${{ github.run_id }}
-      RUNTIME_DIR: ${{ github.workspace }}/cache/linux-${{ matrix.arch }}/executor-${{ github.run_id }}/runtime
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - uses: docker/setup-buildx-action@v3
-    - run: ./dev/ci/tests/binaries/build-linux
-    - uses: actions/upload-artifact@v4
-      with:
-        name: binaries-linux-${{ matrix.arch }}
-        path: 'output-linux-${{ matrix.arch }}/**/*'
-    - run: ./dev/ci/tests/binaries/test-linux
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - run: mkdir cache output
+        working-directory: packaging/binaries/linux
+
+      - name: Fetch cache
+        run: ./dev/ci/fetch-cache-az-blob-storage
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+          BLOB_NAME: "binaries/linux-binaries-cache-${{ hashFiles('packaging/binaries/linux/docker_image/Dockerfile') }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd"
+          CACHE_PATH: packaging/binaries/linux/cache
+
+      - name: Build
+        run: >
+          ./build
+          -p "$WORKSPACE"
+          -c cache
+          -o output
+          -A "$DOCKER_ARCH"
+          -j 2
+          passenger nginx
+        env:
+          WORKSPACE: ${{ github.workspace }}
+          DOCKER_ARCH: ${{ matrix.docker_arch }}
+        working-directory: packaging/binaries/linux
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux-${{ matrix.arch }}
+          path: packages/binaries/linux/output/**/*
+
+      - name: Update cache
+        run: ./dev/ci/update-cache-az-blob-storage
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+          BLOB_NAME: "binaries/linux-binaries-cache-${{ hashFiles('packaging/binaries/linux/docker_image/Dockerfile') }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd"
+          CACHE_PATH: packaging/binaries/linux/cache
+        if: '!cancelled()'
+
+      - name: Package
+        run: ./package -i output -o output -a "$ARCHITECTURE"
+        env:
+          ARCHITECTURE: ${{ matrix.arch }}
+        working-directory: packaging/binaries/linux
+
+      - name: Test
+        run: >
+          ./test
+          -p "$WORKSPACE"
+          -i output
+          -I output
+          -A "$DOCKER_ARCH"
+        env:
+          WORKSPACE: ${{ github.workspace }}
+          DOCKER_ARCH: ${{ matrix.docker_arch }}
+        working-directory: packaging/binaries/linux
 
   build_macos:
-    name: "Binary automation macOS-${{ matrix.arch }}"
+    name: Binaries macOS ${{ matrix.arch }}
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - x86_64
-          - aarch64
-    runs-on: macos-${{ matrix.arch == 'x86_64' && '13' || 'latest' }}
+        include:
+          - runner: macos-13
+            arch: x86_64
+            sccache_arch_and_os: x86_64-apple-darwin
+            sccache_azure_key_prefix: sccache/cxx-macos-13-x86_64
+          - runner: macos-14
+            arch: arm64
+            sccache_arch_and_os: aarch64-apple-darwin
+            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+    runs-on: ${{ matrix.runner }}
     env:
-      WORKSPACE: ${{ github.workspace }}
-      OUTPUT_DIR: ${{ github.workspace }}/output-macos-${{ matrix.arch }}
-      ARCHITECTURE: ${{ matrix.arch }}
-      CACHE_DIR: ${{ github.workspace }}/cache/macos-${{ matrix.arch }}/executor-${{ github.run_id }}
-      RUNTIME_DIR: ${{ github.workspace }}/cache/macos-${{ matrix.arch }}/executor-${{ github.run_id }}/runtime
+      CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - run: \curl -sSL https://get.rvm.io | bash
-    - run: xargs -I{} "$HOME/.rvm/bin/rvm" install ruby-{} < packaging/binaries/shared/definitions/ruby_versions
-    - run: ./dev/ci/tests/binaries/prepare-macos
-    - run: ./dev/ci/tests/binaries/build-macos
-    - uses: actions/upload-artifact@v4
-      with:
-        name: binaries-macos-${{ matrix.arch }}
-        path: 'output-macos-${{ matrix.arch }}/**/*'
-    - run: ./dev/ci/tests/binaries/test-macos
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: brew install zlib automake libtool coreutils
+
+      - run: mkdir work runtime-output output
+        working-directory: packaging/binaries/macos
+
+      - name: Determine runtime version
+        id: determine_runtime_version
+        run: |
+          RUNTIME_VERSION=$(cat ../shared/definitions/macos_runtime_version)
+          echo "version=$RUNTIME_VERSION" >> "$GITHUB_OUTPUT"
+        working-directory: packaging/binaries/macos
+
+
+      - name: Fetch RVM cache
+        run: CACHE_PATH="$HOME/.rvm" ./dev/ci/fetch-cache-az-blob-storage
+        id: fetch_rvm_cache
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          BLOB_NAME: "binaries/rvm-${{ hashFiles('packaging/binaries/shared/definitions/ruby_versions') }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd"
+
+      - name: Install RVM
+        run: set -o pipefail && curl -fsSL https://get.rvm.io/stable | bash
+
+      - name: Install Rubies
+        run: xargs -I{} "$HOME/.rvm/bin/rvm" install ruby-{} < packaging/binaries/shared/definitions/ruby_versions
+        if: steps.fetch_rvm_cache.outputs.cache-hit != 'true'
+
+      - name: Cleanup RVM
+        run: ~/.rvm/bin/rvm cleanup all
+        if: steps.fetch_rvm_cache.outputs.cache-hit != 'true'
+
+      - name: Update RVM cache
+        run: CACHE_PATH="$HOME/.rvm" ./dev/ci/update-cache-az-blob-storage
+        if: steps.fetch_rvm_cache.outputs.cache-hit != 'true'
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          BLOB_NAME: "binaries/rvm-${{ hashFiles('packaging/binaries/shared/definitions/ruby_versions') }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd"
+
+
+      - name: Setup sccache
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          ARCH_AND_OS: ${{ matrix.sccache_arch_and_os }}
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+
+      - name: Fetch runtime cache
+        run: ./dev/ci/fetch-cache-az-blob-storage
+        id: fetch_runtime_cache
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          BLOB_NAME: binaries/macos-runtime-${{ steps.determine_runtime_version.outputs.version }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd
+          CACHE_PATH: packaging/binaries/macos/runtime-output
+
+      - name: Compile runtime
+        run: ./setup-runtime -w work -o runtime-output -j 4
+        if: steps.fetch_runtime_cache.outputs.cache-hit != 'true'
+        working-directory: packaging/binaries/macos
+
+      - name: Update runtime cache
+        run: ./dev/ci/update-cache-az-blob-storage
+        if: steps.fetch_runtime_cache.outputs.cache-hit != 'true'
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          BLOB_NAME: binaries/macos-runtime-${{ steps.determine_runtime_version.outputs.version }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd
+          CACHE_PATH: packaging/binaries/macos/runtime-output
+
+
+      - name: Build binaries
+        run: ./build -p "$WORKSPACE" -r runtime-output -w work -o output -j 4 passenger nginx
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        working-directory: packaging/binaries/macos
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-macos-${{ matrix.arch }}
+          path: packaging/binaries/macos/output/**/*
+
+
+      - name: Package binaries
+        run: ./package -i output -o output
+        working-directory: packaging/binaries/macos
+
+      - name: Cache test suite gem bundle
+        uses: actions/cache@v4
+        with:
+          path: packaging/binaries/macos/runtime-output/gems
+          key: test-gems-${{ hashFiles('packaging/binaries/shared/Gemfile.lock', 'packaging/binaries/shared/definitions/ruby_versions') }}-${{ matrix.runner }}-${{ matrix.arch }}
+
+      - name: Test
+        run: ./test -p "$WORKSPACE" -r runtime-output -i output -I output
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        working-directory: packaging/binaries/macos
+
+
+      - name: Teardown sccache
+        run: ./dev/ci/teardown-sccache
+        if: '!cancelled()'
+
+      - name: Archive configure logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: generic-binaries-logs-macos
+          path: packaging/binaries/macos/work/*/config.log
+          if-no-files-found: ignore

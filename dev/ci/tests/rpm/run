@@ -29,7 +29,8 @@ source "./internal/lib/distro_info.sh"
 
 require_envvar WORKSPACE "$WORKSPACE"
 require_envvar DISTRIBUTION "$DISTRIBUTION"
-require_envvar ARCHITECTURE "$ARCHITECTURE"
+require_envvar RPM_ARCH "$RPM_ARCH"
+require_envvar DOCKER_ARCH "$DOCKER_ARCH"
 
 PASSENGER_ROOT="${PASSENGER_ROOT:-$WORKSPACE}"
 CACHE_DIR="${CACHE_DIR:-$WORKSPACE/cache}"
@@ -51,7 +52,8 @@ run ./build \
 	-o "$WORKSPACE/output" \
 	-p "$PASSENGER_ROOT" \
 	-d "$DISTRIBUTION" \
-	-a "$ARCHITECTURE" \
+	-a "$RPM_ARCH" \
+	-A "$DOCKER_ARCH" \
 	-R \
 	rpm:all
 run ./test \
@@ -59,6 +61,7 @@ run ./test \
 	-d "$WORKSPACE/output/$DISTRIBUTION" \
 	-c "$CACHE_DIR" \
 	-x "$TEST_DISTRO_NAME" \
-	-a "$ARCHITECTURE" \
+	-a "$RPM_ARCH" \
+	-A "$DOCKER_ARCH" \
 	-j \
 	$EXTRA_TEST_PARAMS

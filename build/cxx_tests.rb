@@ -212,14 +212,16 @@ file(TEST_CXX_TARGET => dependencies) do
   )
 end
 
-dependencies = [
+cxx_test_dependencies = [
   TEST_CXX_TARGET,
   "#{TEST_OUTPUT_DIR}allocate_memory",
   NATIVE_SUPPORT_TARGET,
   AGENT_TARGET
 ].compact
+task 'test:cxx:build' => cxx_test_dependencies
+
 desc "Run unit tests for the C++ components"
-task 'test:cxx' => dependencies do
+task 'test:cxx' => cxx_test_dependencies do
   args = ENV['GROUPS'].to_s.split(";").map{ |name| "-g #{name}" }
 
   if level = string_option('LOG_LEVEL')

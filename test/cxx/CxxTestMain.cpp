@@ -157,8 +157,8 @@ parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 
 	vector<ConfigKit::Error> errors;
 	if (!config.update(updates, errors)) {
-		P_BUG("Unable to set initial configuration: " <<
-			ConfigKit::toString(errors));
+		P_ERROR("*** Error in options: " << ConfigKit::toString(errors));
+		std::exit(1);
 	}
 }
 

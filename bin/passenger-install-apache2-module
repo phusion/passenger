@@ -122,6 +122,8 @@ class Installer < PhusionPassenger::AbstractInstaller
   end
 
   def run_steps
+    PlatformInfo.verbose = true if @verbose_depcheck
+
     if PhusionPassenger.build_system_dir.nil?
       # Invariant: PhusionPassenger.custom_packaged?
       if apache_module_available?
@@ -943,6 +945,9 @@ parser = OptionParser.new do |opts|
   #end
   opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
     options[:colorize] = true
+  end
+  opts.on("--verbose-depcheck", "Show more dependency checking-related logs") do
+    options[:verbose_depcheck] = true
   end
   opts.on("--snippet", "Show just the Apache config snippet.") do
     options[:snippet] = true

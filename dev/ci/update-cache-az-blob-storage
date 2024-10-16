@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+if [[ -z "$AZURE_STORAGE_CONNECTION_STRING" ]]; then
+	echo "AZURE_STORAGE_CONNECTION_STRING is required"
+	exit 1
+fi
+
+if [[ -z "$CONTAINER_NAME" ]]; then
+	echo "CONTAINER_NAME is required"
+	exit 1
+fi
+
+if [[ -z "$BLOB_NAME" ]]; then
+	echo "BLOB_NAME is required"
+	exit 1
+fi
+
+if [[ "$SUDO" = true ]]; then
+	SUDO_COMMAND=(sudo)
+else
+	SUDO_COMMAND=()
+fi
+
+CACHE_PATH=${CACHE_PATH:-$BLOB_NAME}
+
+
+echo "--> Packaging cache directory"
+"${SUDO_COMMAND[@]}" env ZSTD_NBTHREADS=0 tar -C "$CACHE_PATH" -c --zstd -f "$CACHE_PATH.tar.zstd" .
+
+echo "--> Uploading blob"
+az storage blob upload \
+	-c "$CONTAINER_NAME" \
+	-n "$BLOB_NAME" \
+	-f "$CACHE_PATH.tar.zstd" \
+	--overwrite \
+	--no-progress
+rm "$CACHE_PATH.tar.zstd"

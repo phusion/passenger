@@ -1,10 +1,11 @@
-def setupTest(enablerFlag, distribution, architecture, block) {
+def setupTest(enablerFlag, distribution, rpmArch, dockerArch, block) {
   if (enablerFlag) {
-    node("linux && ${architecture}") {
+    node("linux && ${rpmArch}") {
       withEnv([
-        "CACHE_DIR=${env.JENKINS_HOME}/cache/${env.JOB_NAME}/${distribution}-${architecture}",
+        "CACHE_DIR=${env.JENKINS_HOME}/cache/${env.JOB_NAME}/${distribution}-${rpmArch}",
         "DISTRIBUTION=${distribution}",
-        "ARCHITECTURE=${architecture}"
+        "RPM_ARCH=${rpmArch}",
+        "DOCKER_ARCH=${dockerArch}"
       ], block)
     }
   } else {
@@ -48,25 +49,25 @@ pipeline {
         script {
           parallel(
             'el8 x86_64': {
-              setupTest(params.EL8, 'el8', 'x86_64') {
+              setupTest(params.EL8, 'el8', 'x86_64', 'amd64') {
                 checkout scm
                 sh './dev/ci/tests/rpm/run'
               }
             },
             'el9 x86_64': {
-              setupTest(params.EL9, 'el9', 'x86_64') {
+              setupTest(params.EL9, 'el9', 'x86_64', 'amd64') {
                 checkout scm
                 sh './dev/ci/tests/rpm/run'
               }
             },
             'el8 aarch64': {
-              setupTest(params.EL8, 'el8', 'aarch64') {
+              setupTest(params.EL8, 'el8', 'aarch64', 'arm64') {
                 checkout scm
                 sh './dev/ci/tests/rpm/run'
               }
             },
             'el9 aarch64': {
-              setupTest(params.EL9, 'el9', 'aarch64') {
+              setupTest(params.EL9, 'el9', 'aarch64', 'arm64') {
                 checkout scm
                 sh './dev/ci/tests/rpm/run'
               }

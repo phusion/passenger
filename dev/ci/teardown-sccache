@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+SUDO=${SUDO:-false}
+
+# Ensure Github Actions print stdout and stderr data in correct order.
+exec 2>&1
+set -x
+
+# teardown-sccache can still be called even when setup-sccache fails, so don't
+# assume that sccache is in PATH and also don't assume that the log file exists.
+
+if [[ -e /usr/local/bin/sccache ]]; then
+	if $SUDO; then
+		sudo /usr/local/bin/sccache --stop-server
+	else
+		/usr/local/bin/sccache --stop-server
+	fi
+fi
+
+if test -e sccache.log; then
+	cat sccache.log;
+fi
+
+# Remove compiler wrappers from PATH.
+PATH=$(ruby -e 'paths = ENV["PATH"].split(":"); paths.delete("/usr/local/libexec/sccache"); puts paths.join(":")')
+echo "PATH=$PATH" >> "$GITHUB_ENV"

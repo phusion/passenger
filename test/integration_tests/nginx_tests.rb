@@ -488,7 +488,7 @@ describe "Phusion Passenger for Nginx" do
         PhusionPassenger.on_event(:oob_work) do
           f = File.open("#{@stub.full_app_root}/oob_work.\#{$$}", 'w')
           f.close
-          sleep 1
+          sleep 3
         end
         app = lambda do |env|
           if env['PATH_INFO'] == '/oobw'
@@ -515,7 +515,7 @@ describe "Phusion Passenger for Nginx" do
       t0 = Time.now
       get("/oobw")
       secs = Time.now - t0
-      secs.should <= 0.1
+      secs.should <= 0.5
     end
   end
 

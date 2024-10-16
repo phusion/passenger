@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+if [[ -z "$AZURE_STORAGE_CONNECTION_STRING" ]]; then
+	echo "AZURE_STORAGE_CONNECTION_STRING is required"
+	exit 1
+fi
+
+if [[ -z "$CONTAINER_NAME" ]]; then
+	echo "CONTAINER_NAME is required"
+	exit 1
+fi
+
+if [[ -z "$BLOB_NAME" ]]; then
+		echo "BLOB_NAME is required"
+		exit 1
+fi
+
+if [[ "$SUDO" = true ]]; then
+	SUDO_COMMAND=(sudo)
+else
+	SUDO_COMMAND=()
+fi
+
+CACHE_PATH=${CACHE_PATH:-$BLOB_NAME}
+
+
+echo "--> Checking whether blob exists"
+EXISTS=$(
+	az storage blob exists \
+	--container-name "$CONTAINER_NAME" \
+	--name "$BLOB_NAME" \
+	--connection-string "$AZURE_STORAGE_CONNECTION_STRING" \
+	--output tsv
+)
+echo "$EXISTS"
+
+if [[ "$EXISTS" = True ]]; then
+	echo "--> Downloading and extracting blob"
+	mkdir -p "$CACHE_PATH"
+	az storage blob download \
+		--container-name "$CONTAINER_NAME" \
+		--name "$BLOB_NAME" \
+		--no-progress \
+		| "${SUDO_COMMAND[@]}" env ZSTD_NBTHREADS=0 tar -C "$CACHE_PATH" -x --zstd -f -
+	echo "Extracted"
+
+	echo "cache-hit=true" >> "$GITHUB_OUTPUT"
+else
+	echo "cache-hit=false" >> "$GITHUB_OUTPUT"
+fi

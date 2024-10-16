@@ -66,19 +66,11 @@ task 'test:install_deps' do
     sh "#{gem_install} bundler"
   end
 
-  if install_base_deps
-    unless Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('3.0.0') || RUBY_PLATFORM =~ /darwin/
-      if bundler_too_new?
-        sh "bundle config set --local without future"
-      else
-        bundle_args.concat(["--without", "future"])
-      end
-    end
-  else
+  if !install_base_deps
     if bundler_too_new?
-      sh "bundle config set --local without 'base future'"
+      sh "bundle config set --local without 'base'"
     else
-      bundle_args.concat(["--without", "base", "future"])
+      bundle_args.concat(["--without", "base"])
     end
   end
   sh "bundle install #{bundle_args.join(' ')} #{ENV['BUNDLE_ARGS']}"
