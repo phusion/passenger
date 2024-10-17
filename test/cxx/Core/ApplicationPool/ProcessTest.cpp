@@ -118,8 +118,9 @@ namespace tut {
 
 			args["spawner_creation_time"] = 0;
 
-			ProcessPtr process(context.processObjectPool.construct(
-				&groupInfo, result, args), false);
+			Process *p = context.processObjectPool.malloc();
+			p = new (p) Process(&groupInfo, 0, result, args);
+			ProcessPtr process(p, false);
 			process->shutdownNotRequired();
 			return process;
 		}

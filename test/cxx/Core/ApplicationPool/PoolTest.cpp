@@ -631,6 +631,69 @@ namespace tut {
 		ensure_equals(pool->getGroupCount(), 0u);
 	}
 
+	TEST_METHOD(15) {
+	    set_test_name("Process generation increments when the group restarts");
+		Options options = createOptions();
+
+		// Spawn a process and opens a session with it.
+		pool->setMax(1);
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+
+		// Close the session so that the process is now idle.
+		ProcessPtr process = currentSession->getProcess()->shared_from_this();
+		pid_t pid = process->getPid();
+		currentSession.reset();
+		unsigned int gen1 = process->generation;
+
+		ensure(pool->restartGroupByName(options.appRoot));
+		EVENTUALLY(5,
+				   LockGuard l(pool->syncher);
+				   vector<ProcessPtr> processes = pool->getProcesses(false);
+				   result = (processes.size() > 0 && processes[0]->getPid() != pid);
+		);
+		pool->asyncGet(options, callback);
+		EVENTUALLY(5,
+			result = number == 2;
+		);
+
+		process = currentSession->getProcess()->shared_from_this();
+		currentSession.reset();
+		unsigned int gen2 = process->generation;
+		ensure_equals(gen1+1,gen2);
+	}
+
+	TEST_METHOD(16) {
+	    // Test that the correct process from the pool is routed
+		Options options = createOptions();
+		ensureMinProcesses(2);
+
+		// async restart the group
+		ensure(pool->restartGroupByName(options.appRoot));
+		ensureMinProcesses(1);
+
+        /*
+		  Imagine we have these processes (ordered from oldest to newest):
+
+          #. PID 1 (generation A, busyness 5)
+          #. PID 2 (generation A, busyness 3)
+          #. PID 3 (generation B, busyness 1)
+
+          The algorithm should select PID 3
+		 */
+
+		/*
+		  Imagine we have these processes (ordered from oldest to newest):
+
+          #. PID 1 (generation A, busyness 1)
+          #. PID 2 (generation B, busyness 5)
+
+          The algorithm should select PID 1
+		 */
+	}
+
 	TEST_METHOD(17) {
 		// Test that restartGroupByName() spawns more processes to ensure
 		// that minProcesses and other constraints are met.

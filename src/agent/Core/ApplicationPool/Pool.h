@@ -28,10 +28,8 @@
 
 #include <string>
 #include <vector>
-#include <algorithm>
 #include <utility>
 #include <sstream>
-#include <iomanip>
 #include <boost/thread.hpp>
 #include <boost/bind/bind.hpp>
 #include <boost/shared_ptr.hpp>

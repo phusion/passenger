@@ -64,71 +64,126 @@ Group::findProcessWithStickySessionId(unsigned int id) const {
 }
 
 Process *
-Group::findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
-	int leastBusyProcessIndex = -1;
-	int lowestBusyness = 0;
-	unsigned int i, size = enabledProcessBusynessLevels.size();
-	const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
-
-	for (i = 0; i < size; i++) {
-		Process *process = enabledProcesses[i].get();
+Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
+	Process *bestProcess = nullptr;
+	Process *fallbackProcess = nullptr;
+	ProcessList::const_iterator it;
+	ProcessList::const_iterator end = enabledProcesses.end();
+	for (it = enabledProcesses.begin(); it != end; it++) {
+		Process *process = (*it).get();
 		if (process->getStickySessionId() == id) {
 			return process;
-		} else if (leastBusyProcessIndex == -1 || enabledProcessBusynessLevels[i] < lowestBusyness) {
-			leastBusyProcessIndex = i;
-			lowestBusyness = enabledProcessBusynessLevels[i];
+		} else if (process->isTotallyBusy() && bestProcess == nullptr) {
+			if (fallbackProcess == nullptr ||
+				process->generation > fallbackProcess->generation ||
+				(process->generation == fallbackProcess->generation && process->spawnStartTime < fallbackProcess->spawnStartTime) ||
+				(process->generation == fallbackProcess->generation && process->spawnStartTime == fallbackProcess->spawnStartTime && process->busyness() < fallbackProcess->busyness())
+			) {
+				fallbackProcess = process;
+			}
+		} else if (!process->isTotallyBusy() && (bestProcess == nullptr ||
+				   process->generation > bestProcess->generation ||
+				   (process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime) ||
+				   (process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
+		)) {
+			bestProcess = process;
 		}
 	}
-
-	if (leastBusyProcessIndex == -1) {
-		return NULL;
-	} else {
-		return enabledProcesses[leastBusyProcessIndex].get();
+	if (bestProcess == nullptr) {
+		return fallbackProcess;
 	}
+	return bestProcess;
 }
 
 Process *
-Group::findProcessWithLowestBusyness(const ProcessList &processes) const {
+Group::findBestProcess(const ProcessList &processes) const {
 	if (processes.empty()) {
-		return NULL;
+		return nullptr;
 	}
 
-	int lowestBusyness = -1;
-	Process *leastBusyProcess = NULL;
+	Process *bestProcess = nullptr;
+	Process *fallbackProcess = nullptr;
 	ProcessList::const_iterator it;
 	ProcessList::const_iterator end = processes.end();
 	for (it = processes.begin(); it != end; it++) {
 		Process *process = (*it).get();
-		int busyness = process->busyness();
-		if (lowestBusyness == -1 || lowestBusyness > busyness) {
-			lowestBusyness = busyness;
-			leastBusyProcess = process;
+
+	 if (process->isTotallyBusy() && bestProcess == nullptr) {
+			if (fallbackProcess == nullptr ||
+				process->generation > fallbackProcess->generation ||
+				(process->generation == fallbackProcess->generation && process->spawnStartTime < fallbackProcess->spawnStartTime) ||
+				(process->generation == fallbackProcess->generation && process->spawnStartTime == fallbackProcess->spawnStartTime && process->busyness() < fallbackProcess->busyness())
+			) {
+				fallbackProcess = process;
+			}
+	 } else if (!process->isTotallyBusy() && (bestProcess == nullptr ||
+			process->generation > bestProcess->generation ||
+			(process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime) ||
+			(process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
+		)) {
+			bestProcess = process;
 		}
 	}
-	return leastBusyProcess;
+	if (bestProcess == nullptr) {
+		return fallbackProcess;
+	}
+	return bestProcess;
 }
 
 /**
- * Cache-optimized version of findProcessWithLowestBusyness() for the common case.
+ * Cache-optimized version of findBestProcess() for the common case.
  */
 Process *
-Group::findEnabledProcessWithLowestBusyness() const {
+Group::findBestEnabledProcess() const {
 	if (enabledProcesses.empty()) {
-		return NULL;
+		return nullptr;
 	}
 
-	int leastBusyProcessIndex = -1;
-	int lowestBusyness = 0;
-	unsigned int i, size = enabledProcessBusynessLevels.size();
+	Process* bestProcess = nullptr;
+	unsigned long long bestProcessStartTime = 0;
+	unsigned int bestProcessGen = 0;
+	int bestProcessBusyness = 0;
+
+	Process* fallbackProcess = nullptr;
+	unsigned long long fallbackProcessStartTime = 0;
+	unsigned int fallbackProcessGen = 0;
+	int fallbackProcessBusyness = 0;
+
+	unsigned int size = enabledProcessBusynessLevels.size();
 	const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
 
-	for (i = 0; i < size; i++) {
-		if (leastBusyProcessIndex == -1 || enabledProcessBusynessLevels[i] < lowestBusyness) {
-			leastBusyProcessIndex = i;
-			lowestBusyness = enabledProcessBusynessLevels[i];
+	for (unsigned int i = 0; i < size; i++) {
+		Process *process = enabledProcesses.at(i).get();
+		unsigned int gen = process->generation;
+		unsigned long long startTime = process->spawnStartTime;
+		int busyness = enabledProcessBusynessLevels[i];
+		bool totallyBusy = process->isTotallyBusy();
+		if (totallyBusy && bestProcess == nullptr) {
+			if (fallbackProcess == nullptr ||
+ 				gen > fallbackProcess->generation ||
+				(gen == fallbackProcessGen && startTime <  fallbackProcessStartTime) ||
+				(gen == fallbackProcessGen && startTime == fallbackProcessStartTime && busyness < fallbackProcessBusyness)
+			) {
+				fallbackProcess = process;
+				fallbackProcessGen = gen;
+				fallbackProcessBusyness = busyness;
+				fallbackProcessStartTime = startTime;
+			}
+		} else if (!totallyBusy && (bestProcess == nullptr ||
+ 			gen > bestProcess->generation ||
+			(gen == bestProcessGen && startTime <  bestProcessStartTime) ||
+			(gen == bestProcessGen && startTime == bestProcessStartTime && busyness < bestProcessBusyness)
+		)) {
+			bestProcess = process;
+			bestProcessGen = gen;
+			bestProcessBusyness = busyness;
+			bestProcessStartTime = startTime;
 		}
 	}
-	return enabledProcesses[leastBusyProcessIndex].get();
+	if (bestProcess == nullptr) {
+		return fallbackProcess;
+	}
+	return bestProcess;
 }
 
 /**
