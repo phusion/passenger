@@ -652,7 +652,7 @@ namespace tut {
 		EVENTUALLY(5,
 				   LockGuard l(pool->syncher);
 				   vector<ProcessPtr> processes = pool->getProcesses(false);
-				   processes.size() > 0 && processes[0]->getPid() != pid;
+				   result = (processes.size() > 0 && processes[0]->getPid() != pid);
 		);
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
