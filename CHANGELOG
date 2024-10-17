@@ -1,6 +1,7 @@
 Release 6.0.24 (Not yet released)
 -------------
  * Fix a regression from 6.0.10 where running `passenger-config system-properties` would throw an error. Closes GH-2565.
+ * [Enterprise] Fix a memory corruption-related crash that could occur during rolling restarting.
  * [Ubuntu] Add packages for Ubuntu 24.10 "oracular".
  * [Ruby] Specify rackup version to avoid broken 1.0 gem. Closes GH-2559.
  * Upgrades Boost from 1.85 -> 1.86.
