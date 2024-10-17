@@ -281,9 +281,11 @@ resumeOriginalProcess(AbortHandlerWorkingState &state) {
 		int e = errno;
 		pos = state.messageBuf;
 		pos = ASSU::appendData(pos, end, state.messagePrefix);
-		pos = ASSU::appendData(pos, end, " ] Could not resume original process: kill() failed with errno=");
+		pos = ASSU::appendData(pos, end, " ] Could not resume original process: kill() failed: ");
+		pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+		pos = ASSU::appendData(pos, end, " (errno=");
 		pos = ASSU::appendInteger<int, 10>(pos, end, e);
-		pos = ASSU::appendData(pos, end, "\n");
+		pos = ASSU::appendData(pos, end, ")\n");
 		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 		return false;
@@ -306,9 +308,11 @@ forceTerminateOriginalProcess(AbortHandlerWorkingState &state) {
 		int e = errno;
 		pos = state.messageBuf;
 		pos = ASSU::appendData(pos, end, state.messagePrefix);
-		pos = ASSU::appendData(pos, end, " ] Could not force terminate original process: kill() failed with errno=");
+		pos = ASSU::appendData(pos, end, " ] Could not force terminate original process: kill() failed: ");
+		pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+		pos = ASSU::appendData(pos, end, " (errno=");
 		pos = ASSU::appendInteger<int, 10>(pos, end, e);
-		pos = ASSU::appendData(pos, end, "\n");
+		pos = ASSU::appendData(pos, end, ")\n");
 		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 	}
 }

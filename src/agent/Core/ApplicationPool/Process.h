@@ -339,9 +339,8 @@ private:
 
 	void destroySelf() const {
 		Context *context = getContext();
-		this->~Process();
 		LockGuard l(context->memoryManagementSyncher);
-		getContext()->processObjectPool.free(const_cast<Process *>(this));
+		context->processObjectPool.destroy(const_cast<Process *>(this));
 	}
 
 

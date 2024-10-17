@@ -68,6 +68,8 @@ jobs:
         with:
           name: cxx-test-logs-macos
           path: 'buildout/testlogs/*'
+          if-no-files-found: ignore
+        if: '!cancelled()'
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
@@ -102,6 +104,9 @@ jobs:
           ARCH_AND_OS: aarch64-apple-darwin
           SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
 
+      - name: Setup dependencies
+        run: brew install coreutils
+
       - name: Setup misc
         run: |
           sudo chmod 755 "$HOME"
@@ -114,23 +119,28 @@ jobs:
         # The AbortHandler doesn't work so well on Github's macOS runners:
         # - crash-watch invocation freezes the runner, so we disable this.
         # - resuming the parent process after SIGSTOP doesn't work, so we force kill the parent.
+        # - force killing the parent may not work, so we enforce a low timeout to prevent
+        #   the test from haging for a long time. We enforce this primarily using the 'timeout'
+        #   command from coreutils instead of Github Actions' timeout,  because the latter
+        #   could put the entire job in the "skipped" state and refuse to show logs.
+        timeout-minutes: 11
         run: >
           sudo env
           PATH="$PATH"
           GEM_PATH="$GEM_PATH"
           PASSENGER_DUMP_WITH_CRASH_WATCH=false
           PASSENGER_FORCE_TERMINATE_ON_ABORT=true
+          gtimeout --signal KILL --verbose 600
           ../buildout/test/cxx/main
         working-directory: test
-        # The AbortHandler may not be able to forcefully kill the parent. We set a low timeout
-        # to prevent the test from hanging for a long time.
-        timeout-minutes: 10
 
       - name: Archive logs
         uses: actions/upload-artifact@v4
         with:
           name: cxx-test-logs-macos
           path: 'buildout/testlogs/*'
+          if-no-files-found: ignore
+        if: '!cancelled()'
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache
@@ -282,6 +292,8 @@ jobs:
         with:
           name: apache-test-logs-${{ matrix.os }}
           path: 'buildout/testlogs/*'
+          if-no-files-found: ignore
+        if: '!cancelled()'
 
   nginx:
     name: "Nginx tests on ${{ matrix.name }}"
@@ -363,6 +375,8 @@ jobs:
         with:
           name: nginx-test-logs-${{ matrix.os }}
           path: 'buildout/testlogs/*'
+          if-no-files-found: ignore
+        if: '!cancelled()'
 
       - name: Teardown sccache
         run: ./dev/ci/teardown-sccache

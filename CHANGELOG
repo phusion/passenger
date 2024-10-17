@@ -3,6 +3,7 @@ Release 6.0.24 (Not yet released)
  * Update the order Passenger routes requests to app processes. Processes are now chosen based on being in the latest generation (Enterprise), then by newest process, then by oldest, then by
 busyness. Closes GH-2551.
  * Fix a regression from 6.0.10 where running `passenger-config system-properties` would throw an error. Closes GH-2565.
+ * [Enterprise] Fix a memory corruption-related crash that could occur during rolling restarting.
  * [Ubuntu] Add packages for Ubuntu 24.10 "oracular".
  * [Ruby] Specify rackup version to avoid broken 1.0 gem. Closes GH-2559.
  * Upgrades Boost from 1.85 -> 1.86.
