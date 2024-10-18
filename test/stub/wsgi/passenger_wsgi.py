@@ -1,4 +1,15 @@
-import os, sys, time, cgi
+import os, sys, time
+
+if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 13):
+	import cgi
+	parsefn = cgi.parse
+else:
+	import urllib.parse
+	def parsefn(input, env):
+		return dict(urllib.parse.parse_qsl(
+			input.read(int(env['CONTENT_LENGTH'])).decode())
+		)
+
 
 def file_exist(filename):
 	try:
@@ -53,7 +64,7 @@ def application(env, start_response):
 			body = b"front page"
 	elif path == '/parameters':
 		method = env['REQUEST_METHOD']
-		params = cgi.parse(env['wsgi.input'], env)
+		params = parsefn(env['wsgi.input'], env)
 		first  = params['first'][0]
 		second = params['second'][0]
 		body = str_to_bytes("Method: %s\nFirst: %s\nSecond: %s\n" % (method, first, second))
@@ -87,7 +98,7 @@ def application(env, start_response):
 		for pair in iteritems(env):
 			body += str_to_bytes(pair[0] + ' = ' + str(pair[1]) + "\n")
 	elif path == '/touch_file':
-		params = cgi.parse(env['wsgi.input'], env)
+		params = parsefn(env['wsgi.input'], env)
 		filename = params["file"][0]
 		open(filename, 'w').close()
 		body = b"ok"
@@ -97,7 +108,7 @@ def application(env, start_response):
 	elif path == '/cached':
 		body = b"This is the uncached version of /cached"
 	elif path == '/upload_with_params':
-		params = cgi.FieldStorage(fp = env['wsgi.input'], environ = env)
+		params = parsefn(env['wsgi.input'], env)
 		name1 = str_to_bytes(params["name1"].value)
 		name2 = str_to_bytes(params["name2"].value)
 		data  = str_to_bytes(params["data"].value)
