@@ -1,15 +1,23 @@
 import os, sys, time
 
-if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 13):
-	import cgi
-	parsefn = cgi.parse
-else:
+if sys.version_info[0] >= 3 and sys.version_info[1] >= 13:
 	import urllib.parse
-	def parsefn(input, env):
+else:
+	import cgi
+
+def parsefn(input, env):
+	if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 13):
+		return cgi.parse(input, env)
+	else:
 		return dict(urllib.parse.parse_qsl(
 			input.read(int(env['CONTENT_LENGTH'])).decode())
-		)
+			)
 
+def parsefn2(input, env):
+	if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 13):
+		return cgi.FieldStorage(fp = input, environ = env)
+	else:
+		raise NotImplementedError("there is no equivalent for FieldStorage in Python 3.13+")
 
 def file_exist(filename):
 	try:
@@ -108,7 +116,7 @@ def application(env, start_response):
 	elif path == '/cached':
 		body = b"This is the uncached version of /cached"
 	elif path == '/upload_with_params':
-		params = parsefn(env['wsgi.input'], env)
+		params = parsefn2(env['wsgi.input'], env)
 		name1 = str_to_bytes(params["name1"].value)
 		name2 = str_to_bytes(params["name2"].value)
 		data  = str_to_bytes(params["data"].value)
