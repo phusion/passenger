@@ -434,6 +434,7 @@ namespace tut {
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 2;
 		);
+	    ProcessPtr first_spawned_process = pool->getProcesses(false)[0];
 
 		// asyncGet() selects some process.
 		pool->asyncGet(options, callback);
@@ -442,31 +443,39 @@ namespace tut {
 		ProcessPtr process1 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
 
-		// The first process now has 1 session, so next asyncGet() should
-		// select the other process.
+		// Next asyncGet() should select the process with the lowest spawnTime.
 		pool->asyncGet(options, callback);
 		ensure_equals("(2)", number, 2);
 		SessionPtr session2 = currentSession;
 		ProcessPtr process2 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
-		ensure("(3)", process1 != process2);
+		ensure_equals("(3)", process2, first_spawned_process);
 
-		// Both processes now have an equal number of sessions. Next asyncGet()
-		// can select either.
+        // Now that one process is totally busy, next asyncGet() should
+        // select the process that is not totally busy.
 		pool->asyncGet(options, callback);
 		ensure_equals("(4)", number, 3);
 		SessionPtr session3 = currentSession;
 		ProcessPtr process3 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
+	    ensure("(5)", process3 != first_spawned_process);
 
-		// One process now has the lowest number of sessions. Next
-		// asyncGet() should select that one.
+		// Next asyncGet() should select the process that is not totally busy again.
 		pool->asyncGet(options, callback);
-		ensure_equals("(5)", number, 4);
+		ensure_equals("(6)", number, 4);
 		SessionPtr session4 = currentSession;
 		ProcessPtr process4 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
-		ensure("(6)", process3 != process4);
+		ensure_equals("(7)", process3, process4);
+
+        // Now that both processes are totally busy, next asyncGet()
+        // should select the process that has the lowest spawnTime.
+		pool->asyncGet(options, callback);
+		ensure_equals("(8)", number, 5);
+		SessionPtr session5 = currentSession;
+		ProcessPtr process5 = currentSession->getProcess()->shared_from_this();
+		currentSession.reset();
+		ensure_equals("(9)", process5, first_spawned_process);
 	}
 
 	TEST_METHOD(9) {
