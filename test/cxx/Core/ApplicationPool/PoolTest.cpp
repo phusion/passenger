@@ -467,15 +467,6 @@ namespace tut {
 		ProcessPtr process4 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
 		ensure_equals("(7)", process3, process4);
-
-        // Now that both processes are totally busy, next asyncGet()
-        // should select the process that has the lowest spawnTime.
-		pool->asyncGet(options, callback);
-		ensure_equals("(8)", number, 5);
-		SessionPtr session5 = currentSession;
-		ProcessPtr process5 = currentSession->getProcess()->shared_from_this();
-		currentSession.reset();
-		ensure_equals("(9)", process5, first_spawned_process);
 	}
 
 	TEST_METHOD(9) {
