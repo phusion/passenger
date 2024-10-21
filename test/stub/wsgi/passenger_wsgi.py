@@ -1,7 +1,7 @@
 import os, sys, time
 
 if sys.version_info[0] >= 3 and sys.version_info[1] >= 13:
-	import cgishim
+	import cgishim as cgi
 else:
 	import cgi
 
