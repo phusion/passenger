@@ -1,4 +1,9 @@
-import os, sys, time, cgi
+import os, sys, time
+
+if sys.version_info[0] >= 3 and sys.version_info[1] >= 13:
+	import cgishim
+else:
+	import cgi
 
 def file_exist(filename):
 	try:
