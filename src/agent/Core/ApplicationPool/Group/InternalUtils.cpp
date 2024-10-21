@@ -184,7 +184,7 @@ Group::createNullProcessObject() {
 	LockGuard l(context->memoryManagementSyncher);
 	Process *process = context->processObjectPool.malloc();
 	Guard guard(context, process);
-	process = new (process) Process(&info, args);
+	process = new (process) Process(&info, info.group->restartsInitiated, args);
 	process->shutdownNotRequired();
 	guard.clear();
 	return ProcessPtr(process, false);
@@ -221,7 +221,7 @@ Group::createProcessObject(const SpawningKit::Spawner &spawner,
 	LockGuard l(context->memoryManagementSyncher);
 	Process *process = context->processObjectPool.malloc();
 	Guard guard(context, process);
-	process = new (process) Process(&info, spawnResult, args);
+	process = new (process) Process(&info, info.group->restartsInitiated, spawnResult, args);
 	guard.clear();
 	return ProcessPtr(process, false);
 }
