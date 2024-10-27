@@ -816,6 +816,28 @@ void ensure_equals(const Q& actual, const T& expected)
 }
 
 /**
+ * Tests two objects for not being equal.
+ * Throws if equal.
+ *
+ * NB: T must have operator << defined somewhere, or
+ * client code will not compile at all!
+ */
+template <class T, class Q>
+void ensure_not_equals(const char* msg, const Q& a, const T& b)
+{
+    if (a == b)
+    {
+        std::stringstream ss;
+        ss << (msg ? msg : "")
+            << (msg ? ":" : "")
+            << " expected not to be '"
+            << a
+            << "'";
+        throw failure(ss.str().c_str());
+    }
+}
+
+/**
  * Tests two objects for being at most in given distance one from another.
  * Borders are excluded.
  * Throws if false.

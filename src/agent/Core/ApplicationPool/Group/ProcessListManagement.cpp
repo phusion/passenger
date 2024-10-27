@@ -63,6 +63,15 @@ Group::findProcessWithStickySessionId(unsigned int id) const {
 	return NULL;
 }
 
+/**
+ * Return the process with the given sticky session ID if it exists.
+ * If not, then find the "best" enabled process to route a request to,
+ * according to the same criteria documented for findBestProcess().
+ *
+ * - If the process with the given sticky session ID exists, then always
+ *   returns that process. Meaning that this process could be `!canBeRoutedTo()`.
+ * - If there is no process that be routed to, then returns nullptr.
+ */
 Process *
 Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
 	Process *bestProcess = nullptr;
@@ -70,7 +79,7 @@ Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
 	ProcessList::const_iterator it;
 	ProcessList::const_iterator end = enabledProcesses.end();
 	for (it = enabledProcesses.begin(); it != end; it++) {
-		Process *process = (*it).get();
+		Process *process = it->get();
 		if (process->getStickySessionId() == id) {
 			return process;
 		} else if (process->isTotallyBusy() && bestProcess == nullptr) {
@@ -95,6 +104,15 @@ Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
 	return bestProcess;
 }
 
+/**
+ * Given a ProcessList, find the "best" process to route a request to.
+ * At the moment, "best" is defined as the process with the highest generation,
+ * lowest start time, and lowest busyness, in that order of priority.
+ *
+ * If there is no process that be routed to, then returns nullptr.
+ *
+ * @post result != nullptr || result.canBeRoutedTo()
+ */
 Process *
 Group::findBestProcess(const ProcessList &processes) const {
 	if (processes.empty()) {
@@ -131,7 +149,8 @@ Group::findBestProcess(const ProcessList &processes) const {
 }
 
 /**
- * Cache-optimized version of findBestProcess() for the common case.
+ * Cache-optimized version of `findBestProcess()` for the common case.
+ * See `findBestProcess()` for the general contract.
  */
 Process *
 Group::findBestEnabledProcess() const {

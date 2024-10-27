@@ -53,6 +53,10 @@
 #include <Core/SpawningKit/Result.h>
 #include <Shared/ApplicationPoolApiKey.h>
 
+namespace tut {
+	template<class Data> class test_object;
+}
+
 namespace Passenger {
 namespace ApplicationPool2 {
 
@@ -100,6 +104,7 @@ typedef boost::container::vector<ProcessPtr> ProcessList;
 class Process {
 public:
 	friend class Group;
+	template<class Data> friend class tut::test_object;
 
 	static const unsigned int MAX_SOCKETS_ACCEPTING_HTTP_REQUESTS = 3;
 

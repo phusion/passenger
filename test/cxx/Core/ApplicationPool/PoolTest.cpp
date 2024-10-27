@@ -434,7 +434,6 @@ namespace tut {
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 2;
 		);
-		ProcessPtr first_spawned_process = pool->getProcesses(false)[0];
 
 		// asyncGet() selects some process.
 		pool->asyncGet(options, callback);
@@ -443,24 +442,25 @@ namespace tut {
 		ProcessPtr process1 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
 
-		// Next asyncGet() should select the process with the lowest spawnTime.
+		// The first process now has 1 session. Next asyncGet() should
+		// select the same process because it's not totally busy.
 		pool->asyncGet(options, callback);
 		ensure_equals("(2)", number, 2);
 		SessionPtr session2 = currentSession;
 		ProcessPtr process2 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
-		ensure_equals("(3)", process2, first_spawned_process);
+		ensure("(3)", process1 == process2);
 
 		// Now that one process is totally busy, next asyncGet() should
-		// select the process that is not totally busy.
+		// select the other process.
 		pool->asyncGet(options, callback);
 		ensure_equals("(4)", number, 3);
 		SessionPtr session3 = currentSession;
 		ProcessPtr process3 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
-		ensure("(5)", process3 != first_spawned_process);
+		ensure_not_equals("(5)", process3, process1);
 
-		// Next asyncGet() should select the process that is not totally busy again.
+		// Next asyncGet() should select the other process again.
 		pool->asyncGet(options, callback);
 		ensure_equals("(6)", number, 4);
 		SessionPtr session4 = currentSession;
@@ -650,9 +650,9 @@ namespace tut {
 
 		ensure(pool->restartGroupByName(options.appRoot));
 		EVENTUALLY(5,
-				   LockGuard l(pool->syncher);
-				   vector<ProcessPtr> processes = pool->getProcesses(false);
-				   result = (processes.size() > 0 && processes[0]->getPid() != pid);
+			LockGuard l(pool->syncher);
+			vector<ProcessPtr> processes = pool->getProcesses(false);
+			result = (processes.size() > 0 && processes[0]->getPid() != pid);
 		);
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
