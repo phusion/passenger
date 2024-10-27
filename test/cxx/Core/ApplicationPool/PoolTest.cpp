@@ -23,6 +23,7 @@ namespace tut {
 		Context context;
 		PoolPtr pool;
 		Pool::DebugSupportPtr debug;
+		string pythonCommand;
 		Ticket ticket;
 		GetCallback callback;
 		SessionPtr currentSession;
@@ -47,6 +48,7 @@ namespace tut {
 			context.finalize();
 			pool = boost::make_shared<Pool>(&context);
 			pool->initialize();
+			pythonCommand = findPythonCommand();
 			callback.func = _callback;
 			callback.userData = this;
 
@@ -113,6 +115,7 @@ namespace tut {
 			options.spawnMethod = "dummy";
 			options.appRoot = "stub/rack";
 			options.appType = "ruby";
+			options.python = pythonCommand.c_str();
 			options.appStartCommand = "ruby start.rb";
 			options.startupFile  = "start.rb";
 			options.loadShellEnvvars = false;

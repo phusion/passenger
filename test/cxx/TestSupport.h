@@ -107,6 +107,30 @@ extern Json::Value testConfig;
 void createInstanceDir(InstanceDirectoryPtr &instanceDir);
 
 /**
+ * Find the given command in PATH. Returns the empty string if not found.
+ *
+ * @throws FileSystemException
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
+ */
+string findCommandInPath(const string &basename);
+
+/**
+ * Find an appropriate Python command for this system, regardless of whether it's Python 2 or 3.
+ * Returns something like "/usr/bin/python3" if possible, but on older
+ * systems without Python 3 it could return something like "/usr/bin/python".
+ *
+ * This function primarily exists because newer systems don't have a "python" command anymore, only "python3".
+ *
+ * Returns the empty string if not found.
+ *
+ * @throws FileSystemException
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
+ */
+string findPythonCommand();
+
+/**
  * Writes zeroes into the given file descriptor its buffer is full (i.e.
  * the next write will block).
  *

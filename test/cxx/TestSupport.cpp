@@ -7,9 +7,11 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <grp.h>
-#include <cassert>
+#include <vector>
+#include <cstdlib>
 #include <FileTools/FileManip.h>
 #include <SystemTools/UserDatabase.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Utils/ScopeGuard.h>
 #include <jsoncpp/json.h>
 
@@ -34,6 +36,38 @@ createInstanceDir(InstanceDirectoryPtr &instanceDir) {
 	options.defaultUid = osUser.pwd.pw_uid;
 	options.defaultGid = osUser.pwd.pw_gid;
 	instanceDir = boost::make_shared<InstanceDirectory>(options);
+}
+
+string
+findCommandInPath(const string &basename) {
+	const char *path = getenv("PATH");
+	if (path == nullptr) {
+		return string();
+	}
+
+	vector<string> directories;
+	split(path, ':', directories);
+
+	for (const string &dir: directories) {
+		string fullPath = dir + "/" + basename;
+		if (fileExists(fullPath)) {
+			return fullPath;
+		}
+	}
+
+	return string();
+}
+
+string
+findPythonCommand() {
+	string python = findCommandInPath("python");
+	if (python.empty()) {
+		python = findCommandInPath("python3");
+	}
+	if (python.empty()) {
+		python = findCommandInPath("python2");
+	}
+	return python;
 }
 
 void
