@@ -139,12 +139,12 @@ Group::findBestEnabledProcess() const {
 		return nullptr;
 	}
 
-	Process* bestProcess = nullptr;
+	Process *bestProcess = nullptr;
 	unsigned long long bestProcessStartTime = 0;
 	unsigned int bestProcessGen = 0;
 	int bestProcessBusyness = 0;
 
-	Process* fallbackProcess = nullptr;
+	Process *fallbackProcess = nullptr;
 	unsigned long long fallbackProcessStartTime = 0;
 	unsigned int fallbackProcessGen = 0;
 	int fallbackProcessBusyness = 0;

@@ -451,14 +451,14 @@ namespace tut {
 		currentSession.reset();
 		ensure_equals("(3)", process2, first_spawned_process);
 
-        // Now that one process is totally busy, next asyncGet() should
-        // select the process that is not totally busy.
+		// Now that one process is totally busy, next asyncGet() should
+		// select the process that is not totally busy.
 		pool->asyncGet(options, callback);
 		ensure_equals("(4)", number, 3);
 		SessionPtr session3 = currentSession;
 		ProcessPtr process3 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
-	    ensure("(5)", process3 != first_spawned_process);
+		ensure("(5)", process3 != first_spawned_process);
 
 		// Next asyncGet() should select the process that is not totally busy again.
 		pool->asyncGet(options, callback);
