@@ -434,7 +434,7 @@ namespace tut {
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 2;
 		);
-	    ProcessPtr first_spawned_process = pool->getProcesses(false)[0];
+		ProcessPtr first_spawned_process = pool->getProcesses(false)[0];
 
 		// asyncGet() selects some process.
 		pool->asyncGet(options, callback);
