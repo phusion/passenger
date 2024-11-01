@@ -207,11 +207,12 @@ namespace tut {
 
 		// Ensure that n processes exist.
 		Options ensureMinProcesses(unsigned int n) {
+			int prevNumber = number;
 			Options options = createOptions();
 			options.minProcesses = n;
 			pool->asyncGet(options, callback);
 			EVENTUALLY(5,
-				result = number == 1;
+				result = number == prevNumber + 1;
 			);
 			EVENTUALLY(5,
 				result = pool->getProcessCount() == n;
@@ -261,7 +262,7 @@ namespace tut {
 
 	TEST_METHOD(3) {
 		// If one matching process already exists and it's not at full
-		// capacity then asyncGet() will immediately use it.
+		// utilization, then asyncGet() will immediately use it.
 		Options options = createOptions();
 
 		// Spawn a process and opens a session with it.
@@ -283,13 +284,13 @@ namespace tut {
 	}
 
 	TEST_METHOD(4) {
-		// If one matching process already exists but it's at full capacity,
+		// If one matching process already exists but it's at full utilization,
 		// and the limits prevent spawning of a new process,
 		// then asyncGet() will put the get action on the group's wait
-		// queue. When the process is no longer at full capacity it will
+		// queue. When the process is no longer at full utilization it will
 		// process the request.
 
-		// Spawn a process and verify that it's at full capacity.
+		// Spawn a process and verify that it's at full utilization.
 		// Keep its session open.
 		Options options = createOptions();
 		options.appGroupName = "test";
@@ -379,104 +380,278 @@ namespace tut {
 	}
 
 	TEST_METHOD(7) {
-		// If multiple matching processes exist, and one of them is idle,
-		// then asyncGet() will use that.
+		set_test_name("If multiple matching processes exist, none of them at full utilization,"
+			" then asyncGet() routes to the process with the highest generation number");
 
-		// Spawn 3 processes and keep a session open with 1 of them.
+		// Spawn a process with generation 0.
+		ensureMinProcesses(1);
+		ProcessPtr process1 = pool->getProcesses()[0];
+		ensure_equals("(1)", process1->generation, 0u);
+
+		// Spawn another process with generation 1.
+		{
+			LockGuard l(pool->syncher);
+			process1->getGroup()->restartsInitiated = 1;
+		}
+		ensureMinProcesses(2);
+		ProcessPtr process2 = pool->getProcesses()[1];
+		ensure_equals("(2)", process2->generation, 1u);
+
+		// asyncGet() should select the process with the highest generation.
 		Options options = createOptions();
-		options.minProcesses = 3;
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
-			result = number == 1;
+			result = number == 3;
 		);
-		EVENTUALLY(5,
-			result = pool->getProcessCount() == 3;
-		);
-		SessionPtr session1 = currentSession;
-		ProcessPtr process1 = currentSession->getProcess()->shared_from_this();
-		currentSession.reset();
-
-		// Now open another session. It should complete immediately
-		// and should not use the first process.
-		ScopedLock l(pool->syncher);
-		pool->asyncGet(options, callback, false);
-		ensure_equals("asyncGet() completed immediately", number, 2);
-		SessionPtr session2 = currentSession;
-		ProcessPtr process2 = currentSession->getProcess()->shared_from_this();
-		l.unlock();
-		currentSession.reset();
-		ensure(process2 != process1);
-
-		// Now open yet another session. It should also complete immediately
-		// and should not use the first or the second process.
-		l.lock();
-		pool->asyncGet(options, callback, false);
-		ensure_equals("asyncGet() completed immediately", number, 3);
-		SessionPtr session3 = currentSession;
 		ProcessPtr process3 = currentSession->getProcess()->shared_from_this();
-		l.unlock();
+		ensure_equals("(3)", process3, process2);
 		currentSession.reset();
-		ensure(process3 != process1);
-		ensure(process3 != process2);
 	}
 
 	TEST_METHOD(8) {
-		// If multiple matching processes exist, then asyncGet() will use
-		// the one with the smallest utilization number.
+		set_test_name("If multiple matching processes exist, none of them at full utilization,"
+			" all of the same generation, then asyncGet() routes to the process with"
+			" the earliest start time");
 
-		// Spawn 2 processes, each with a concurrency of 2.
-		skDebugSupport.dummyConcurrency = 2;
+		// Spawn two processes with the same generation number.
+		SystemTime::forceAll(1000000);
+		ensureMinProcesses(1);
+		SystemTime::forceAll(2000000);
+		ensureMinProcesses(2);
+		SystemTime::releaseAll();
+		ProcessPtr process1 = pool->getProcesses()[0];
+		ProcessPtr process2 = pool->getProcesses()[1];
+		ensure_gt("(1)", process2->spawnStartTime, process1->spawnStartTime);
+
+		// asyncGet() should select the oldest process.
 		Options options = createOptions();
-		options.minProcesses = 2;
-		pool->setMax(2);
-		GroupPtr group = pool->findOrCreateGroup(options);
-		{
-			LockGuard l(pool->syncher);
-			group->spawn();
-		}
+		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
-			result = pool->getProcessCount() == 2;
+			result = number == 3;
 		);
-
-		// asyncGet() selects some process.
-		pool->asyncGet(options, callback);
-		ensure_equals("(1)", number, 1);
-		SessionPtr session1 = currentSession;
-		ProcessPtr process1 = currentSession->getProcess()->shared_from_this();
-		currentSession.reset();
-
-		// The first process now has 1 session. Next asyncGet() should
-		// select the same process because it's not totally busy.
-		pool->asyncGet(options, callback);
-		ensure_equals("(2)", number, 2);
-		SessionPtr session2 = currentSession;
-		ProcessPtr process2 = currentSession->getProcess()->shared_from_this();
-		currentSession.reset();
-		ensure("(3)", process1 == process2);
-
-		// Now that one process is totally busy, next asyncGet() should
-		// select the other process.
-		pool->asyncGet(options, callback);
-		ensure_equals("(4)", number, 3);
-		SessionPtr session3 = currentSession;
 		ProcessPtr process3 = currentSession->getProcess()->shared_from_this();
+		ensure_equals("(2)", process3, process1);
 		currentSession.reset();
-		ensure_not_equals("(5)", process3, process1);
-
-		// Next asyncGet() should select the other process again.
-		pool->asyncGet(options, callback);
-		ensure_equals("(6)", number, 4);
-		SessionPtr session4 = currentSession;
-		ProcessPtr process4 = currentSession->getProcess()->shared_from_this();
-		currentSession.reset();
-		ensure_equals("(7)", process3, process4);
 	}
 
 	TEST_METHOD(9) {
-		// If multiple matching processes exist, and all of them are at full capacity,
+		set_test_name("If multiple matching processes exist, none of them at full utilization,"
+			" all of the same generation and start time, then asyncGet() routes to"
+			" the process with the lowest busyness");
+
+		// Spawn three processes with the same generation number and start time,
+		// all with a concurrency of 3.
+		SystemTime::forceAll(1000000);
+		skDebugSupport.dummyConcurrency = 3;
+		ensureMinProcesses(3);
+		SystemTime::releaseAll();
+		ProcessPtr process1 = pool->getProcesses()[0];
+		ProcessPtr process2 = pool->getProcesses()[1];
+		ProcessPtr process3 = pool->getProcesses()[2];
+		ensure_equals("(1)", process2->spawnStartTime, process1->spawnStartTime);
+		ensure_equals("(2)", process3->spawnStartTime, process1->spawnStartTime);
+
+		// Create the following situation:
+		// process1: sessions=2
+		// process2: sessions=1
+		// process3: sessions=2
+
+		// First open 9 sessions.
+		Options options = createOptions();
+		vector<SessionPtr> sessions;
+		int prevNumber = number;
+		for (unsigned int i = 0; i < 9; i++) {
+			pool->asyncGet(options, callback);
+			EVENTUALLY(5,
+				result = number == static_cast<int>(prevNumber + i + 1);
+			);
+			sessions.push_back(currentSession);
+			currentSession.reset();
+		}
+
+		// Check various sessions belong to the expected processes.
+		ensure_equals("(3)", sessions[0]->getProcess()->getPid(), process1->getPid());
+		ensure_equals("(4)", sessions[1]->getProcess()->getPid(), process2->getPid());
+		ensure_equals("(5)", sessions[2]->getProcess()->getPid(), process3->getPid());
+		ensure_equals("(6)", sessions[4]->getProcess()->getPid(), process2->getPid());
+
+		// Close a bunch of sessions and we should arrive at the desired situation.
+		sessions[0].reset();
+		sessions[1].reset();
+		sessions[2].reset();
+		sessions[4].reset();
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals("(7)", process1->sessions, 2);
+			ensure_equals("(8)", process2->sessions, 1);
+			ensure_equals("(9)", process3->sessions, 2);
+		}
+
+		// asyncGet() should select process 2 (least busyness).
+		pool->asyncGet(options, callback);
+		prevNumber = number;
+		EVENTUALLY(5,
+			result = prevNumber + 1;
+		);
+		ProcessPtr process = currentSession->getProcess()->shared_from_this();
+		ensure_equals("(10)", process->getPid(), process2->getPid());
+		currentSession.reset();
+	}
+
+	TEST_METHOD(10) {
+		set_test_name("If multiple matching processes exist,"
+			" with generation 3 processes at full utilization,"
+			" generation 2 and generation 1 processes not at full utilization,"
+			" then asyncGet() routes to generation 2");
+
+		skDebugSupport.dummyConcurrency = 2;
+
+		// Spawn a process with generation 0.
+		ensureMinProcesses(1);
+		ProcessPtr process1 = pool->getProcesses()[0];
+		GroupPtr group = process1->getGroup()->shared_from_this();
+		ensure_equals("(1)", process1->generation, 0u);
+
+		// Spawn another process with generation 2.
+		{
+			LockGuard l(pool->syncher);
+			group->restartsInitiated = 2;
+		}
+		ensureMinProcesses(2);
+		ProcessPtr process2 = pool->getProcesses()[1];
+		ensure_equals("(2)", process2->generation, 2u);
+
+		// Spawn another process with generation 3.
+		{
+			LockGuard l(pool->syncher);
+			group->restartsInitiated = 3;
+		}
+		ensureMinProcesses(3);
+		ProcessPtr process3 = pool->getProcesses()[2];
+		ensure_equals("(3)", process3->generation, 3u);
+
+		// Create the following situation:
+		// process1: sessions=0
+		// process2: sessions=1
+		// process3: sessions=2 (full utilization)
+
+		// First open 6 sessions.
+		Options options = createOptions();
+		vector<SessionPtr> sessions;
+		int prevNumber = number;
+		for (unsigned int i = 0; i < 6; i++) {
+			pool->asyncGet(options, callback);
+			EVENTUALLY(5,
+				result = number == static_cast<int>(prevNumber + i + 1);
+			);
+			sessions.push_back(currentSession);
+			currentSession.reset();
+		}
+
+		// Check various sessions belong to the expected processes.
+		ensure_equals("(4)", sessions[0]->getProcess()->getPid(), process3->getPid());
+		ensure_equals("(5)", sessions[1]->getProcess()->getPid(), process3->getPid());
+		ensure_equals("(6)", sessions[2]->getProcess()->getPid(), process2->getPid());
+		ensure_equals("(7)", sessions[3]->getProcess()->getPid(), process2->getPid());
+		ensure_equals("(8)", sessions[4]->getProcess()->getPid(), process1->getPid());
+		ensure_equals("(9)", sessions[5]->getProcess()->getPid(), process1->getPid());
+
+		// Close a bunch of sessions and we should arrive at the desired situation.
+		sessions[3].reset();
+		sessions[4].reset();
+		sessions[5].reset();
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals("(10)", process1->sessions, 0);
+			ensure_equals("(11)", process2->sessions, 1);
+			ensure_equals("(12)", process3->sessions, 2);
+		}
+
+		// asyncGet() should select process2 even though process1 has fewer sessions open and is older.
+		pool->asyncGet(options, callback);
+		prevNumber = number;
+		EVENTUALLY(5,
+			result = number + 1;
+		);
+		ProcessPtr process4 = currentSession->getProcess()->shared_from_this();
+		ensure_equals("(13)", process4->getPid(), process2->getPid());
+		currentSession.reset();
+	}
+
+	TEST_METHOD(11) {
+		set_test_name("If multiple matching processes exist, all of them of the same generation,"
+			" with the lowest-start-time processes being at full utilization"
+			" and higher-start-time processes not at full utilization,"
+			" then asyncGet() routes to a lowest-start-time process that's not at full utilization");
+
+		skDebugSupport.dummyConcurrency = 2;
+
+		SystemTime::forceAll(1000000);
+		ensureMinProcesses(1);
+		SystemTime::forceAll(2000000);
+		ensureMinProcesses(2);
+		SystemTime::forceAll(3000000);
+		ensureMinProcesses(3);
+		SystemTime::releaseAll();
+		ProcessPtr process1 = pool->getProcesses()[0];
+		ProcessPtr process2 = pool->getProcesses()[1];
+		ProcessPtr process3 = pool->getProcesses()[2];
+		ensure_gt("(1)", process2->spawnStartTime, process1->spawnStartTime);
+		ensure_gt("(2)", process3->spawnStartTime, process2->spawnStartTime);
+
+		// Create the following situation:
+		// process1: sessions=2 (full utilization)
+		// process2: sessions=1
+		// process3: sessions=0
+
+		// First open 6 sessions.
+		Options options = createOptions();
+		vector<SessionPtr> sessions;
+		int prevNumber = number;
+		for (unsigned int i = 0; i < 6; i++) {
+			pool->asyncGet(options, callback);
+			EVENTUALLY(5,
+				result = number == static_cast<int>(prevNumber + i + 1);
+			);
+			sessions.push_back(currentSession);
+			currentSession.reset();
+		}
+
+		// Check various sessions belong to the expected processes.
+		ensure_equals("(4)", sessions[0]->getProcess()->getPid(), process1->getPid());
+		ensure_equals("(5)", sessions[1]->getProcess()->getPid(), process1->getPid());
+		ensure_equals("(6)", sessions[2]->getProcess()->getPid(), process2->getPid());
+		ensure_equals("(7)", sessions[3]->getProcess()->getPid(), process2->getPid());
+		ensure_equals("(8)", sessions[4]->getProcess()->getPid(), process3->getPid());
+		ensure_equals("(9)", sessions[5]->getProcess()->getPid(), process3->getPid());
+
+		// Close a bunch of sessions and we should arrive at the desired situation.
+		sessions[3].reset();
+		sessions[4].reset();
+		sessions[5].reset();
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals("(10)", process1->sessions, 2);
+			ensure_equals("(11)", process2->sessions, 1);
+			ensure_equals("(12)", process3->sessions, 0);
+		}
+
+		// asyncGet() should select process2 (oldest possible process) even though process3 has fewer sessions open.
+		pool->asyncGet(options, callback);
+		prevNumber = number;
+		EVENTUALLY(5,
+			result = number + 1;
+		);
+		ProcessPtr process4 = currentSession->getProcess()->shared_from_this();
+		ensure_equals("(13)", process4->getPid(), process2->getPid());
+		currentSession.reset();
+	}
+
+	TEST_METHOD(13) {
+		// If multiple matching processes exist, and all of them are at full utilization,
 		// and no more processes may be spawned,
 		// then asyncGet() will put the action on the group's wait queue.
-		// The process that first becomes not at full capacity will process the action.
+		// The process that first becomes not at full utilization will process the action.
 
 		// Spawn 2 processes and open 4 sessions.
 		Options options = createOptions();
@@ -517,7 +692,7 @@ namespace tut {
 		ensure(pool->atFullCapacity());
 	}
 
-	TEST_METHOD(10) {
+	TEST_METHOD(14) {
 		// If multiple matching processes exist, and all of them are at full utilization,
 		// and a new process may be spawned,
 		// then asyncGet() will put the action on the group's wait queue and spawn the
@@ -566,7 +741,7 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 2u);
 	}
 
-	TEST_METHOD(11) {
+	TEST_METHOD(15) {
 		// Here we test the case where the newly spawned process is earlier.
 
 		// Spawn 2 processes and open 4 sessions.
@@ -604,14 +779,14 @@ namespace tut {
 		ensure_equals(group->getWaitlist.size(), 0u);
 	}
 
-	TEST_METHOD(12) {
+	TEST_METHOD(16) {
 		// Test shutting down.
 		ensureMinProcesses(2);
 		ensure(pool->detachGroupByName("stub/rack"));
 		ensure_equals(pool->getGroupCount(), 0u);
 	}
 
-	TEST_METHOD(13) {
+	TEST_METHOD(17) {
 		// Test shutting down while Group is restarting.
 		initPoolDebugging();
 		debug->messages->send("Proceed with spawn loop iteration 1");
@@ -623,7 +798,7 @@ namespace tut {
 		ensure_equals(pool->getGroupCount(), 0u);
 	}
 
-	TEST_METHOD(14) {
+	TEST_METHOD(18) {
 		// Test shutting down while Group is spawning.
 		initPoolDebugging();
 		Options options = createOptions();
@@ -634,7 +809,7 @@ namespace tut {
 		ensure_equals(pool->getGroupCount(), 0u);
 	}
 
-	TEST_METHOD(15) {
+	TEST_METHOD(19) {
 	    set_test_name("Process generation increments when the group restarts");
 		Options options = createOptions();
 
@@ -651,7 +826,7 @@ namespace tut {
 		currentSession.reset();
 		unsigned int gen1 = process->generation;
 
-		ensure(pool->restartGroupByName(options.appRoot));
+		ensure("(1)", pool->restartGroupByName(options.appRoot));
 		EVENTUALLY(5,
 			LockGuard l(pool->syncher);
 			vector<ProcessPtr> processes = pool->getProcesses(false);
@@ -665,39 +840,10 @@ namespace tut {
 		process = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
 		unsigned int gen2 = process->generation;
-		ensure_equals(gen1+1,gen2);
+		ensure_equals("(2)", gen2,gen1 + 1);
 	}
 
-	TEST_METHOD(16) {
-	    // Test that the correct process from the pool is routed
-		Options options = createOptions();
-		ensureMinProcesses(2);
-
-		// async restart the group
-		ensure(pool->restartGroupByName(options.appRoot));
-		ensureMinProcesses(1);
-
-        /*
-		  Imagine we have these processes (ordered from oldest to newest):
-
-          #. PID 1 (generation A, busyness 5)
-          #. PID 2 (generation A, busyness 3)
-          #. PID 3 (generation B, busyness 1)
-
-          The algorithm should select PID 3
-		 */
-
-		/*
-		  Imagine we have these processes (ordered from oldest to newest):
-
-          #. PID 1 (generation A, busyness 1)
-          #. PID 2 (generation B, busyness 5)
-
-          The algorithm should select PID 1
-		 */
-	}
-
-	TEST_METHOD(17) {
+	TEST_METHOD(20) {
 		// Test that restartGroupByName() spawns more processes to ensure
 		// that minProcesses and other constraints are met.
 		ensureMinProcesses(1);
@@ -707,7 +853,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(18) {
+	TEST_METHOD(21) {
 		// Test getting from an app for which minProcesses is set to 0,
 		// and restart.txt already existed.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
@@ -736,7 +882,7 @@ namespace tut {
 
 	/*********** Test asyncGet() behavior on multiple Groups ***********/
 
-	TEST_METHOD(20) {
+	TEST_METHOD(30) {
 		// If the pool is full, and one tries to asyncGet() from a nonexistant group,
 		// then it will kill the oldest idle process and spawn a new process.
 		Options options = createOptions();
@@ -772,7 +918,7 @@ namespace tut {
 		ensure_equals(group1->getProcessCount(), 0u);
 	}
 
-	TEST_METHOD(21) {
+	TEST_METHOD(31) {
 		// If the pool is full, and one tries to asyncGet() from a nonexistant group,
 		// and all existing processes are non-idle, then it will
 		// kill the oldest process and spawn a new process.
@@ -808,7 +954,7 @@ namespace tut {
 		ensure_equals(group1->getProcessCount(), 0u);
 	}
 
-	TEST_METHOD(22) {
+	TEST_METHOD(32) {
 		// Suppose the pool is at full capacity, and one tries to asyncGet() from an
 		// existant group that does not have any processes. It should kill a process
 		// from another group, and the request should succeed.
@@ -845,7 +991,7 @@ namespace tut {
 		ensure_equals("(4)", pool->getProcessCount(), 1u);
 	}
 
-	TEST_METHOD(23) {
+	TEST_METHOD(33) {
 		// Suppose the pool is at full capacity, and one tries to asyncGet() from an
 		// existant group that does not have any processes, and that happens to need
 		// restarting. It should kill a process from another group and the request
@@ -888,7 +1034,7 @@ namespace tut {
 		ensure_equals("(4)", pool->getProcessCount(), 1u);
 	}
 
-	TEST_METHOD(24) {
+	TEST_METHOD(34) {
 		// Suppose the pool is at full capacity, with two groups:
 		// - one that is spawning a process.
 		// - one with no processes.
@@ -948,7 +1094,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(25) {
+	TEST_METHOD(35) {
 		// Suppose the pool is at full capacity, with two groups:
 		// - one that is spawning a process, and has a queued request.
 		// - one with no processes.
@@ -1017,7 +1163,7 @@ namespace tut {
 
 	/*********** Test detachProcess() ***********/
 
-	TEST_METHOD(30) {
+	TEST_METHOD(40) {
 		// detachProcess() detaches the process from the group. The pool
 		// will restore the minimum number of processes afterwards.
 		Options options = createOptions();
@@ -1046,7 +1192,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(31) {
+	TEST_METHOD(41) {
 		// If the containing group had waiters on it, and detachProcess()
 		// detaches the only process in the group, then a new process
 		// is automatically spawned to handle the waiters.
@@ -1082,7 +1228,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(32) {
+	TEST_METHOD(42) {
 		// If the pool had waiters on it then detachProcess() will
 		// automatically create the Groups that were requested
 		// by the waiters.
@@ -1125,7 +1271,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(33) {
+	TEST_METHOD(43) {
 		// A Group does not become garbage collectable
 		// after detaching all its processes.
 		Options options = createOptions();
@@ -1143,7 +1289,7 @@ namespace tut {
 		ensure(!group->garbageCollectable());
 	}
 
-	TEST_METHOD(34) {
+	TEST_METHOD(44) {
 		// When detaching a process, it waits until all sessions have
 		// finished before telling the process to shut down.
 		Options options = createOptions();
@@ -1172,7 +1318,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(35) {
+	TEST_METHOD(45) {
 		// When detaching a process, it waits until the OS processes
 		// have exited before cleaning up the in-memory data structures.
 		Options options = createOptions();
@@ -1209,7 +1355,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(36) {
+	TEST_METHOD(46) {
 		// Detaching a process that is already being detached, works.
 		Options options = createOptions();
 		options.appGroupName = "test";
@@ -1257,7 +1403,7 @@ namespace tut {
 
 	/*********** Test disabling and enabling processes ***********/
 
-	TEST_METHOD(40) {
+	TEST_METHOD(50) {
 		// Disabling a process under idle conditions should succeed immediately.
 		ensureMinProcesses(2);
 		vector<ProcessPtr> processes = pool->getProcesses();
@@ -1275,7 +1421,7 @@ namespace tut {
 			processes[1]->enabled, Process::ENABLED);
 	}
 
-	TEST_METHOD(41) {
+	TEST_METHOD(51) {
 		// Disabling the sole process in a group, in case the pool settings allow
 		// spawning another process, should trigger a new process spawn.
 		ensureMinProcesses(1);
@@ -1303,7 +1449,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(42) {
+	TEST_METHOD(52) {
 		// Disabling the sole process in a group, in case pool settings don't allow
 		// spawning another process, should fail.
 		pool->setMax(1);
@@ -1323,7 +1469,7 @@ namespace tut {
 		ensure_equals("(3)", pool->getProcessCount(), 1u);
 	}
 
-	TEST_METHOD(43) {
+	TEST_METHOD(53) {
 		// If there are no enabled processes in the group, then disabling should
 		// succeed after the new process has been spawned.
 		initPoolDebugging();
@@ -1370,7 +1516,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(44) {
+	TEST_METHOD(54) {
 		// Suppose that a previous disable command triggered a new process spawn,
 		// and the spawn fails. Then any disabling processes should become enabled
 		// again, and the callbacks for the previous disable commands should be called.
@@ -1435,7 +1581,7 @@ namespace tut {
 	// TODO: A disabling process becomes disabled as soon as it's done with
 	//       all its request.
 
-	TEST_METHOD(50) {
+	TEST_METHOD(60) {
 		// Disabling a process that's already being disabled should result in the
 		// callback being called after disabling is done.
 		ensureMinProcesses(2);
@@ -1459,7 +1605,7 @@ namespace tut {
 	// TODO: Enabling a process that's disabling succeeds immediately. The disable
 	//       callbacks will be called with DR_CANCELED.
 
-	TEST_METHOD(51) {
+	TEST_METHOD(61) {
 		// If the number of processes is already at maximum, then disabling
 		// a process will cause that process to be disabled, without spawning
 		// a new process.
@@ -1484,7 +1630,7 @@ namespace tut {
 
 	/*********** Other tests ***********/
 
-	TEST_METHOD(60) {
+	TEST_METHOD(70) {
 		// The pool is considered to be at full capacity if and only
 		// if all Groups are at full capacity.
 		Options options = createOptions();
@@ -1509,7 +1655,7 @@ namespace tut {
 		ensure(!pool->atFullCapacity());
 	}
 
-	TEST_METHOD(61) {
+	TEST_METHOD(71) {
 		// If the pool is at full capacity, then increasing 'max' will cause
 		// new processes to be spawned. Any queued get requests are processed
 		// as those new processes become available or as existing processes
@@ -1532,7 +1678,7 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 3u);
 	}
 
-	TEST_METHOD(62) {
+	TEST_METHOD(72) {
 		// Each spawned process has a GUPID, which can be looked up
 		// through findProcessByGupid().
 		Options options = createOptions();
@@ -1546,13 +1692,13 @@ namespace tut {
 			pool->findProcessByGupid(gupid).get());
 	}
 
-	TEST_METHOD(63) {
+	TEST_METHOD(73) {
 		// findProcessByGupid() returns a NULL pointer if there is
 		// no matching process.
 		ensure(pool->findProcessByGupid("none") == NULL);
 	}
 
-	TEST_METHOD(64) {
+	TEST_METHOD(74) {
 		// Test process idle cleaning.
 		Options options = createOptions();
 		pool->setMaxIdleTime(50000);
@@ -1578,7 +1724,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(65) {
+	TEST_METHOD(75) {
 		// Test spawner idle cleaning.
 		Options options = createOptions();
 		options.appGroupName = "test1";
@@ -1604,7 +1750,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(66) {
+	TEST_METHOD(76) {
 		// It should restart the app if restart.txt is created or updated.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
@@ -1641,7 +1787,7 @@ namespace tut {
 		ensure_equals(sendRequest(options, "/"), "restarted 2");
 	}
 
-	TEST_METHOD(67) {
+	TEST_METHOD(77) {
 		// Test spawn exceptions.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
@@ -1670,7 +1816,7 @@ namespace tut {
 		ensure(e->getProblemDescriptionHTML().find("Something went wrong!") != string::npos);
 	}
 
-	TEST_METHOD(68) {
+	TEST_METHOD(78) {
 		// If a process fails to spawn, then it stops trying to spawn minProcesses processes.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
@@ -1718,7 +1864,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(69) {
+	TEST_METHOD(79) {
 		// It removes the process from the pool if session->initiate() fails.
 		Options options = createOptions();
 		options.appRoot = "stub/wsgi";
@@ -1748,7 +1894,7 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 0u);
 	}
 
-	TEST_METHOD(70) {
+	TEST_METHOD(80) {
 		// When a process has become idle, and there are waiters on the pool,
 		// consider detaching it in order to satisfy a waiter.
 		Options options1 = createOptions();
@@ -1778,7 +1924,7 @@ namespace tut {
 		ensure_equals(group2->enabledCount, 1);
 	}
 
-	TEST_METHOD(71) {
+	TEST_METHOD(81) {
 		// A process is detached after processing maxRequests sessions.
 		Options options = createOptions();
 		options.minProcesses = 0;
@@ -1802,7 +1948,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(72) {
+	TEST_METHOD(82) {
 		// If we restart while spawning is in progress, and the restart
 		// finishes before the process is done spawning, then that
 		// process will not be attached and the original spawn loop will
@@ -1848,7 +1994,7 @@ namespace tut {
 		ensure_equals("(4)", pool->getProcessCount(), 3u);
 	}
 
-	TEST_METHOD(73) {
+	TEST_METHOD(83) {
 		// If a get() request comes in while the restart is in progress, then
 		// that get() request will be put into the get waiters list, which will
 		// be processed after spawning is done.
@@ -1882,7 +2028,7 @@ namespace tut {
 			pool->getProcessCount(), 2u);
 	}
 
-	TEST_METHOD(74) {
+	TEST_METHOD(84) {
 		// If a process fails to spawn, it sends a SpawnException result to all get waiters.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		chmod("tmp.wsgi", 0777);
@@ -1936,7 +2082,7 @@ namespace tut {
 		ensure(sessions.empty());
 	}
 
-	TEST_METHOD(75) {
+	TEST_METHOD(85) {
 		// If a process fails to spawn, the existing processes
 		// are kept alive.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
@@ -1974,7 +2120,7 @@ namespace tut {
 		}
 	}
 
-	TEST_METHOD(76) {
+	TEST_METHOD(86) {
 		// No more than maxOutOfBandWorkInstances process will be performing
 		// out-of-band work at the same time.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
@@ -2021,7 +2167,7 @@ namespace tut {
 		debug->debugger->recv("OOBW request finished");
 	}
 
-	TEST_METHOD(77) {
+	TEST_METHOD(87) {
 		// If the getWaitlist already has maxRequestQueueSize items,
 		// then an exception is returned.
 		Options options = createOptions();
@@ -2056,7 +2202,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(78) {
+	TEST_METHOD(88) {
 		// Test restarting while a previous restart was already being finalized.
 		// The previous finalization should abort.
 		Options options = createOptions();
@@ -2074,7 +2220,7 @@ namespace tut {
 		debug->debugger->recv("Restarting aborted");
 	}
 
-	TEST_METHOD(79) {
+	TEST_METHOD(89) {
 		// Test sticky sessions.
 
 		// Spawn 2 processes and get their sticky session IDs and PIDs.
@@ -2135,7 +2281,7 @@ namespace tut {
 
 	/*********** Test previously discovered bugs ***********/
 
-	TEST_METHOD(85) {
+	TEST_METHOD(95) {
 		// Test detaching, then restarting. This should not violate any invariants.
 		TempDirCopy dir("stub/wsgi", "tmp.wsgi");
 		Options options = createOptions();
