@@ -70,25 +70,30 @@ Group::findProcessWithStickySessionId(unsigned int id) const {
  *
  * - If the process with the given sticky session ID exists, then always
  *   returns that process. Meaning that this process could be `!canBeRoutedTo()`.
- * - If there is no process that be routed to, then returns nullptr.
+ * - If there is no process that can be routed to, then returns nullptr.
  */
 Process *
 Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
 	Process *bestProcess = nullptr;
 	ProcessList::const_iterator it;
 	ProcessList::const_iterator end = enabledProcesses.end();
+
 	for (it = enabledProcesses.begin(); it != end; it++) {
 		Process *process = it->get();
 		if (process->getStickySessionId() == id) {
 			return process;
-		} else if (!process->isTotallyBusy() && (bestProcess == nullptr ||
-				   process->generation > bestProcess->generation ||
-				   (process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime) ||
-				   (process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
-		)) {
+		} else if (!process->isTotallyBusy()
+			&& (
+				bestProcess == nullptr
+				|| process->generation > bestProcess->generation
+				|| (process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime)
+				|| (process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
+			)
+		) {
 			bestProcess = process;
 		}
 	}
+
 	return bestProcess;
 }
 
@@ -97,7 +102,7 @@ Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
  * At the moment, "best" is defined as the process with the highest generation,
  * lowest start time, and lowest busyness, in that order of priority.
  *
- * If there is no process that be routed to, then returns nullptr.
+ * If there is no process that can be routed to, then returns nullptr.
  *
  * @post result != nullptr || result.canBeRoutedTo()
  */
@@ -110,17 +115,22 @@ Group::findBestProcess(const ProcessList &processes) const {
 	Process *bestProcess = nullptr;
 	ProcessList::const_iterator it;
 	ProcessList::const_iterator end = processes.end();
-	for (it = processes.begin(); it != end; it++) {
-		Process *process = (*it).get();
 
-	 if (!process->isTotallyBusy() && (bestProcess == nullptr ||
-			process->generation > bestProcess->generation ||
-			(process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime) ||
-			(process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
-		)) {
+	for (it = processes.begin(); it != end; it++) {
+		Process *process = it->get();
+
+		if (!process->isTotallyBusy()
+			&& (
+				bestProcess == nullptr
+				|| process->generation > bestProcess->generation
+				|| (process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime)
+				|| (process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
+			)
+		) {
 			bestProcess = process;
 		}
 	}
+
 	return bestProcess;
 }
 

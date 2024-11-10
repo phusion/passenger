@@ -314,8 +314,7 @@ Group::get(const Options &newOptions, const GetCallback &callback,
 
 		if (disablingCount > 0 && !restarting()) {
 			Process *process = findBestProcess(disablingProcesses);
-			assert(process != NULL);
-			if (!process->isTotallyBusy()) {
+			if (process != nullptr && !process->isTotallyBusy()) {
 				return newSession(process, newOptions.currentTime);
 			}
 		}
