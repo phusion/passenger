@@ -65,15 +65,8 @@ Group::RouteResult
 Group::route(const Options &options) const {
 	if (OXT_LIKELY(enabledCount > 0)) {
 		if (options.stickySessionId == 0) {
-			Process *process = findBestEnabledProcess();
+			Process *process = findBestProcess(enabledProcesses);
 			if (process != nullptr) {
-				// TODO: remove this part when findBestEnabledProcess() has been
-				// modified to adhere to the new contract with postcondition
-				// `result != nullptr || result.canBeRoutedTo()`
-				if (!process->canBeRoutedTo()) {
-					return RouteResult(nullptr, false);
-				}
-
 				assert(process->canBeRoutedTo());
 				return RouteResult(process);
 			} else {
@@ -95,13 +88,6 @@ Group::route(const Options &options) const {
 	} else {
 		Process *process = findBestProcess(disablingProcesses);
 		if (process != nullptr) {
-			// TODO: remove this part when findBestProcess() has been
-			// modified to adhere to the new contract with postcondition
-			// `result != nullptr || result.canBeRoutedTo()`
-			if (!process->canBeRoutedTo()) {
-				return RouteResult(nullptr, false);
-			}
-
 			assert(process->canBeRoutedTo());
 			return RouteResult(process);
 		} else {
