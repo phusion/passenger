@@ -109,9 +109,14 @@ private:
 	}
 
 	void destroySelf() const {
+		Context *context = this->context;
+		Session *storagePointer = const_cast<Session *>(this);
 		this->~Session();
+
 		LockGuard l(context->memoryManagementSyncher);
-		context->sessionObjectPool.free(const_cast<Session *>(this));
+		// Use `storagePointer` because using `this` after calling the destructor
+		// is undefined behavior.
+		context->sessionObjectPool.free(storagePointer);
 	}
 
 public:

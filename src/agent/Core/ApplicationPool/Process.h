@@ -344,8 +344,13 @@ private:
 
 	void destroySelf() const {
 		Context *context = getContext();
+		Process *storagePointer = const_cast<Process *>(this);
+		this->~Process();
+
 		LockGuard l(context->memoryManagementSyncher);
-		context->processObjectPool.destroy(const_cast<Process *>(this));
+		// Use `storagePointer` because using `this` after calling the destructor
+		// is undefined behavior.
+		context->processObjectPool.free(storagePointer);
 	}
 
 

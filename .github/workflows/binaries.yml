@@ -6,7 +6,6 @@ env:
 
 on:
   push: {}
-  pull_request: {}
 
 jobs:
   build_linux:
@@ -55,7 +54,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: binaries-linux-${{ matrix.arch }}
-          path: packages/binaries/linux/output/**/*
+          path: packaging/binaries/linux/output/**/*
 
       - name: Update cache
         run: ./dev/ci/update-cache-az-blob-storage
