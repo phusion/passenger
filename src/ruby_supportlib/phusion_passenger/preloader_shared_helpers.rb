@@ -37,7 +37,7 @@ module PhusionPassenger
     def init(main_app)
       options = LoaderSharedHelpers.init(main_app)
 
-      $0 = "#{SHORT_PROGRAM_NAME} AppPreloader: #{options['app_root']}"
+      LoaderSharedHelpers.rename_process pre_name(options)
 
       if !Kernel.respond_to?(:fork)
         message = "Smart spawning is not available on this Ruby " +
@@ -56,7 +56,7 @@ module PhusionPassenger
       options
     end
 
-    def accept_and_process_next_client(server_socket)
+    def accept_and_process_next_client(server_socket, options)
       client = server_socket.accept
       client.binmode
       begin
@@ -75,7 +75,7 @@ module PhusionPassenger
       end
 
       if doc['command'] == 'spawn'
-        handle_spawn_command(client, doc)
+        handle_spawn_command(client, doc, options)
       else
         client.write(Utils::JSON.generate(
           :result => 'error',
@@ -94,7 +94,7 @@ module PhusionPassenger
       end
     end
 
-    def handle_spawn_command(client, doc)
+    def handle_spawn_command(client, doc, options)
       work_dir = doc['work_dir']
       LoaderSharedHelpers.record_journey_step_end('PRELOADER_PREPARATION',
         'STEP_PERFORMED', work_dir)
@@ -114,7 +114,7 @@ module PhusionPassenger
 
       if pid.nil?
         begin
-          $0 = "#{$0} (forking...)"
+          LoaderSharedHelpers.rename_process "#{pre_name(options)} (forking...)"
           LoaderSharedHelpers.record_journey_step_end('PRELOADER_FORK_SUBPROCESS',
             'STEP_PERFORMED', work_dir)
           LoaderSharedHelpers.run_block_and_record_step_progress('PRELOADER_SEND_RESPONSE', work_dir) do
@@ -164,7 +164,7 @@ module PhusionPassenger
         # https://code.google.com/p/phusion-passenger/issues/detail?id=915
         ios = Kernel.select([server_socket, STDIN])[0]
         if ios.include?(server_socket)
-          result, subprocess_work_dir = accept_and_process_next_client(server_socket)
+          result, subprocess_work_dir = accept_and_process_next_client(server_socket, options)
           if result == :forked
             return subprocess_work_dir
           end
@@ -188,6 +188,12 @@ module PhusionPassenger
         File.unlink(socket_filename) rescue nil
       end
     end
+
+    private
+    def pre_name(options)
+      "#{SHORT_PROGRAM_NAME} AppPreloader: #{options['app_root']}"
+    end
+
   end
 
 end # module PhusionPassenger

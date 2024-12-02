@@ -304,9 +304,9 @@ module PhusionPassenger
       end
 
       if options["process_title"] && !options["process_title"].empty?
-        $0 = options["process_title"] + ": " + options["app_group_name"]
+        rename_process "#{options["process_title"]}: #{options["app_group_name"]}"
       else
-        $0 = "Passenger App: " + options["app_group_name"]
+        rename_process "Passenger App: #{options["app_group_name"]}"
       end
 
       # If we were forked from a preloader process then clear or
@@ -539,6 +539,14 @@ module PhusionPassenger
     def dump_envvars
       dir = "#{ENV['PASSENGER_SPAWN_WORK_DIR']}/envdump"
       try_write_file("#{dir}/envvars", ENV.to_a.map { |k, v| "#{k} = #{v}" }.join("\n"))
+    end
+
+    def rename_process(name)
+      if Process.respond_to?(:setproctitle)
+        Process.setproctitle(name)
+      else
+        $0 = name
+      end
     end
 
   private

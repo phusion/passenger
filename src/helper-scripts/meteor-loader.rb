@@ -183,8 +183,13 @@ module PhusionPassenger
         end
         exec("meteor run -p #{port} #{production} --settings settings.json")
       end
-      $0 = options["process_title"] if options["process_title"]
-      $0 = "#{$0} (#{pid})"
+
+      if options["process_title"] && !options["process_title"].empty?
+        rename_process "#{options["process_title"]} (#{pid})"
+      else
+        rename_process "#{$0} (#{pid})"
+      end
+
       return [pid, port]
     end
 

@@ -3,6 +3,7 @@ Release 6.0.25 (Not yet released)
  * Fixes compilation with clang 19 (latest Fedora update) by dropping a buggy stddev function from the moving average header. Closes GH-2580.
  * [Standalone] Adds a config option to specify the stop timeout for Passenger: `--stop-timeout 120` or `PASSENGER_STOP_TIMEOUT=120`.
  * [Standalone] Changes Passenger's (not apps') start timeout to 25s (from 15s), stop timeouts default to 60s.
+ * [Ruby] Fixes an issue where Bundler would try to re-exec the process name instead of the script. Closes GH-2567 and GH-2577.
  * 
 
 
