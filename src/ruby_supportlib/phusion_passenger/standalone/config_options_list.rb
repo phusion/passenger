@@ -166,6 +166,12 @@ module PhusionPassenger
         :desc      => 'Where to store the PID file'
       },
       {
+        :name      => :stop_timeout,
+        :type      => :integer,
+        :default   => 60,
+        :desc      => "How long in seconds to wait for the HTTP engine to gracefully shutdown,\nbefore killing it.\nDefault: %DEFAULT%"
+      },
+      {
         :name      => :instance_registry_dir,
         :type      => :path,
         :desc      => 'Use the given instance registry directory'
@@ -263,7 +269,7 @@ module PhusionPassenger
         :type      => :hostname,
         :type_desc => 'HOST',
         :default   => '127.0.0.1',
-        :desc      => "The address that Passenger binds to in order to allow sending HTTP requests to individual application processes.\nDefault: %DEFAULT%"
+        :desc      => "The address that Passenger binds to in order to allow sending\nHTTP requests to individual application processes.\nDefault: %DEFAULT%"
       },
       {
         :name      => :static_files_dir,

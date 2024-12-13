@@ -84,6 +84,12 @@ module PhusionPassenger
             "Don't abort with an error if PID file cannot be found") do
             options[:ignore_pid_not_found] = true
           end
+          opts.on("-t", "--timeout NUMBER", Integer,
+                  "How long in seconds to wait for the HTTP engine to#{nl}"+
+                  "gracefully shutdown, before killing it.#{nl}" +
+                  "Default: #{defaults[:stop_timeout]}") do |value|
+            options[:stop_timeout] = value
+          end
         end
       end
 
@@ -125,7 +131,7 @@ module PhusionPassenger
           :ping_command  => "true", # Doesn't matter
           :pid_file      => @options[:pid_file],
           :log_file      => "/dev/null",
-          :stop_timeout  => 25
+          :stop_timeout  => @options[:stop_timeout]
         )
       end
     end

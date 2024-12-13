@@ -200,7 +200,8 @@ module PhusionPassenger
             :ping_command  => ping_spec,
             :pid_file      => @options[:pid_file],
             :log_file      => @options[:log_file],
-            :start_timeout => 25
+            :start_timeout => 25,
+            :stop_timeout  => @options[:stop_timeout]
           }
         end
 

@@ -166,7 +166,7 @@ module PhusionPassenger
             :pid_file      => @options[:pid_file],
             :log_file      => @options[:log_file],
             :start_timeout => 25,
-            :stop_timeout  => 60,
+            :stop_timeout  => @options[:stop_timeout],
             :log_file_activity_timeout => 12,
             :dont_stop_if_pid_file_invalid => true
           }
