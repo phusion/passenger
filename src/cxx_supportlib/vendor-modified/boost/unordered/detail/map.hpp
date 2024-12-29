@@ -41,23 +41,6 @@ namespace boost {
         typedef typename table::iterator iterator;
         typedef boost::unordered::insert_return_type_map<iterator, node_type> insert_return_type;
       };
-
-      template <typename K, typename M, typename H, typename P, typename A>
-      class instantiate_map
-      {
-        typedef boost::unordered_map<K, M, H, P, A> container;
-        container x;
-        typename container::node_type node_type;
-        typename container::insert_return_type insert_return_type;
-      };
-
-      template <typename K, typename M, typename H, typename P, typename A>
-      class instantiate_multimap
-      {
-        typedef boost::unordered_multimap<K, M, H, P, A> container;
-        container x;
-        typename container::node_type node_type;
-      };
     }
   }
 }

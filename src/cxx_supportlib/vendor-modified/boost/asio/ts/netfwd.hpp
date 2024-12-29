@@ -18,10 +18,6 @@
 #include <boost/asio/detail/config.hpp>
 #include <boost/asio/detail/chrono.hpp>
 
-#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-# include <boost/asio/detail/date_time_fwd.hpp>
-#endif // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-
 #if !defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 #include <boost/asio/execution/blocking.hpp>
 #include <boost/asio/execution/outstanding_work.hpp>
@@ -89,13 +85,6 @@ class io_context;
 template <typename Clock>
 struct wait_traits;
 
-#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-
-template <typename Time>
-struct time_traits;
-
-#endif // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-
 #if !defined(BOOST_ASIO_BASIC_WAITABLE_TIMER_FWD_DECL)
 #define BOOST_ASIO_BASIC_WAITABLE_TIMER_FWD_DECL
 
@@ -151,14 +140,8 @@ class basic_socket_acceptor;
 
 // Forward declaration with defaulted arguments.
 template <typename Protocol,
-#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME) \
-  || defined(GENERATING_DOCUMENTATION)
-    typename Clock = boost::posix_time::ptime,
-    typename WaitTraits = time_traits<Clock>>
-#else
     typename Clock = chrono::steady_clock,
     typename WaitTraits = wait_traits<Clock>>
-#endif
 class basic_socket_streambuf;
 
 #endif // !defined(BOOST_ASIO_BASIC_SOCKET_STREAMBUF_FWD_DECL)
@@ -168,14 +151,8 @@ class basic_socket_streambuf;
 
 // Forward declaration with defaulted arguments.
 template <typename Protocol,
-#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME) \
-  || defined(GENERATING_DOCUMENTATION)
-    typename Clock = boost::posix_time::ptime,
-    typename WaitTraits = time_traits<Clock>>
-#else
     typename Clock = chrono::steady_clock,
     typename WaitTraits = wait_traits<Clock>>
-#endif
 class basic_socket_iostream;
 
 #endif // !defined(BOOST_ASIO_BASIC_SOCKET_IOSTREAM_FWD_DECL)

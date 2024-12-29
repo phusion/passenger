@@ -336,8 +336,8 @@ class allocator
       BOOST_CONTAINER_STATIC_ASSERT(( Version > 1 ));
       dlmalloc_memchain ch;
       void *beg(&*chain.begin()), *last(&*chain.last());
-      size_t size(chain.size());
-      BOOST_CONTAINER_MEMCHAIN_INIT_FROM(&ch, beg, last, size);
+      size_t sz(chain.size());
+      BOOST_CONTAINER_MEMCHAIN_INIT_FROM(&ch, beg, last, sz);
       dlmalloc_multidealloc(&ch);
       //dlmalloc_multidealloc(move_detail::force_ptr<dlmalloc_memchain *>(&chain));
    }

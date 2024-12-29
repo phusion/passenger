@@ -102,6 +102,19 @@ struct get_static_vector_opt<void>
    typedef static_vector_null_opt type;
 };
 
+template<class Options>
+struct get_vector_opt_from_static_vector_opt
+{
+   typedef typename get_static_vector_opt<Options>::type options_t;
+   typedef vector_opt<void, typename options_t::stored_size_type> type;
+};
+
+template<>
+struct get_vector_opt_from_static_vector_opt<void>
+{
+   typedef void type;
+};
+
 template <typename T, std::size_t Capacity, class Options>
 struct get_static_vector_allocator
 {
@@ -113,7 +126,6 @@ struct get_static_vector_allocator
       , options_t::throw_on_overflow
       > type;
 };
-
 
 }  //namespace dtl {
 
@@ -148,12 +160,18 @@ struct get_static_vector_allocator
 //! is specified, by default throw_on_overflow<true> option is set.
 template <typename T, std::size_t Capacity, class Options BOOST_CONTAINER_DOCONLY(= void) >
 class static_vector
-    : public vector<T, typename dtl::get_static_vector_allocator< T, Capacity, Options>::type>
+   #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
+    : public vector< T
+                   , typename dtl::get_static_vector_allocator< T, Capacity, Options>::type
+                   , typename dtl::get_vector_opt_from_static_vector_opt<Options>::type
+                   >
+   #endif
 {
    public:
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    typedef typename dtl::get_static_vector_allocator< T, Capacity, Options>::type allocator_type;
-   typedef vector<T, allocator_type > base_t;
+   typedef typename dtl::get_vector_opt_from_static_vector_opt<Options>::type options_type;
+   typedef vector<T, allocator_type, options_type> base_t;
 
    BOOST_COPYABLE_AND_MOVABLE(static_vector)
 

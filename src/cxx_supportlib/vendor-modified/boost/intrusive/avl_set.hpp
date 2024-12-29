@@ -554,15 +554,19 @@ class avl_set
    inline void clone_from(BOOST_RV_REF(avl_set) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static avl_set &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<avl_set &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const avl_set &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const avl_set &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static avl_set &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<avl_set &>(Base::container_from_iterator(it));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const avl_set &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const avl_set &>(Base::container_from_iterator(it));   }
 };
@@ -1049,15 +1053,19 @@ class avl_multiset
    inline void clone_from(BOOST_RV_REF(avl_multiset) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static avl_multiset &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<avl_multiset &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const avl_multiset &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const avl_multiset &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static avl_multiset &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<avl_multiset &>(Base::container_from_iterator(it));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const avl_multiset &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const avl_multiset &>(Base::container_from_iterator(it));   }
 };

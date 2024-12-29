@@ -47,10 +47,9 @@ public:
   typedef scheduler_task* (*get_task_func_type)(
       boost::asio::execution_context&);
 
-  // Constructor. Specifies the number of concurrent threads that are likely to
-  // run the scheduler. If set to 1 certain optimisation are performed.
+  // Constructor.
   BOOST_ASIO_DECL scheduler(boost::asio::execution_context& ctx,
-      int concurrency_hint = 0, bool own_thread = true,
+      bool own_thread = true,
       get_task_func_type get_task = &scheduler::get_default_task);
 
   // Destructor.
@@ -136,12 +135,6 @@ public:
   // work_started() was previously called for the operations.
   BOOST_ASIO_DECL void abandon_operations(op_queue<operation>& ops);
 
-  // Get the concurrency hint that was used to initialise the scheduler.
-  int concurrency_hint() const
-  {
-    return concurrency_hint_;
-  }
-
 private:
   // The mutex type used by this scheduler.
   typedef conditionally_enabled_mutex mutex;
@@ -225,6 +218,12 @@ private:
 
   // The concurrency hint used to initialise the scheduler.
   const int concurrency_hint_;
+
+  // The time limit on running the scheduler task, in microseconds.
+  const long task_usec_;
+
+  // The time limit on waiting when the queue is empty, in microseconds.
+  const long wait_usec_;
 
   // The thread that is running the scheduler.
   boost::asio::detail::thread* thread_;

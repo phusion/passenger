@@ -563,15 +563,19 @@ class sg_set
    inline void clone_from(BOOST_RV_REF(sg_set) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static sg_set &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<sg_set &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const sg_set &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const sg_set &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static sg_set &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<sg_set &>(Base::container_from_iterator(it));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const sg_set &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const sg_set &>(Base::container_from_iterator(it));   }
 };
@@ -1070,15 +1074,19 @@ class sg_multiset
    inline void clone_from(BOOST_RV_REF(sg_multiset) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static sg_multiset &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<sg_multiset &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const sg_multiset &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const sg_multiset &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static sg_multiset &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<sg_multiset &>(Base::container_from_iterator(it));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const sg_multiset &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const sg_multiset &>(Base::container_from_iterator(it));   }
 };

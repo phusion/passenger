@@ -36,6 +36,12 @@ struct null_static_mutex
   {
   }
 
+  // Try to lock the mutex without blocking.
+  bool try_lock()
+  {
+    return true;
+  }
+
   // Lock the mutex.
   void lock()
   {

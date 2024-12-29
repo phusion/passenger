@@ -110,7 +110,7 @@ public:
    *
    * For example:
    * @code execution::any_executor<execution::blocking_t::possibly_t> ex = ...;
-   * auto ex2 = boost::asio::requre(ex, execution::blocking.possibly); @endcode
+   * auto ex2 = boost::asio::require(ex, execution::blocking.possibly); @endcode
    */
   template <typename Property>
   any_executor require(Property) const;

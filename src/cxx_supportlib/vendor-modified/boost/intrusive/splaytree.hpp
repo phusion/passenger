@@ -642,15 +642,19 @@ class splaytree
    inline void clone_from(BOOST_RV_REF(splaytree) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static splaytree &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<splaytree &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const splaytree &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const splaytree &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static splaytree &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<splaytree &>(Base::container_from_iterator(it));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const splaytree &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const splaytree &>(Base::container_from_iterator(it));   }
 };

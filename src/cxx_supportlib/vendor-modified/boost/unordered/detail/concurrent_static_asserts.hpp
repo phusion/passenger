@@ -1,5 +1,5 @@
 /* Copyright 2023 Christian Mazakas.
- * Copyright 2023 Joaquin M Lopez Munoz.
+ * Copyright 2023-2024 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -13,10 +13,7 @@
 #include <boost/config.hpp>
 #include <boost/mp11/algorithm.hpp>
 #include <boost/mp11/list.hpp>
-
-#include <functional>
-#include <iterator>
-#include <type_traits>
+#include <boost/unordered/detail/type_traits.hpp>
 
 #define BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F)                             \
   static_assert(boost::unordered::detail::is_invocable<F, value_type&>::value, \
@@ -58,15 +55,40 @@
   BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(                               \
     BOOST_UNORDERED_DETAIL_LAST_ARG(Arg, Args))
 
+#define BOOST_UNORDERED_DETAIL_PENULTIMATE_ARG(Arg1, Arg2, Args)               \
+  mp11::mp_at_c<mp11::mp_list<                                                 \
+    Arg1 BOOST_UNORDERED_DETAIL_COMMA Arg2 BOOST_UNORDERED_DETAIL_COMMA Args   \
+    >,                                                                         \
+    mp11::mp_size<mp11::mp_list<                                               \
+      Arg1 BOOST_UNORDERED_DETAIL_COMMA Arg2 BOOST_UNORDERED_DETAIL_COMMA Args \
+    >>::value - 2>
+
+#define BOOST_UNORDERED_STATIC_ASSERT_PENULTIMATE_ARG_INVOCABLE(               \
+  Arg1, Arg2, Args)                                                            \
+  BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(                                     \
+    BOOST_UNORDERED_DETAIL_PENULTIMATE_ARG(Arg1, Arg2, Args))
+
+#define BOOST_UNORDERED_STATIC_ASSERT_PENULTIMATE_ARG_CONST_INVOCABLE(         \
+  Arg1, Arg2, Args)                                                            \
+  BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(                               \
+    BOOST_UNORDERED_DETAIL_PENULTIMATE_ARG(Arg1, Arg2, Args))
+
 namespace boost {
   namespace unordered {
     namespace detail {
-      template <class F, class... Args>
-      struct is_invocable
-          : std::is_constructible<std::function<void(Args...)>,
-              std::reference_wrapper<typename std::remove_reference<F>::type> >
+      template <class...> struct is_invocable_helper : std::false_type
       {
       };
+
+      template <class F, class... Args>
+      struct is_invocable_helper<
+        void_t<decltype(std::declval<F>()(std::declval<Args>()...))>, F,
+        Args...> : std::true_type
+      {
+      };
+
+      template <class F, class... Args>
+      using is_invocable = is_invocable_helper<void, F, Args...>;
 
     } // namespace detail
 

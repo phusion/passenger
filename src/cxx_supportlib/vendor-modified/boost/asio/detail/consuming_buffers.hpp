@@ -198,74 +198,36 @@ private:
 
 template <>
 class consuming_buffers<mutable_buffer, mutable_buffer, const mutable_buffer*>
-  : public consuming_single_buffer<BOOST_ASIO_MUTABLE_BUFFER>
+  : public consuming_single_buffer<mutable_buffer>
 {
 public:
   explicit consuming_buffers(const mutable_buffer& buffer)
-    : consuming_single_buffer<BOOST_ASIO_MUTABLE_BUFFER>(buffer)
+    : consuming_single_buffer<mutable_buffer>(buffer)
   {
   }
 };
 
 template <>
 class consuming_buffers<const_buffer, mutable_buffer, const mutable_buffer*>
-  : public consuming_single_buffer<BOOST_ASIO_CONST_BUFFER>
+  : public consuming_single_buffer<const_buffer>
 {
 public:
   explicit consuming_buffers(const mutable_buffer& buffer)
-    : consuming_single_buffer<BOOST_ASIO_CONST_BUFFER>(buffer)
+    : consuming_single_buffer<const_buffer>(buffer)
   {
   }
 };
 
 template <>
 class consuming_buffers<const_buffer, const_buffer, const const_buffer*>
-  : public consuming_single_buffer<BOOST_ASIO_CONST_BUFFER>
+  : public consuming_single_buffer<const_buffer>
 {
 public:
   explicit consuming_buffers(const const_buffer& buffer)
-    : consuming_single_buffer<BOOST_ASIO_CONST_BUFFER>(buffer)
+    : consuming_single_buffer<const_buffer>(buffer)
   {
   }
 };
-
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-
-template <>
-class consuming_buffers<mutable_buffer,
-    mutable_buffers_1, const mutable_buffer*>
-  : public consuming_single_buffer<BOOST_ASIO_MUTABLE_BUFFER>
-{
-public:
-  explicit consuming_buffers(const mutable_buffers_1& buffer)
-    : consuming_single_buffer<BOOST_ASIO_MUTABLE_BUFFER>(buffer)
-  {
-  }
-};
-
-template <>
-class consuming_buffers<const_buffer, mutable_buffers_1, const mutable_buffer*>
-  : public consuming_single_buffer<BOOST_ASIO_CONST_BUFFER>
-{
-public:
-  explicit consuming_buffers(const mutable_buffers_1& buffer)
-    : consuming_single_buffer<BOOST_ASIO_CONST_BUFFER>(buffer)
-  {
-  }
-};
-
-template <>
-class consuming_buffers<const_buffer, const_buffers_1, const const_buffer*>
-  : public consuming_single_buffer<BOOST_ASIO_CONST_BUFFER>
-{
-public:
-  explicit consuming_buffers(const const_buffers_1& buffer)
-    : consuming_single_buffer<BOOST_ASIO_CONST_BUFFER>(buffer)
-  {
-  }
-};
-
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 template <>
 class consuming_buffers<mutable_buffer,

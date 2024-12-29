@@ -83,7 +83,7 @@ public:
     io_queue queues_[max_ops];
     bool shutdown_;
 
-    BOOST_ASIO_DECL io_object(bool locking);
+    BOOST_ASIO_DECL io_object(bool locking, int spin_count);
   };
 
   // Per I/O object data.
@@ -277,6 +277,12 @@ private:
 
   // Whether the service has been shut down.
   bool shutdown_;
+
+  // Whether I/O locking is enabled.
+  const bool io_locking_;
+
+  // How any times to spin waiting for the I/O mutex.
+  const int io_locking_spin_count_;
 
   // The timer queues.
   timer_queue_set timer_queues_;

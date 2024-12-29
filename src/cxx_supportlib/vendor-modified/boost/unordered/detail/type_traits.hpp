@@ -219,6 +219,17 @@ namespace boost {
       using iter_to_alloc_t =
         typename std::pair<iter_key_t<T> const, iter_val_t<T> >;
 #endif
+
+#if BOOST_CXX_VERSION < 201703L
+      template <class T>
+      constexpr typename std::add_const<T>::type& as_const(T& t) noexcept
+      {
+        return t;
+      }
+      template <class T> void as_const(const T&&) = delete;
+#else
+      using std::as_const;
+#endif
     } // namespace detail
   } // namespace unordered
 } // namespace boost

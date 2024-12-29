@@ -22,6 +22,7 @@
 
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <boost/intrusive/detail/workaround.hpp>
+#include <boost/move/detail/launder.hpp>
 #include <cstddef>
 
 #if defined(_MSC_VER)
@@ -90,15 +91,15 @@ BOOST_INTRUSIVE_FORCEINLINE std::ptrdiff_t offset_from_pointer_to_member(const M
 template<class Parent, class Member>
 BOOST_INTRUSIVE_FORCEINLINE Parent *parent_from_member(Member *member, const Member Parent::* ptr_to_member)
 {
-   return reinterpret_cast<Parent*>
-      (reinterpret_cast<std::size_t>(member) - static_cast<std::size_t>(offset_from_pointer_to_member(ptr_to_member)));
+   return boost::move_detail::launder(reinterpret_cast<Parent*>
+      (reinterpret_cast<std::size_t>(member) - static_cast<std::size_t>(offset_from_pointer_to_member(ptr_to_member))));
 }
 
 template<class Parent, class Member>
 BOOST_INTRUSIVE_FORCEINLINE const Parent *parent_from_member(const Member *member, const Member Parent::* ptr_to_member)
 {
-   return reinterpret_cast<const Parent*>
-      ( reinterpret_cast<std::size_t>(member) - static_cast<std::size_t>(offset_from_pointer_to_member(ptr_to_member)) );
+   return boost::move_detail::launder(reinterpret_cast<const Parent*>
+      ( reinterpret_cast<std::size_t>(member) - static_cast<std::size_t>(offset_from_pointer_to_member(ptr_to_member)) ));
 }
 
 }  //namespace detail {

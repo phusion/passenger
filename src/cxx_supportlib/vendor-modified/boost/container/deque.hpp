@@ -1026,6 +1026,11 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
    private:                      // Internal typedefs
+
+   //`allocator_type::value_type` must match container's `value type`. If this
+   //assertion fails, please review your allocator definition. 
+   BOOST_CONTAINER_STATIC_ASSERT((dtl::is_same<value_type, typename allocator_traits<ValAllocator>::value_type>::value));
+
    BOOST_COPYABLE_AND_MOVABLE(deque)
    typedef typename Base::ptr_alloc_ptr index_pointer;
    typedef allocator_traits<ValAllocator>                  allocator_traits_type;

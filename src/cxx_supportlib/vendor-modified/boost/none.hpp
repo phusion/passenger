@@ -50,7 +50,7 @@ namespace {
 
 #else
 
-BOOST_INLINE_VARIABLE BOOST_CONSTEXPR_OR_CONST none_t none ((none_t::init_tag()));
+BOOST_INLINE_CONSTEXPR none_t none ((none_t::init_tag()));
 
 #endif // older definitions
 

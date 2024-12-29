@@ -42,6 +42,12 @@ public:
   {
   }
 
+  // Try to lock the mutex.
+  bool try_lock()
+  {
+    return true;
+  }
+
   // Lock the mutex.
   void lock()
   {

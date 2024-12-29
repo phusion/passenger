@@ -39,23 +39,6 @@ namespace boost {
         typedef boost::unordered::insert_return_type_set<iterator, node_type>
           insert_return_type;
       };
-
-      template <typename T, typename H, typename P, typename A>
-      class instantiate_set
-      {
-        typedef boost::unordered_set<T, H, P, A> container;
-        container x;
-        typename container::node_type node_type;
-        typename container::insert_return_type insert_return_type;
-      };
-
-      template <typename T, typename H, typename P, typename A>
-      class instantiate_multiset
-      {
-        typedef boost::unordered_multiset<T, H, P, A> container;
-        container x;
-        typename container::node_type node_type;
-      };
     }
   }
 }

@@ -65,16 +65,8 @@ protected:
 
 // Forward declaration with defaulted arguments.
 template <typename Protocol,
-#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME) \
-  && defined(BOOST_ASIO_USE_BOOST_DATE_TIME_FOR_SOCKET_IOSTREAM)
-    typename Clock = boost::posix_time::ptime,
-    typename WaitTraits = time_traits<Clock>>
-#else // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-      // && defined(BOOST_ASIO_USE_BOOST_DATE_TIME_FOR_SOCKET_IOSTREAM)
     typename Clock = chrono::steady_clock,
     typename WaitTraits = wait_traits<Clock>>
-#endif // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-       // && defined(BOOST_ASIO_USE_BOOST_DATE_TIME_FOR_SOCKET_IOSTREAM)
 class basic_socket_iostream;
 
 #endif // !defined(BOOST_ASIO_BASIC_SOCKET_IOSTREAM_FWD_DECL)
@@ -92,16 +84,7 @@ class basic_socket_iostream
     public std::basic_iostream<char>
 {
 private:
-  // These typedefs are intended keep this class's implementation independent
-  // of whether it's using Boost.DateClock, Boost.Chrono or std::chrono.
-#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME) \
-  && defined(BOOST_ASIO_USE_BOOST_DATE_TIME_FOR_SOCKET_IOSTREAM)
-  typedef WaitTraits traits_helper;
-#else // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-      // && defined(BOOST_ASIO_USE_BOOST_DATE_TIME_FOR_SOCKET_IOSTREAM)
   typedef detail::chrono_time_traits<Clock, WaitTraits> traits_helper;
-#endif // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-       // && defined(BOOST_ASIO_USE_BOOST_DATE_TIME_FOR_SOCKET_IOSTREAM)
 
 public:
   /// The protocol type.
@@ -114,22 +97,12 @@ public:
   typedef Clock clock_type;
 
 #if defined(GENERATING_DOCUMENTATION)
-  /// (Deprecated: Use time_point.) The time type.
-  typedef typename WaitTraits::time_type time_type;
-
   /// The time type.
   typedef typename WaitTraits::time_point time_point;
-
-  /// (Deprecated: Use duration.) The duration type.
-  typedef typename WaitTraits::duration_type duration_type;
 
   /// The duration type.
   typedef typename WaitTraits::duration duration;
 #else
-# if !defined(BOOST_ASIO_NO_DEPRECATED)
-  typedef typename traits_helper::time_type time_type;
-  typedef typename traits_helper::duration_type duration_type;
-# endif // !defined(BOOST_ASIO_NO_DEPRECATED)
   typedef typename traits_helper::time_type time_point;
   typedef typename traits_helper::duration_type duration;
 #endif
@@ -241,18 +214,6 @@ public:
     return rdbuf()->error();
   }
 
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-  /// (Deprecated: Use expiry().) Get the stream's expiry time as an absolute
-  /// time.
-  /**
-   * @return An absolute time value representing the stream's expiry time.
-   */
-  time_point expires_at() const
-  {
-    return rdbuf()->expires_at();
-  }
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
-
   /// Get the stream's expiry time as an absolute time.
   /**
    * @return An absolute time value representing the stream's expiry time.
@@ -289,32 +250,6 @@ public:
   {
     rdbuf()->expires_after(expiry_time);
   }
-
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-  /// (Deprecated: Use expiry().) Get the stream's expiry time relative to now.
-  /**
-   * @return A relative time value representing the stream's expiry time.
-   */
-  duration expires_from_now() const
-  {
-    return rdbuf()->expires_from_now();
-  }
-
-  /// (Deprecated: Use expires_after().) Set the stream's expiry time relative
-  /// to now.
-  /**
-   * This function sets the expiry time associated with the stream. Stream
-   * operations performed after this time (where the operations cannot be
-   * completed using the internal buffers) will fail with the error
-   * boost::asio::error::operation_aborted.
-   *
-   * @param expiry_time The expiry time to be used for the timer.
-   */
-  void expires_from_now(const duration& expiry_time)
-  {
-    rdbuf()->expires_from_now(expiry_time);
-  }
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 private:
   // Disallow copying and assignment.

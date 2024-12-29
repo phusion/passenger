@@ -78,7 +78,7 @@ namespace function_detector {
       template <class U> \
       static NotFoundType Test( ... ); \
    public : \
-      static const int check = NotFound + (sizeof(Test<T>(0, 0)) - sizeof(NotFoundType));\
+      static const int check = NotFound + int(sizeof(Test<T>(0, 0)) - sizeof(NotFoundType));\
    };\
 }}} //namespace boost::intrusive::function_detector {
 

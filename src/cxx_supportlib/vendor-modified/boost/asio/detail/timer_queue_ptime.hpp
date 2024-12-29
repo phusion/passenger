@@ -17,6 +17,8 @@
 
 #include <boost/asio/detail/config.hpp>
 
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
+
 #if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
 
 #include <boost/asio/time_traits.hpp>
@@ -30,7 +32,7 @@ namespace detail {
 
 struct forwarding_posix_time_traits : time_traits<boost::posix_time::ptime> {};
 
-// Template specialisation for the commonly used instantation.
+// Template specialisation for the commonly used instantiation.
 template <>
 class timer_queue<time_traits<boost::posix_time::ptime>>
   : public timer_queue_base
@@ -101,5 +103,7 @@ private:
 #endif // defined(BOOST_ASIO_HEADER_ONLY)
 
 #endif // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
+
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 #endif // BOOST_ASIO_DETAIL_TIMER_QUEUE_PTIME_HPP

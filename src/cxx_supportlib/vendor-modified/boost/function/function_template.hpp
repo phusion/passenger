@@ -261,9 +261,9 @@ namespace boost {
          actual invoker that will be used for the given function
          object.
 
-         Each specialization contains an "apply" nested class template
+         Each specialization contains an "apply_" nested class template
          that accepts the function object, return type, function
-         argument types, and allocator. The resulting "apply" class
+         argument types, and allocator. The resulting "apply_" class
          contains two typedefs, "invoker_type" and "manager_type",
          which correspond to the invoker and manager types. */
       template<typename Tag>
@@ -275,7 +275,7 @@ namespace boost {
       {
         template<typename FunctionPtr,
                  typename R, typename... T>
-        struct apply
+        struct apply_
         {
           typedef typename get_function_invoker<
                              FunctionPtr,
@@ -308,7 +308,7 @@ namespace boost {
       {
         template<typename MemberPtr,
                  typename R, typename... T>
-        struct apply
+        struct apply_
         {
           typedef typename get_member_invoker<
                              MemberPtr,
@@ -341,7 +341,7 @@ namespace boost {
       {
         template<typename FunctionObj,
                  typename R, typename... T>
-        struct apply
+        struct apply_
         {
           typedef typename get_function_obj_invoker<
                              FunctionObj,
@@ -374,7 +374,7 @@ namespace boost {
       {
         template<typename RefWrapper,
                  typename R, typename... T>
-        struct apply
+        struct apply_
         {
           typedef typename get_function_ref_invoker<
                              typename RefWrapper::type,
@@ -923,7 +923,7 @@ namespace boost {
       typedef typename boost::detail::function::get_function_tag<Functor>::type tag;
       typedef boost::detail::function::get_invoker<tag> get_invoker;
       typedef typename get_invoker::
-                         template apply<Functor, R,
+                         template apply_<Functor, R,
                         T...>
         handler_type;
 

@@ -51,19 +51,20 @@ namespace boost {
          //
          // some helper functions which really should be constexpr already, but sadly aren't:
          //
-#ifndef BOOST_NO_CXX14_CONSTEXPR
          template <class T>
-         inline constexpr T constexpr_min(T const& a, T const& b) BOOST_GCD_NOEXCEPT(T)
+         inline BOOST_CONSTEXPR T constexpr_min(T const& a, T const& b) BOOST_GCD_NOEXCEPT(T)
          {
             return a < b ? a : b;
          }
+
+#ifndef BOOST_NO_CXX14_CONSTEXPR
          template <class T>
-         inline constexpr auto constexpr_swap(T&a, T& b) BOOST_GCD_NOEXCEPT(T) -> decltype(a.swap(b))
+         inline constexpr auto constexpr_swap(T& a, T& b) BOOST_GCD_NOEXCEPT(T) -> decltype(a.swap(b))
          {
             return a.swap(b);
          }
          template <class T, class U>
-         inline constexpr void constexpr_swap(T&a, U& b...) BOOST_GCD_NOEXCEPT(T)
+         inline constexpr void constexpr_swap(T& a, U& b, ...) BOOST_GCD_NOEXCEPT(T)
          {
             T t(static_cast<T&&>(a));
             a = static_cast<T&&>(b);
@@ -71,12 +72,7 @@ namespace boost {
          }
 #else
          template <class T>
-         inline T constexpr_min(T const& a, T const& b) BOOST_GCD_NOEXCEPT(T)
-         {
-            return a < b ? a : b;
-         }
-         template <class T>
-         inline void constexpr_swap(T&a, T& b) BOOST_GCD_NOEXCEPT(T)
+         inline void constexpr_swap(T& a, T& b) BOOST_GCD_NOEXCEPT(T)
          {
             using std::swap;
             swap(a, b);

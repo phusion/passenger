@@ -22,8 +22,8 @@
 #include <variant>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
+#include <boost/asio/deferred.hpp>
 #include <boost/asio/detail/type_traits.hpp>
-#include <boost/asio/experimental/deferred.hpp>
 #include <boost/asio/experimental/parallel_group.hpp>
 #include <boost/asio/multiple_exceptions.hpp>
 #include <boost/asio/this_coro.hpp>

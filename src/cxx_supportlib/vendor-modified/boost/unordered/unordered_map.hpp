@@ -198,7 +198,7 @@ namespace boost {
       template <class... Args> std::pair<iterator, bool> emplace(Args&&... args)
       {
         return table_.emplace_unique(
-          table::extractor::extract(std::forward<Args>(args)...),
+          table::extractor::extract(detail::as_const(args)...),
           std::forward<Args>(args)...);
       }
 
@@ -206,7 +206,7 @@ namespace boost {
       iterator emplace_hint(const_iterator hint, Args&&... args)
       {
         return table_.emplace_hint_unique(hint,
-          table::extractor::extract(std::forward<Args>(args)...),
+          table::extractor::extract(detail::as_const(args)...),
           std::forward<Args>(args)...);
       }
 

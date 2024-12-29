@@ -1565,6 +1565,11 @@ class slist
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    private:
+
+   //`allocator_type::value_type` must match container's `value type`. If this
+   //assertion fails, please review your allocator definition. 
+   BOOST_CONTAINER_STATIC_ASSERT((dtl::is_same<value_type, typename allocator_traits_type::value_type>::value));
+
    void priv_move_assign(BOOST_RV_REF(slist) x, dtl::bool_<true> /*steal_resources*/)
    {
       //Destroy objects but retain memory in case x reuses it in the future

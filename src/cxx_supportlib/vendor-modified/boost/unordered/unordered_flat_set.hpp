@@ -1,4 +1,5 @@
 // Copyright (C) 2022-2023 Christian Mazakas
+// Copyright (C) 2024 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -177,6 +178,7 @@ namespace boost {
       {
       }
 
+      template <bool avoid_explicit_instantiation = true>
       unordered_flat_set(
         concurrent_flat_set<Key, Hash, KeyEqual, Allocator>&& other)
           : table_(std::move(other.table_))
@@ -195,6 +197,13 @@ namespace boost {
         noexcept(std::declval<table_type&>() = std::declval<table_type&&>()))
       {
         table_ = std::move(other.table_);
+        return *this;
+      }
+
+      unordered_flat_set& operator=(std::initializer_list<value_type> il)
+      {
+        this->clear();
+        this->insert(il.begin(), il.end());
         return *this;
       }
 

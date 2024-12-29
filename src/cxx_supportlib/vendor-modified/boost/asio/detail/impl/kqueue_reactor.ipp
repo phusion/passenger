@@ -20,6 +20,7 @@
 
 #if defined(BOOST_ASIO_HAS_KQUEUE)
 
+#include <boost/asio/config.hpp>
 #include <boost/asio/detail/kqueue_reactor.hpp>
 #include <boost/asio/detail/scheduler.hpp>
 #include <boost/asio/detail/throw_error.hpp>
@@ -47,12 +48,18 @@ namespace detail {
 kqueue_reactor::kqueue_reactor(boost::asio::execution_context& ctx)
   : execution_context_service_base<kqueue_reactor>(ctx),
     scheduler_(use_service<scheduler>(ctx)),
-    mutex_(BOOST_ASIO_CONCURRENCY_HINT_IS_LOCKING(
-          REACTOR_REGISTRATION, scheduler_.concurrency_hint())),
+    mutex_(config(ctx).get("reactor", "registration_locking", true),
+        config(ctx).get("reactor", "registration_locking_spin_count", 0)),
     kqueue_fd_(do_kqueue_create()),
     interrupter_(),
     shutdown_(false),
-    registered_descriptors_mutex_(mutex_.enabled())
+    io_locking_(config(ctx).get("reactor", "io_locking", true)),
+    io_locking_spin_count_(
+        config(ctx).get("reactor", "io_locking_spin_count", 0)),
+    registered_descriptors_mutex_(mutex_.enabled()),
+    registered_descriptors_(
+        config(ctx).get("reactor", "preallocated_io_objects", 0U),
+        io_locking_, io_locking_spin_count_)
 {
   struct kevent events[1];
   BOOST_ASIO_KQUEUE_EV_SET(&events[0], interrupter_.read_descriptor(),
@@ -563,8 +570,7 @@ int kqueue_reactor::do_kqueue_create()
 kqueue_reactor::descriptor_state* kqueue_reactor::allocate_descriptor_state()
 {
   mutex::scoped_lock descriptors_lock(registered_descriptors_mutex_);
-  return registered_descriptors_.alloc(BOOST_ASIO_CONCURRENCY_HINT_IS_LOCKING(
-        REACTOR_IO, scheduler_.concurrency_hint()));
+  return registered_descriptors_.alloc(io_locking_, io_locking_spin_count_);
 }
 
 void kqueue_reactor::free_descriptor_state(kqueue_reactor::descriptor_state* s)

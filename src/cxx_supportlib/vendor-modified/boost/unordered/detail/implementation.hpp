@@ -21,6 +21,7 @@
 #include <boost/unordered/detail/serialize_tracked_address.hpp>
 #include <boost/unordered/detail/static_assert.hpp>
 #include <boost/unordered/detail/type_traits.hpp>
+#include <boost/unordered/unordered_printers.hpp>
 
 #include <boost/assert.hpp>
 #include <boost/core/allocator_traits.hpp>

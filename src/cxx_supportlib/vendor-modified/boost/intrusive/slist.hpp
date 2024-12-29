@@ -660,6 +660,7 @@ class slist_impl
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static slist_impl &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return slist_impl::priv_container_from_end_iterator(end_iterator);   }
 
@@ -671,6 +672,7 @@ class slist_impl
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const slist_impl &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return slist_impl::priv_container_from_end_iterator(end_iterator);   }
 
@@ -2107,6 +2109,7 @@ class slist_impl
    static void priv_swap_lists(node_ptr this_node, node_ptr other_node, detail::bool_<true>)
    {  node_algorithms::swap_trailing_nodes(this_node, other_node); }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    static slist_impl &priv_container_from_end_iterator(const const_iterator &end_iterator)
    {
       //Obtaining the container from the end iterator is not possible with linear
@@ -2229,9 +2232,11 @@ class slist
    inline void clone_from(BOOST_RV_REF(slist) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static slist &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<slist &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const slist &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const slist &>(Base::container_from_end_iterator(end_iterator));   }
 };

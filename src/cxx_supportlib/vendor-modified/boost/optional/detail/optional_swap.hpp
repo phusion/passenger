@@ -54,7 +54,7 @@ struct swap_selector<true>
 #endif
 
 #ifndef BOOST_OPTIONAL_DETAIL_NO_RVALUE_REFERENCES
-# define BOOST_OPTIONAL_DETAIL_MOVE(EXPR_) boost::move(EXPR_)
+# define BOOST_OPTIONAL_DETAIL_MOVE(EXPR_) optional_detail::move(EXPR_)
 #else
 # define BOOST_OPTIONAL_DETAIL_MOVE(EXPR_) EXPR_
 #endif
@@ -63,7 +63,7 @@ template <>
 struct swap_selector<false>
 {
     template <class T>
-    static void optional_swap ( optional<T>& x, optional<T>& y ) 
+    static void optional_swap ( optional<T>& x, optional<T>& y )
     //BOOST_NOEXCEPT_IF(::boost::is_nothrow_move_constructible<T>::value && BOOST_NOEXCEPT_EXPR(boost::core::invoke_swap(*x, *y)))
     {
         if (x)
@@ -91,7 +91,7 @@ struct swap_selector<false>
 
 } // namespace optional_detail
 
-#if (!defined BOOST_NO_CXX11_RVALUE_REFERENCES) && (!defined BOOST_CONFIG_RESTORE_OBSOLETE_SWAP_IMPLEMENTATION)
+#if (!defined BOOST_CONFIG_RESTORE_OBSOLETE_SWAP_IMPLEMENTATION)
 
 template<class T>
 struct optional_swap_should_use_default_constructor : boost::false_type {} ;

@@ -25,15 +25,10 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <boost/asio/detail/chrono.hpp>
+#include <boost/asio/detail/chrono_time_traits.hpp>
 #include <boost/asio/detail/handler_tracking.hpp>
-
-#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-# include <boost/asio/time_traits.hpp>
-#else // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-# include <boost/asio/detail/chrono.hpp>
-# include <boost/asio/detail/chrono_time_traits.hpp>
-# include <boost/asio/wait_traits.hpp>
-#endif // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
+#include <boost/asio/wait_traits.hpp>
 
 #if defined(BOOST_ASIO_WINDOWS_RUNTIME)
 # include <boost/asio/detail/socket_types.hpp>
@@ -54,16 +49,10 @@ struct handler_tracking_timestamp
 
   handler_tracking_timestamp()
   {
-#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
-    boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
-    boost::posix_time::time_duration now =
-      boost::posix_time::microsec_clock::universal_time() - epoch;
-#else // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
     typedef chrono_time_traits<chrono::system_clock,
         boost::asio::wait_traits<chrono::system_clock>> traits_helper;
     traits_helper::posix_time_duration now(
         chrono::system_clock::now().time_since_epoch());
-#endif // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
     seconds = static_cast<uint64_t>(now.total_seconds());
     microseconds = static_cast<uint64_t>(now.total_microseconds() % 1000000);
   }

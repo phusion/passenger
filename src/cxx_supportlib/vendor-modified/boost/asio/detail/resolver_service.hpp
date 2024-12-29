@@ -21,7 +21,6 @@
 
 #include <boost/asio/ip/basic_resolver_query.hpp>
 #include <boost/asio/ip/basic_resolver_results.hpp>
-#include <boost/asio/detail/concurrency_hint.hpp>
 #include <boost/asio/detail/memory.hpp>
 #include <boost/asio/detail/resolve_endpoint_op.hpp>
 #include <boost/asio/detail/resolve_query_op.hpp>

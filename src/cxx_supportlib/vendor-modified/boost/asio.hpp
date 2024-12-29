@@ -71,6 +71,7 @@
 #include <boost/asio/completion_condition.hpp>
 #include <boost/asio/compose.hpp>
 #include <boost/asio/composed.hpp>
+#include <boost/asio/config.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/connect_pipe.hpp>
 #include <boost/asio/consign.hpp>
@@ -81,6 +82,7 @@
 #include <boost/asio/default_completion_token.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/dispatch.hpp>
+#include <boost/asio/disposition.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/execution.hpp>
 #include <boost/asio/execution/allocator.hpp>
@@ -109,8 +111,6 @@
 #include <boost/asio/immediate.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/io_context_strand.hpp>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/io_service_strand.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/address_v4.hpp>
 #include <boost/asio/ip/address_v4_iterator.hpp>
@@ -188,6 +188,15 @@
 #include <boost/asio/uses_executor.hpp>
 #include <boost/asio/version.hpp>
 #include <boost/asio/wait_traits.hpp>
+#include <boost/asio/windows/basic_object_handle.hpp>
+#include <boost/asio/windows/basic_overlapped_handle.hpp>
+#include <boost/asio/windows/basic_random_access_handle.hpp>
+#include <boost/asio/windows/basic_stream_handle.hpp>
+#include <boost/asio/windows/object_handle.hpp>
+#include <boost/asio/windows/overlapped_handle.hpp>
+#include <boost/asio/windows/overlapped_ptr.hpp>
+#include <boost/asio/windows/random_access_handle.hpp>
+#include <boost/asio/windows/stream_handle.hpp>
 #include <boost/asio/writable_pipe.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/asio/write_at.hpp>

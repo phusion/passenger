@@ -69,7 +69,9 @@ struct get_vopt_from_svopt
    : get_small_vector_opt<Options>::type
 {
    typedef typename get_small_vector_opt<Options>::type options_t;
-   typedef vector_opt< typename options_t::growth_factor_type, void> type;
+   typedef vector_opt< typename options_t::growth_factor_type
+                     , typename options_t::stored_size_type
+                     > type;
 };
 
 template<>
@@ -340,9 +342,11 @@ struct small_vector_storage<T, 0u, Alignment>
 //!
 template <class T, class SecAlloc, class Options>
 class small_vector_base
+#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    : public dtl::vector_for_small_vector<T, SecAlloc, Options>::type
+#endif
 {
-   #ifndef BOOST_CONTAINER_DOXYGEN_INVOKEDVECTOR
+   #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    public:
    //Make it public as it will be inherited by small_vector and container
    //must have this public member
@@ -389,13 +393,13 @@ class small_vector_base
    {}
 
    template<class AllocFwd>
-   inline explicit small_vector_base(initial_capacity_t, size_type capacity, BOOST_FWD_REF(AllocFwd) a)
-      : base_type(initial_capacity_t(), this->internal_storage(), capacity, ::boost::forward<AllocFwd>(a))
+   inline explicit small_vector_base(initial_capacity_t, size_type initial_capacity, BOOST_FWD_REF(AllocFwd) a)
+      : base_type(initial_capacity_t(), this->internal_storage(), initial_capacity, ::boost::forward<AllocFwd>(a))
    {}
 
    template<class AllocFwd>
-   inline explicit small_vector_base(initial_capacity_t, size_type capacity, BOOST_FWD_REF(AllocFwd) a, small_vector_base &x)
-      : base_type(initial_capacity_t(), this->internal_storage(), capacity, ::boost::forward<AllocFwd>(a), x)
+   inline explicit small_vector_base(initial_capacity_t, size_type initial_capacity, BOOST_FWD_REF(AllocFwd) a, small_vector_base &x)
+      : base_type(initial_capacity_t(), this->internal_storage(), initial_capacity, ::boost::forward<AllocFwd>(a), x)
    {}
 
    inline explicit small_vector_base(maybe_initial_capacity_t, size_type initial_capacity, size_type initial_size)

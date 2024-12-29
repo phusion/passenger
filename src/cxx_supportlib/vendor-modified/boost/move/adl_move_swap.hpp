@@ -40,6 +40,8 @@
       //In GCC 4.4 stl_move.h was renamed to move.h
       #include <bits/move.h>
    #endif
+#elif defined(_LIBCPP_VERSION) && (_LIBCPP_VERSION >= 13000)
+   #include <__utility/swap.h>  //libc++ refactored <utility> headers in smaller headers
 #elif defined(_LIBCPP_VERSION)
    #include <type_traits>  //The initial import of libc++ defines std::swap and still there
 #elif __cplusplus >= 201103L

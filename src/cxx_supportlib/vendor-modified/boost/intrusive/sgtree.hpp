@@ -1049,15 +1049,19 @@ class sgtree
    inline void clone_from(BOOST_RV_REF(sgtree) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static sgtree &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<sgtree &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const sgtree &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const sgtree &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static sgtree &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<sgtree &>(Base::container_from_iterator(it));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const sgtree &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const sgtree &>(Base::container_from_iterator(it));   }
 };

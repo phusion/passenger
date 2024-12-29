@@ -13,9 +13,9 @@
 #ifndef BOOST_RANDOM_BETA_DISTRIBUTION_HPP
 #define BOOST_RANDOM_BETA_DISTRIBUTION_HPP
 
-#include <cassert>
 #include <istream>
 #include <iosfwd>
+#include <boost/assert.hpp>
 #include <boost/random/detail/operators.hpp>
 #include <boost/random/gamma_distribution.hpp>
 
@@ -48,8 +48,8 @@ public:
                             RealType beta_arg = RealType(1.0))
           : _alpha(alpha_arg), _beta(beta_arg)
         {
-            assert(alpha_arg > 0);
-            assert(beta_arg > 0);
+            BOOST_ASSERT(alpha_arg > 0);
+            BOOST_ASSERT(beta_arg > 0);
         }
 
         /** Returns the "alpha" parameter of the distribtuion. */
@@ -86,8 +86,8 @@ public:
                                RealType beta_arg = RealType(1.0))
       : _alpha(alpha_arg), _beta(beta_arg)
     {
-        assert(alpha_arg > 0);
-        assert(beta_arg > 0);
+        BOOST_ASSERT(alpha_arg > 0);
+        BOOST_ASSERT(beta_arg > 0);
     }
     /** Constructs an @c beta_distribution from its parameters. */
     explicit beta_distribution(const param_type& parm)

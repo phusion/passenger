@@ -18,10 +18,10 @@
 #include <boost/asio/detail/config.hpp>
 #include <utility>
 #include <boost/asio/compose.hpp>
+#include <boost/asio/deferred.hpp>
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/experimental/coro.hpp>
-#include <boost/asio/experimental/deferred.hpp>
-#include <boost/asio/experimental/prepend.hpp>
+#include <boost/asio/prepend.hpp>
 #include <boost/asio/redirect_error.hpp>
 
 #include <boost/asio/detail/push_options.hpp>

@@ -818,21 +818,21 @@ struct is_async_operation :
 template <typename T, typename... Args>
 BOOST_ASIO_CONCEPT async_operation = is_async_operation<T, Args...>::value;
 
-#define BOOST_ASIO_ASYNC_OPERATION(t) \
-  ::boost::asio::async_operation<t>
-#define BOOST_ASIO_ASYNC_OPERATION1(t, a0) \
-  ::boost::asio::async_operation<t, a0>
-#define BOOST_ASIO_ASYNC_OPERATION2(t, a0, a1) \
-  ::boost::asio::async_operation<t, a0, a1>
-#define BOOST_ASIO_ASYNC_OPERATION3(t, a0, a1, a2) \
-  ::boost::asio::async_operation<t, a0, a1, a2>
+#define BOOST_ASIO_ASYNC_OPERATION \
+  ::boost::asio::async_operation
+#define BOOST_ASIO_ASYNC_OPERATION1(a0) \
+  ::boost::asio::async_operation<a0>
+#define BOOST_ASIO_ASYNC_OPERATION2(a0, a1) \
+  ::boost::asio::async_operation<a0, a1>
+#define BOOST_ASIO_ASYNC_OPERATION3(a0, a1, a2) \
+  ::boost::asio::async_operation<a0, a1, a2>
 
 #else // defined(BOOST_ASIO_HAS_CONCEPTS)
 
-#define BOOST_ASIO_ASYNC_OPERATION(t) typename
-#define BOOST_ASIO_ASYNC_OPERATION1(t, a0) typename
-#define BOOST_ASIO_ASYNC_OPERATION2(t, a0, a1) typename
-#define BOOST_ASIO_ASYNC_OPERATION3(t, a0, a1, a2) typename
+#define BOOST_ASIO_ASYNC_OPERATION typename
+#define BOOST_ASIO_ASYNC_OPERATION1(a0) typename
+#define BOOST_ASIO_ASYNC_OPERATION2(a0, a1) typename
+#define BOOST_ASIO_ASYNC_OPERATION3(a0, a1, a2) typename
 
 #endif // defined(BOOST_ASIO_HAS_CONCEPTS)
 

@@ -124,33 +124,6 @@ public:
   /// Get the address as a string.
   BOOST_ASIO_DECL std::string to_string() const;
 
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-  /// (Deprecated: Use other overload.) Get the address as a string.
-  BOOST_ASIO_DECL std::string to_string(boost::system::error_code& ec) const;
-
-  /// (Deprecated: Use make_address_v6().) Create an IPv6 address from an IP
-  /// address string.
-  static address_v6 from_string(const char* str);
-
-  /// (Deprecated: Use make_address_v6().) Create an IPv6 address from an IP
-  /// address string.
-  static address_v6 from_string(
-      const char* str, boost::system::error_code& ec);
-
-  /// (Deprecated: Use make_address_v6().) Create an IPv6 address from an IP
-  /// address string.
-  static address_v6 from_string(const std::string& str);
-
-  /// (Deprecated: Use make_address_v6().) Create an IPv6 address from an IP
-  /// address string.
-  static address_v6 from_string(
-      const std::string& str, boost::system::error_code& ec);
-
-  /// (Deprecated: Use make_address_v4().) Converts an IPv4-mapped or
-  /// IPv4-compatible address to an IPv4 address.
-  BOOST_ASIO_DECL address_v4 to_v4() const;
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
-
   /// Determine whether the address is a loopback address.
   /**
    * This function tests whether the address is the loopback address
@@ -173,12 +146,6 @@ public:
 
   /// Determine whether the address is a mapped IPv4 address.
   BOOST_ASIO_DECL bool is_v4_mapped() const noexcept;
-
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-  /// (Deprecated: No replacement.) Determine whether the address is an
-  /// IPv4-compatible address.
-  BOOST_ASIO_DECL bool is_v4_compatible() const;
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
   /// Determine whether the address is a multicast address.
   BOOST_ASIO_DECL bool is_multicast() const noexcept;
@@ -252,14 +219,6 @@ public:
    * address <tt>::1</tt>.
    */
   BOOST_ASIO_DECL static address_v6 loopback() noexcept;
-
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-  /// (Deprecated: Use make_address_v6().) Create an IPv4-mapped IPv6 address.
-  BOOST_ASIO_DECL static address_v6 v4_mapped(const address_v4& addr);
-
-  /// (Deprecated: No replacement.) Create an IPv4-compatible IPv6 address.
-  BOOST_ASIO_DECL static address_v6 v4_compatible(const address_v4& addr);
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 private:
   friend class basic_address_iterator<address_v6>;

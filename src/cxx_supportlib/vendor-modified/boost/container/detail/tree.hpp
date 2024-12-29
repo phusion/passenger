@@ -456,6 +456,10 @@ class tree
 
    private:
 
+   //`allocator_type::value_type` must match container's `value type`. If this
+   //assertion fails, please review your allocator definition. 
+   BOOST_CONTAINER_STATIC_ASSERT((dtl::is_same<value_type, typename allocator_traits<allocator_type>::value_type>::value));
+
    typedef key_node_pred<key_compare, key_of_value_t, Node>  KeyNodeCompare;
 
    public:

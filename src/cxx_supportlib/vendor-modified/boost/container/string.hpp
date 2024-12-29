@@ -628,6 +628,11 @@ class basic_string
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    private:
+
+   //`allocator_type::value_type` must match container's `value type`. If this
+   //assertion fails, please review your allocator definition. 
+   BOOST_CONTAINER_STATIC_ASSERT((dtl::is_same<value_type, typename allocator_traits<allocator_type>::value_type>::value));
+
    typedef constant_iterator<CharT> cvalue_iterator;
    typedef typename base_t::alloc_version  alloc_version;
    typedef ::boost::intrusive::pointer_traits<pointer> pointer_traits;
@@ -3543,21 +3548,6 @@ inline std::basic_istream<CharT, Traits>&
 getline(std::basic_istream<CharT, Traits>& is, basic_string<CharT,Traits,Allocator>& s)
 {
    return getline(is, s, '\n');
-}
-
-template <class Ch, class Allocator>
-inline std::size_t hash_value(basic_string<Ch, std::char_traits<Ch>, Allocator> const& v)
-{
-   std::size_t seed = 0;
-   const Ch *first = v.data();
-
-   for(std::size_t i = 0, i_max = v.size(); i != i_max; ++i)
-   {
-      boost::intrusive::detail::hash_combine_size_t(seed, static_cast<std::size_t>(*first));
-      ++first;
-   }
-
-   return seed;
 }
 
 }}

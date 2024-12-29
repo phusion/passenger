@@ -173,6 +173,11 @@ class devector
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    private:
+
+   //`allocator_type::value_type` must match container's `value type`. If this
+   //assertion fails, please review your allocator definition. 
+   BOOST_CONTAINER_STATIC_ASSERT((dtl::is_same<value_type, typename allocator_traits<allocator_type>::value_type>::value));
+
    BOOST_COPYABLE_AND_MOVABLE(devector)
 
    // Guard to deallocate buffer on exception
@@ -2170,6 +2175,28 @@ class devector
                                  || allocator_traits_type::is_always_equal::value)
    {   x.swap(y);   }
 
+   #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
+
+   //Functions for optimizations, not for users
+   T *unused_storage(size_type &sz)
+   {
+      T *const storage_addr = boost::movelib::to_raw_pointer(m_.buffer);
+      if(this->empty()){
+         sz = m_.capacity;
+         return storage_addr;
+      }
+      else if(this->back_free_capacity() > this->front_free_capacity()){
+         sz = this->back_free_capacity();
+         return storage_addr + m_.back_idx;
+      }
+      else{
+         sz = this->front_free_capacity();
+         return storage_addr;
+      }
+   }
+
+   #endif
+
    private:
 
    void priv_move_assign(BOOST_RV_REF(devector) x, dtl::bool_<true> /*steal_resources*/)
@@ -2285,20 +2312,20 @@ class devector
       return static_cast<const allocator_type&>(m_);
    }
 
-   pointer allocate(size_type capacity)
+   pointer allocate(size_type cap)
    {
-      pointer const p = impl::do_allocate(get_allocator_ref(), capacity);
+      pointer const p = impl::do_allocate(get_allocator_ref(), cap);
       #ifdef BOOST_CONTAINER_DEVECTOR_ALLOC_STATS
       ++m_.capacity_alloc_count;
       #endif // BOOST_CONTAINER_DEVECTOR_ALLOC_STATS
       return p;
    }
 
-   void destroy_elements(pointer begin, pointer end)
+   void destroy_elements(pointer b, pointer e)
    {
-      for (; begin != end; ++begin)
+      for (; b != e; ++b)
       {
-         allocator_traits_type::destroy(get_allocator_ref(), boost::movelib::to_raw_pointer(begin));
+         allocator_traits_type::destroy(get_allocator_ref(), boost::movelib::to_raw_pointer(b));
       }
    }
 
@@ -2400,10 +2427,10 @@ class devector
    }
 
    template <typename Guard>
-   void opt_move_or_copy(pointer begin, pointer end, pointer dst, Guard& guard)
+   void opt_move_or_copy(pointer b, pointer e, pointer dst, Guard& guard)
    {
       // if trivial copy and default allocator, memcpy
-      boost::container::uninitialized_move_alloc(get_allocator_ref(), begin, end, dst);
+      boost::container::uninitialized_move_alloc(get_allocator_ref(), b, e, dst);
       guard.extend();
    }
 
@@ -2782,10 +2809,10 @@ class devector
 
 
    template <typename Iterator>
-   void construct_from_range(Iterator begin, Iterator end)
+   void construct_from_range(Iterator b, Iterator e)
    {
       allocation_guard buffer_guard(m_.buffer, m_.capacity, get_allocator_ref());
-      boost::container::uninitialized_copy_alloc(get_allocator_ref(), begin, end, m_.buffer);
+      boost::container::uninitialized_copy_alloc(get_allocator_ref(), b, e, m_.buffer);
       buffer_guard.release();
    }
 

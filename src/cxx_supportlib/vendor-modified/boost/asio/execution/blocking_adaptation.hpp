@@ -471,6 +471,36 @@ const T disallowed_t<I>::static_query_v;
 #endif // defined(BOOST_ASIO_HAS_DEDUCED_STATIC_QUERY_TRAIT)
        //   && defined(BOOST_ASIO_HAS_SFINAE_VARIABLE_TEMPLATES)
 
+template <typename>
+struct is_blocking_adaptation_t : false_type
+{
+};
+
+template <int I>
+struct is_blocking_adaptation_t<blocking_adaptation_t<I>> : true_type
+{
+};
+
+template <typename>
+struct is_allowed_t : false_type
+{
+};
+
+template <int I>
+struct is_allowed_t<allowed_t<I>> : true_type
+{
+};
+
+template <typename>
+struct is_disallowed_t : false_type
+{
+};
+
+template <int I>
+struct is_disallowed_t<disallowed_t<I>> : true_type
+{
+};
+
 template <typename Executor>
 class adapter
 {
@@ -510,7 +540,10 @@ public:
 
   template <typename Property>
   enable_if_t<
-    can_query<const Executor&, Property>::value,
+    can_query<const Executor&, Property>::value
+      && !is_blocking_adaptation_t<Property>::value
+      && !is_allowed_t<Property>::value
+      && !is_disallowed_t<Property>::value,
     query_result_t<const Executor&, Property>
   > query(const Property& p) const
     noexcept(is_nothrow_query<const Executor&, Property>::value)
@@ -526,7 +559,10 @@ public:
 
   template <typename Property>
   enable_if_t<
-    can_require<const Executor&, Property>::value,
+    can_require<const Executor&, Property>::value
+      && !is_blocking_adaptation_t<Property>::value
+      && !is_allowed_t<Property>::value
+      && !is_disallowed_t<Property>::value,
     adapter<decay_t<require_result_t<const Executor&, Property>>>
   > require(const Property& p) const
     noexcept(is_nothrow_require<const Executor&, Property>::value)
@@ -537,7 +573,10 @@ public:
 
   template <typename Property>
   enable_if_t<
-    can_prefer<const Executor&, Property>::value,
+    can_prefer<const Executor&, Property>::value
+      && !is_blocking_adaptation_t<Property>::value
+      && !is_allowed_t<Property>::value
+      && !is_disallowed_t<Property>::value,
     adapter<decay_t<prefer_result_t<const Executor&, Property>>>
   > prefer(const Property& p) const
     noexcept(is_nothrow_prefer<const Executor&, Property>::value)

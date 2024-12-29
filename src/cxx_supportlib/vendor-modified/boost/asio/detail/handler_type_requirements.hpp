@@ -125,28 +125,6 @@ struct handler_type_requirements
 {
 };
 
-#define BOOST_ASIO_LEGACY_COMPLETION_HANDLER_CHECK( \
-    handler_type, handler) \
-  \
-  typedef BOOST_ASIO_HANDLER_TYPE(handler_type, \
-      void()) asio_true_handler_type; \
-  \
-  BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
-      sizeof(boost::asio::detail::zero_arg_copyable_handler_test( \
-          boost::asio::detail::clvref< \
-            asio_true_handler_type>(), 0)) == 1, \
-      "CompletionHandler type requirements not met") \
-  \
-  typedef boost::asio::detail::handler_type_requirements< \
-      sizeof( \
-        boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
-            asio_true_handler_type>())) + \
-      sizeof( \
-        boost::asio::detail::rorlvref< \
-          asio_true_handler_type>()(), \
-        char(0))> BOOST_ASIO_UNUSED_TYPEDEF
-
 #define BOOST_ASIO_READ_HANDLER_CHECK( \
     handler_type, handler) \
   \

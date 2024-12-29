@@ -876,7 +876,8 @@ class bstree_impl
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   static bstree_impl &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
+   BOOST_INTRUSIVE_NO_DANGLING
+   static bstree_impl& container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {
       return static_cast<bstree_impl&>
                (data_type::get_tree_base_from_end_iterator(end_iterator));
@@ -890,7 +891,8 @@ class bstree_impl
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   static const bstree_impl &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
+   BOOST_INTRUSIVE_NO_DANGLING
+   static const bstree_impl & container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {
       return static_cast<bstree_impl&>
                (data_type::get_tree_base_from_end_iterator(end_iterator));
@@ -904,7 +906,8 @@ class bstree_impl
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Logarithmic.
-   static bstree_impl &container_from_iterator(iterator it) BOOST_NOEXCEPT
+   BOOST_INTRUSIVE_NO_DANGLING
+   static bstree_impl & container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return container_from_end_iterator(it.end_iterator_from_it());   }
 
    //! <b>Precondition</b>: it must be a valid end const_iterator
@@ -915,7 +918,8 @@ class bstree_impl
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Logarithmic.
-   static const bstree_impl &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
+   BOOST_INTRUSIVE_NO_DANGLING
+   static const bstree_impl & container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return container_from_end_iterator(it.end_iterator_from_it());   }
 
    #ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
@@ -2215,15 +2219,19 @@ class bstree
    inline void clone_from(BOOST_RV_REF(bstree) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static bstree &container_from_end_iterator(iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<bstree &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const bstree &container_from_end_iterator(const_iterator end_iterator) BOOST_NOEXCEPT
    {  return static_cast<const bstree &>(Base::container_from_end_iterator(end_iterator));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static bstree &container_from_iterator(iterator it) BOOST_NOEXCEPT
    {  return static_cast<bstree &>(Base::container_from_iterator(it));   }
 
+   BOOST_INTRUSIVE_NO_DANGLING
    inline static const bstree &container_from_iterator(const_iterator it) BOOST_NOEXCEPT
    {  return static_cast<const bstree &>(Base::container_from_iterator(it));   }
 };

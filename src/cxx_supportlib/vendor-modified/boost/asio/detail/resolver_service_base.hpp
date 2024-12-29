@@ -145,6 +145,9 @@ private:
 
   // Thread used for running the work io_context's run loop.
   boost::asio::detail::scoped_ptr<boost::asio::detail::thread> work_thread_;
+
+  // Whether the scheduler locking is enabled.
+  bool scheduler_locking_;
 };
 
 } // namespace detail

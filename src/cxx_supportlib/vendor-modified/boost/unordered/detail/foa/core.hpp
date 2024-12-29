@@ -29,6 +29,7 @@
 #include <boost/unordered/detail/static_assert.hpp>
 #include <boost/unordered/detail/type_traits.hpp>
 #include <boost/unordered/hash_traits.hpp>
+#include <boost/unordered/unordered_printers.hpp>
 #include <climits>
 #include <cmath>
 #include <cstddef>
@@ -1017,6 +1018,11 @@ struct table_arrays
       rebind<group_type>;
   using group_type_pointer_traits=boost::pointer_traits<group_type_pointer>;
 
+  // For natvis purposes
+  using char_pointer=
+    typename boost::pointer_traits<value_type_pointer>::template
+      rebind<unsigned char>;
+
   table_arrays(
     std::size_t gsi,std::size_t gsm,
     group_type_pointer pg,value_type_pointer pe):
@@ -1453,6 +1459,11 @@ public:
   using stats=table_core_stats;
 #endif
 
+#if defined(BOOST_GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
   table_core(
     std::size_t n=default_bucket_count,const Hash& h_=Hash(),
     const Pred& pred_=Pred(),const Allocator& al_=Allocator()):
@@ -1460,6 +1471,10 @@ public:
     allocator_base{empty_init,al_},arrays(new_arrays(n)),
     size_ctrl{initial_max_load(),0}
     {}
+
+#if defined(BOOST_GCC)
+#pragma GCC diagnostic pop
+#endif
 
   /* genericize on an ArraysFn so that we can do things like delay an
    * allocation for the group_access data required by cfoa after the move
@@ -2075,6 +2090,11 @@ private:
   using pred_base=empty_value<Pred,1>;
   using allocator_base=empty_value<Allocator,2>;
 
+#if defined(BOOST_GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
   /* used by allocator-extended move ctor */
 
   table_core(Hash&& h_,Pred&& pred_,const Allocator& al_):
@@ -2084,6 +2104,10 @@ private:
     size_ctrl{initial_max_load(),0}
   {
   }
+
+#if defined(BOOST_GCC)
+#pragma GCC diagnostic pop
+#endif
 
   arrays_type new_arrays(std::size_t n)const
   {

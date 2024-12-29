@@ -163,11 +163,14 @@ class flat_map
    typedef dtl_pair_t impl_pair_t;
    #endif
 
-   typedef dtl::flat_tree<
-                           impl_pair_t,
+   typedef dtl::flat_tree< impl_pair_t,
                            dtl::select1st<Key>,
                            Compare,
+                           #ifdef BOOST_CONTAINER_STD_PAIR_IS_MOVABLE
+                           AllocatorOrContainer
+                           #else
                            typename dtl::container_or_allocator_rebind<AllocatorOrContainer, impl_pair_t >::type
+                           #endif
                            > impl_tree_t;
    impl_tree_t m_flat_tree;  // flat tree representing flat_map
 
@@ -1849,7 +1852,11 @@ class flat_multimap
                            impl_pair_t,
                            dtl::select1st<Key>,
                            Compare,
+                           #ifdef BOOST_CONTAINER_STD_PAIR_IS_MOVABLE
+                           AllocatorOrContainer
+                           #else
                            typename dtl::container_or_allocator_rebind<AllocatorOrContainer, impl_pair_t >::type
+                           #endif
                            > impl_tree_t;
    impl_tree_t m_flat_tree;  // flat tree representing flat_map
 

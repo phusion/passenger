@@ -120,8 +120,8 @@ public:
   /// The type used to represent the output sequence as a list of buffers.
   typedef implementation_defined mutable_buffers_type;
 #else
-  typedef BOOST_ASIO_CONST_BUFFER const_buffers_type;
-  typedef BOOST_ASIO_MUTABLE_BUFFER mutable_buffers_type;
+  typedef const_buffer const_buffers_type;
+  typedef mutable_buffer mutable_buffers_type;
 #endif
 
   /// Construct a basic_streambuf object.

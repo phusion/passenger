@@ -643,7 +643,7 @@ struct vector_alloc_holder<Allocator, StoredSizeType, version_0>
    template<class AllocConvertible>
    vector_alloc_holder(vector_uninitialized_size_t, BOOST_FWD_REF(AllocConvertible) a, size_type initial_size)
       : allocator_type(boost::forward<AllocConvertible>(a))
-      , m_size(initial_size)  //Size is initialized here...
+      , m_size(static_cast<stored_size_type>(initial_size))  //Size is initialized here...
    {
       //... and capacity here, so vector, must call uninitialized_xxx in the derived constructor
       this->priv_first_allocation(initial_size);
@@ -652,7 +652,7 @@ struct vector_alloc_holder<Allocator, StoredSizeType, version_0>
    //Constructor, does not throw
    vector_alloc_holder(vector_uninitialized_size_t, size_type initial_size)
       : allocator_type()
-      , m_size(initial_size)  //Size is initialized here...
+      , m_size(static_cast<stored_size_type>(initial_size))  //Size is initialized here...
    {
       //... and capacity here, so vector, must call uninitialized_xxx in the derived constructor
       this->priv_first_allocation(initial_size);
@@ -813,8 +813,11 @@ public:
    typedef BOOST_CONTAINER_IMPDEF(boost::container::reverse_iterator<const_iterator>)  const_reverse_iterator;
 
 private:
-
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
+   //`allocator_type::value_type` must match container's `value type`. If this
+   //assertion fails, please review your allocator definition. 
+   BOOST_CONTAINER_STATIC_ASSERT((dtl::is_same<value_type, typename allocator_traits_t::value_type>::value));
+
    typedef typename boost::container::
       allocator_traits<allocator_type>::size_type                             alloc_size_type;
    typedef typename get_vector_opt<Options, alloc_size_type>::type            options_type;
@@ -2315,6 +2318,7 @@ private:
       return cp >= new_cap || (alloc_version::value == 2 && this->m_holder.try_expand_fwd(size_type(new_cap - cp)));
    }
 
+   #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    //Absolutely experimental. This function might change, disappear or simply crash!
    template<class BiDirPosConstIt, class BiDirValueIt>
    inline void insert_ordered_at(const size_type element_count, BiDirPosConstIt last_position_it, BiDirValueIt last_value_it)
@@ -2328,24 +2332,35 @@ private:
    {  this->merge(first, last, value_less_t());  }
 
    template<class InputIt, class Compare>
-   inline void merge(InputIt first, InputIt last, Compare comp)
+   inline 
+      typename dtl::enable_if_c
+         < !dtl::is_input_iterator<InputIt>::value &&
+           dtl::is_same<value_type, typename iterator_traits<InputIt>::value_type>::value
+         , void>::type
+      merge(InputIt first, InputIt last, Compare comp)
    {
       size_type const s = this->size();
       size_type const c = this->capacity();
       size_type n = 0;
       size_type const free_cap = c - s;
       //If not input iterator and new elements don't fit in the remaining capacity, merge in new buffer
-      if(!dtl::is_input_iterator<InputIt>::value &&
-         free_cap < (n = boost::container::iterator_udistance(first, last))){
+      if(free_cap < (n = boost::container::iterator_udistance(first, last))){
          this->priv_merge_in_new_buffer(first, n, comp, alloc_version());
       }
       else{
-         this->insert(this->cend(), first, last);
-         T *const raw_beg = this->priv_raw_begin();
-         T *const raw_end = this->priv_raw_end();
-         T *const raw_pos = raw_beg + s;
-         boost::movelib::adaptive_merge(raw_beg, raw_pos, raw_end, comp, raw_end, free_cap - n);
+         this->priv_merge_generic(first, last, comp);
       }
+   }
+
+   template<class InputIt, class Compare>
+   inline 
+      typename dtl::enable_if_c
+         < dtl::is_input_iterator<InputIt>::value ||
+           !dtl::is_same<value_type, typename iterator_traits<InputIt>::value_type>::value
+         , void>::type
+      merge(InputIt first, InputIt last, Compare comp)
+   {
+      this->priv_merge_generic(first, last, comp);
    }
 
    template<class InputIt>
@@ -2353,7 +2368,12 @@ private:
    {  this->merge_unique(first, last, value_less_t());  }
 
    template<class InputIt, class Compare>
-   inline void merge_unique(InputIt first, InputIt last, Compare comp)
+   inline 
+      typename dtl::enable_if_c
+         < !dtl::is_input_iterator<InputIt>::value &&
+           dtl::is_same<value_type, typename iterator_traits<InputIt>::value_type>::value
+         , void>::type
+      merge_unique(InputIt first, InputIt last, Compare comp)
    {
       size_type const old_size = this->size();
       this->priv_set_difference_back(first, last, comp);
@@ -2363,7 +2383,42 @@ private:
       boost::movelib::adaptive_merge(raw_beg, raw_pos, raw_end, comp, raw_end, this->capacity() - this->size());
    }
 
+   template<class InputIt, class Compare>
+   inline 
+      typename dtl::enable_if_c
+         < dtl::is_input_iterator<InputIt>::value ||
+           !dtl::is_same<value_type, typename iterator_traits<InputIt>::value_type>::value
+         , void>::type
+      merge_unique(InputIt first, InputIt last, Compare comp)
+   {
+      iterator pos = this->insert(this->end(), first, last);
+      const iterator e = boost::movelib::inplace_set_unique_difference(pos, this->end(), this->begin(), pos, comp);
+      this->erase(e, this->end());
+      boost::movelib::adaptive_merge( this->begin(), pos, e, comp
+                                    , this->priv_raw_end(), this->capacity() - this->size());
+   }
+
+   //Function for optimizations, not for users
+   T *unused_storage(size_type &sz)
+   {
+      sz = static_cast<size_type>(this->capacity() - this->size());
+      return this->priv_raw_end();
+   }
+  
+   #endif
+
    private:
+   template<class InputIt, class Compare>
+   inline void priv_merge_generic(InputIt first, InputIt last, Compare comp)
+   {
+      size_type const old_s = this->size();
+      this->insert(this->cend(), first, last);
+      T* const raw_beg = this->priv_raw_begin();
+      T* const raw_end = this->priv_raw_end();
+      T* const raw_pos = raw_beg + old_s;
+      boost::movelib::adaptive_merge(raw_beg, raw_pos, raw_end, comp, raw_end, this->capacity() - this->size());
+   }
+
    template<class PositionValue>
    void priv_insert_ordered_at(const size_type element_count, PositionValue position_value)
    {
@@ -2710,7 +2765,7 @@ private:
             //Move internal memory data to the internal memory data of the target, this can throw
             BOOST_ASSERT(extmem.capacity() >= intmem.size());
             ::boost::container::uninitialized_move_alloc_n
-               (intmem.get_stored_allocator(), this->priv_raw_begin(), intmem.size(), extmem.priv_raw_begin());
+               (intmem.get_stored_allocator(), intmem.priv_raw_begin(), intmem.size(), extmem.priv_raw_begin());
 
             //Exception not thrown, commit new state
             extmem.m_holder.set_stored_size(intmem.size());
@@ -2721,7 +2776,7 @@ private:
 
          //Destroy moved elements from intmem
          boost::container::destroy_alloc_n
-            ( intmem.get_stored_allocator(), this->priv_raw_begin()
+            ( intmem.get_stored_allocator(), intmem.priv_raw_begin()
             , intmem.size());
 
          //Adopt dynamic buffer
@@ -3319,6 +3374,8 @@ struct has_trivial_destructor_after_move<boost::container::vector<T, Allocator, 
 //See comments on vec_iterator::element_type to know why is this needed
 #ifdef BOOST_GNU_STDLIB
 
+#include <boost/move/detail/std_ns_begin.hpp>
+
 BOOST_MOVE_STD_NS_BEG
 
 template <class Pointer, bool IsConst>
@@ -3327,6 +3384,8 @@ struct pointer_traits< boost::container::vec_iterator<Pointer, IsConst> >
 {};
 
 BOOST_MOVE_STD_NS_END
+
+#include <boost/move/detail/std_ns_end.hpp>
 
 #endif   //BOOST_GNU_STDLIB
 

@@ -42,6 +42,17 @@ namespace detail {
  * The thread pool class is an execution context where functions are permitted
  * to run on one of a fixed number of threads.
  *
+ * @par Thread Safety
+ * @e Distinct @e objects: Safe.@n
+ * @e Shared @e objects: Safe, with the specific exceptions of the join()
+ * wait() and notify_fork() functions. The join() and wait() functions must not
+ * be called at the same time as other calls to join() or wait() on the same
+ * pool. The notify_fork() function should not be called while any thread_pool
+ * function, or any function on an I/O object that is associated with the
+ * thread_pool, is being called in another thread. (In effect, this means that
+ * notify_fork() is safe only on a thread pool that has no internal or attached
+ * threads at the time.)
+ *
  * @par Submitting tasks to the pool
  *
  * To submit functions to the thread pool, use the @ref boost::asio::dispatch,
@@ -93,6 +104,19 @@ public:
   /// Constructs a pool with a specified number of threads.
   BOOST_ASIO_DECL thread_pool(std::size_t num_threads);
 
+  /// Constructs a pool with a specified number of threads.
+  /**
+   * Construct with a service maker, to create an initial set of services that
+   * will be installed into the execution context at construction time.
+   *
+   * @param num_threads The number of threads required.
+   *
+   * @param initial_services Used to create the initial services. The @c make
+   * function will be called once at the end of execution_context construction.
+   */
+  BOOST_ASIO_DECL thread_pool(std::size_t num_threads,
+      const execution_context::service_maker& initial_services);
+
   /// Destructor.
   /**
    * Automatically stops and joins the pool, if not explicitly done beforehand.
@@ -133,6 +157,8 @@ public:
    * This function blocks until the threads in the pool have completed. If @c
    * stop() is not called prior to @c wait(), the @c wait() call will wait
    * until the pool has no more outstanding work.
+   *
+   * @note @c wait() is synonymous with @c join().
    */
   BOOST_ASIO_DECL void wait();
 
@@ -153,6 +179,9 @@ private:
 
   // The current number of threads in the pool.
   detail::atomic_count num_threads_;
+
+  // Whether a join call will have any effect.
+  bool joinable_;
 };
 
 /// Executor implementation type used to submit functions to a thread pool.

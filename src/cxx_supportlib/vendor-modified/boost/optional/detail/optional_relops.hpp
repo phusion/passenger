@@ -1,5 +1,5 @@
 // Copyright (C) 2003, 2008 Fernando Luis Cacciola Carballal.
-// Copyright (C) 2015 Andrzej Krzemienski.
+// Copyright (C) 2015, 2024 Andrzej Krzemienski.
 //
 // Use, modification, and distribution is subject to the Boost Software
 // License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -16,7 +16,8 @@
 namespace boost {
 
 // optional's relational operators ( ==, !=, <, >, <=, >= ) have deep-semantics (compare values).
-// WARNING: This is UNLIKE pointers. Use equal_pointees()/less_pointees() in generic code instead.
+// WARNING: This is UNLIKE pointers. Use equal_pointees()/less_pointees() in generic code instead,
+// to obtain the same semantic for pointers.
 
 
 //
@@ -31,7 +32,7 @@ bool operator == ( optional<T> const& x, optional<T> const& y )
 template<class T>
 inline
 bool operator < ( optional<T> const& x, optional<T> const& y )
-{ return less_pointees(x,y); }
+{ return !y ? false : (!x ? true : (*x) < (*y)); }
 
 template<class T>
 inline
@@ -60,12 +61,12 @@ bool operator >= ( optional<T> const& x, optional<T> const& y )
 template<class T>
 inline
 bool operator == ( optional<T> const& x, T const& y )
-{ return equal_pointees(x, optional<T>(y)); }
+{ return x && (*x == y); }
 
 template<class T>
 inline
 bool operator < ( optional<T> const& x, T const& y )
-{ return less_pointees(x, optional<T>(y)); }
+{ return (!x) || (*x < y); }
 
 template<class T>
 inline
@@ -94,12 +95,12 @@ bool operator >= ( optional<T> const& x, T const& y )
 template<class T>
 inline
 bool operator == ( T const& x, optional<T> const& y )
-{ return equal_pointees( optional<T>(x), y ); }
+{ return y && (x == *y); }
 
 template<class T>
 inline
 bool operator < ( T const& x, optional<T> const& y )
-{ return less_pointees( optional<T>(x), y ); }
+{ return y && (x < *y); }
 
 template<class T>
 inline
@@ -133,8 +134,8 @@ bool operator == ( optional<T> const& x, none_t ) BOOST_NOEXCEPT
 
 template<class T>
 inline
-bool operator < ( optional<T> const& x, none_t )
-{ return less_pointees(x,optional<T>() ); }
+bool operator < ( optional<T> const&, none_t )
+{ return false; }
 
 template<class T>
 inline
@@ -168,7 +169,7 @@ bool operator == ( none_t , optional<T> const& y ) BOOST_NOEXCEPT
 template<class T>
 inline
 bool operator < ( none_t , optional<T> const& y )
-{ return less_pointees(optional<T>() ,y); }
+{ return bool(y); }
 
 template<class T>
 inline
@@ -193,4 +194,3 @@ bool operator >= ( none_t x, optional<T> const& y )
 } // namespace boost
 
 #endif // header guard
-

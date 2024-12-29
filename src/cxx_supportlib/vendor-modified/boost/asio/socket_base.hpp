@@ -535,17 +535,6 @@ public:
       = BOOST_ASIO_OS_DEF(SOMAXCONN));
 #endif
 
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-  /// (Deprecated: Use max_listen_connections.) The maximum length of the queue
-  /// of pending incoming connections.
-#if defined(GENERATING_DOCUMENTATION)
-  static const int max_connections = implementation_defined;
-#else
-  BOOST_ASIO_STATIC_CONSTANT(int, max_connections
-      = BOOST_ASIO_OS_DEF(SOMAXCONN));
-#endif
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
-
 protected:
   /// Protected destructor to prevent deletion through this type.
   ~socket_base()

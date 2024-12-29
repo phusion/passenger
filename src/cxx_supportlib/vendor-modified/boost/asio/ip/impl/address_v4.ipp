@@ -71,13 +71,6 @@ address_v4::uint_type address_v4::to_uint() const noexcept
   return boost::asio::detail::socket_ops::network_to_host_long(addr_.s_addr);
 }
 
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-unsigned long address_v4::to_ulong() const
-{
-  return boost::asio::detail::socket_ops::network_to_host_long(addr_.s_addr);
-}
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
-
 std::string address_v4::to_string() const
 {
   boost::system::error_code ec;
@@ -91,20 +84,6 @@ std::string address_v4::to_string() const
   return addr;
 }
 
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-std::string address_v4::to_string(boost::system::error_code& ec) const
-{
-  char addr_str[boost::asio::detail::max_addr_v4_str_len];
-  const char* addr =
-    boost::asio::detail::socket_ops::inet_ntop(
-        BOOST_ASIO_OS_DEF(AF_INET), &addr_, addr_str,
-        boost::asio::detail::max_addr_v4_str_len, 0, ec);
-  if (addr == 0)
-    return std::string();
-  return addr;
-}
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
-
 bool address_v4::is_loopback() const noexcept
 {
   return (to_uint() & 0xFF000000) == 0x7F000000;
@@ -115,45 +94,10 @@ bool address_v4::is_unspecified() const noexcept
   return to_uint() == 0;
 }
 
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-bool address_v4::is_class_a() const
-{
-  return (to_uint() & 0x80000000) == 0;
-}
-
-bool address_v4::is_class_b() const
-{
-  return (to_uint() & 0xC0000000) == 0x80000000;
-}
-
-bool address_v4::is_class_c() const
-{
-  return (to_uint() & 0xE0000000) == 0xC0000000;
-}
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
-
 bool address_v4::is_multicast() const noexcept
 {
   return (to_uint() & 0xF0000000) == 0xE0000000;
 }
-
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-address_v4 address_v4::broadcast(const address_v4& addr, const address_v4& mask)
-{
-  return address_v4(addr.to_uint() | (mask.to_uint() ^ 0xFFFFFFFF));
-}
-
-address_v4 address_v4::netmask(const address_v4& addr)
-{
-  if (addr.is_class_a())
-    return address_v4(0xFF000000);
-  if (addr.is_class_b())
-    return address_v4(0xFFFF0000);
-  if (addr.is_class_c())
-    return address_v4(0xFFFFFF00);
-  return address_v4(0xFFFFFFFF);
-}
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 address_v4 make_address_v4(const char* str)
 {
