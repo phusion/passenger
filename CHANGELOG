@@ -1,6 +1,7 @@
 Release 6.0.25 (Not yet released)
 -------------
  * [Standalone] Changes Passenger (not app) start and stop timeouts to 25s (from 15s) except for Nginx engine mode, which retains a stop timeout of 60s.
+ * Fixes compilation with clang 19 (latest Fedora update) by dropping a buggy stddev function from the moving average header. Closes GH-2580.
  * 
 
 

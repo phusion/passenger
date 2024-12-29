@@ -186,12 +186,6 @@ public:
 	double stddev() const {
 		return sqrt(sumOfSquaredData / dema.sumOfWeights - pow(average(), 2));
 	}
-
-	double stddev(unsigned long long now) const {
-		DiscExpMovingAverageWithStddev<alpha, alphaTimeUnit, maxAge> copy(*this);
-		copy.update(0, now);
-		return sqrt(copy.sumOfSquaredData / copy.sumOfWeights - pow(copy.average(), 2));
-	}
 };
 
 
