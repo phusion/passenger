@@ -9,8 +9,8 @@ Subject: [PATCH] drop windows headers from asio
 
 diff --git src/cxx_supportlib/vendor-modified/boost/asio.hpp src/cxx_supportlib/vendor-modified/boost/asio.hpp
 index 7b889de4a..b32ead6ae 100644
---- src/cxx_supportlib/vendor-modified/boost/asio.hpp
-+++ src/cxx_supportlib/vendor-modified/boost/asio.hpp
+--- a/src/cxx_supportlib/vendor-modified/boost/asio.hpp
++++ b/src/cxx_supportlib/vendor-modified/boost/asio.hpp
 @@ -182,15 +182,6 @@
  #include <boost/asio/uses_executor.hpp>
  #include <boost/asio/version.hpp>
