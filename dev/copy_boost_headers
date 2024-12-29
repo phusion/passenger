@@ -117,6 +117,7 @@ PROGRAM_SOURCE = %q{
   #include <boost/pool/object_pool.hpp>
   #include <boost/predef.h>
   #include <boost/predef/other/endian.h>
+  #include <boost/preprocessor/stringize.hpp>
   #include <boost/random/random_device.hpp>
   #include <boost/random/uniform_int_distribution.hpp>
   #include <boost/ref.hpp>
@@ -189,9 +190,8 @@ def copy_boost_files(patterns, exclude = nil)
 end
 
 def copy_essential_files
-  exclude = []
-  EXCLUDE.each do |pattern|
-    exclude.concat(Dir["#{BOOST_DIR}/#{pattern}"])
+  exclude = EXCLUDE.flat_map do |pattern|
+    Dir["#{BOOST_DIR}/#{pattern}"]
   end
   copy_boost_files(ESSENTIALS, exclude)
 end

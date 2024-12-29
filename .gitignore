@@ -41,3 +41,5 @@ autom4te.cache
 /play
 *.orig
 /compile_commands.json
+/src/cxx_supportlib/vendor-modified/test.cpp
+/src/cxx_supportlib/vendor-modified/test-*.o.tmp
