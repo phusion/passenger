@@ -57,10 +57,6 @@ typedef struct {
     ngx_uint_t stat_throttle_rate;
     ngx_flag_t turbocaching;
     ngx_flag_t user_switching;
-    ngx_str_t admin_panel_auth_type;
-    ngx_str_t admin_panel_password;
-    ngx_str_t admin_panel_url;
-    ngx_str_t admin_panel_username;
     ngx_str_t anonymous_telemetry_proxy;
     ngx_str_t data_buffer_dir;
     ngx_str_t default_group;
@@ -74,10 +70,6 @@ typedef struct {
     ngx_str_t spawn_dir;
 
     ngx_str_t abort_on_startup_error_source_file;
-    ngx_str_t admin_panel_auth_type_source_file;
-    ngx_str_t admin_panel_password_source_file;
-    ngx_str_t admin_panel_url_source_file;
-    ngx_str_t admin_panel_username_source_file;
     ngx_str_t anonymous_telemetry_proxy_source_file;
     ngx_str_t app_file_descriptor_ulimit_source_file;
     ngx_str_t core_file_descriptor_ulimit_source_file;
@@ -108,10 +100,6 @@ typedef struct {
     ngx_str_t user_switching_source_file;
 
     ngx_uint_t abort_on_startup_error_source_line;
-    ngx_uint_t admin_panel_auth_type_source_line;
-    ngx_uint_t admin_panel_password_source_line;
-    ngx_uint_t admin_panel_url_source_line;
-    ngx_uint_t admin_panel_username_source_line;
     ngx_uint_t anonymous_telemetry_proxy_source_line;
     ngx_uint_t app_file_descriptor_ulimit_source_line;
     ngx_uint_t core_file_descriptor_ulimit_source_line;
@@ -142,10 +130,6 @@ typedef struct {
     ngx_uint_t user_switching_source_line;
 
     ngx_int_t abort_on_startup_error_explicitly_set;
-    ngx_int_t admin_panel_auth_type_explicitly_set;
-    ngx_int_t admin_panel_password_explicitly_set;
-    ngx_int_t admin_panel_url_explicitly_set;
-    ngx_int_t admin_panel_username_explicitly_set;
     ngx_int_t anonymous_telemetry_proxy_explicitly_set;
     ngx_int_t app_file_descriptor_ulimit_explicitly_set;
     ngx_int_t core_file_descriptor_ulimit_explicitly_set;

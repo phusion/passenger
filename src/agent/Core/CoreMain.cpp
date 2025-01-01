@@ -45,21 +45,17 @@
 #include <sys/un.h>
 #include <sys/resource.h>
 #include <cstring>
-#include <cassert>
 #include <cerrno>
 #include <stdlib.h>
 #include <unistd.h>
-#include <limits.h>
 #include <fcntl.h>
 #include <pwd.h>
 #include <grp.h>
 
-#include <set>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <iostream>
-#include <sstream>
 #include <stdexcept>
 
 #include <curl/curl.h>
@@ -100,7 +96,6 @@
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/SecurityUpdateChecker.h>
 #include <Core/TelemetryCollector.h>
-#include <Core/AdminPanelConnector.h>
 
 using namespace boost;
 using namespace oxt;
@@ -167,8 +162,6 @@ namespace Core {
 
 		SecurityUpdateChecker *securityUpdateChecker;
 		TelemetryCollector *telemetryCollector;
-		AdminPanelConnector *adminPanelConnector;
-		oxt::thread *adminPanelConnectorThread;
 
 		WorkingObjects()
 			: exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
@@ -177,9 +170,7 @@ namespace Core {
 			  shutdownCounter(0),
 			  prestarterThread(NULL),
 			  securityUpdateChecker(NULL),
-			  telemetryCollector(NULL),
-			  adminPanelConnector(NULL),
-			  adminPanelConnectorThread(NULL)
+			  telemetryCollector(NULL)
 			  /*******************/
 		{
 			for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
@@ -190,8 +181,6 @@ namespace Core {
 
 		~WorkingObjects() {
 			delete prestarterThread;
-			delete adminPanelConnectorThread;
-			delete adminPanelConnector;
 			delete securityUpdateChecker;
 			delete telemetryCollector;
 
@@ -899,46 +888,6 @@ initializeTelemetryCollector() {
 }
 
 static void
-runAdminPanelConnector(AdminPanelConnector *connector) {
-	connector->run();
-	P_DEBUG("Admin panel connector shutdown finished");
-	serverShutdownFinished();
-}
-
-static void
-initializeAdminPanelConnector() {
-	TRACE_POINT();
-	WorkingObjects &wo = *workingObjects;
-
-	if (coreConfig->get("admin_panel_url").empty()) {
-		return;
-	}
-
-	Json::Value config = coreConfig->inspectEffectiveValues();
-	config["log_prefix"] = "AdminPanelConnector: ";
-	config["ruby"] = config["default_ruby"];
-
-	P_NOTICE("Initialize connection with " << PROGRAM_NAME " admin panel at "
-		<< config["admin_panel_url"].asString());
-	AdminPanelConnector *connector = new Core::AdminPanelConnector(
-		coreSchema->adminPanelConnector.schema, config,
-		coreSchema->adminPanelConnector.translator);
-	connector->resourceLocator = Agent::Fundamentals::context->resourceLocator;
-	connector->appPool = wo.appPool;
-	connector->configGetter = inspectConfig;
-	for (unsigned int i = 0; i < wo.threadWorkingObjects.size(); i++) {
-		ThreadWorkingObjects *two = &wo.threadWorkingObjects[i];
-		connector->controllers.push_back(two->controller);
-	}
-	connector->initialize();
-	wo.shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
-	wo.adminPanelConnector = connector;
-	wo.adminPanelConnectorThread = new oxt::thread(
-		boost::bind(runAdminPanelConnector, connector),
-		"Admin panel connector main loop", 128 * 1024);
-}
-
-static void
 prestartWebApps() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
@@ -1256,9 +1205,6 @@ waitForExitEvent() {
 		if (wo->telemetryCollector != NULL) {
 			asyncShutdownTelemetryCollector();
 		}
-		if (wo->adminPanelConnector != NULL) {
-			wo->adminPanelConnector->asyncShutdown();
-		}
 
 		UPDATE_TRACE_POINT();
 		FD_ZERO(&fds);
@@ -1348,7 +1294,6 @@ runCore() {
 		initializeNonPrivilegedWorkingObjects();
 		initializeSecurityUpdateChecker();
 		initializeTelemetryCollector();
-		initializeAdminPanelConnector();
 		prestartWebApps();
 
 		UPDATE_TRACE_POINT();

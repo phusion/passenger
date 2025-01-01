@@ -41,7 +41,6 @@
 
 #include <ev++.h> // include first in order to avoid macro clash on EV_ERROR
 #include <iostream>
-#include <Core/AdminPanelConnector.h>
 #include <Core/ApiServer.h>
 #include <Core/Config.h>
 #include <Core/Controller/Config.h>
@@ -53,13 +52,11 @@
 #include <ServerKit/Config.h>
 #include <ServerKit/HttpServer.h>
 #include <ServerKit/Server.h>
-#include <WebSocketCommandReverseServer.h>
 
 int
 main(int argc, char *argv[]) {
 	Passenger::Json::Value doc(Passenger::Json::objectValue);
 
-	doc["Passenger::Core::AdminPanelConnector::Schema"] = Passenger::Core::AdminPanelConnector::Schema().inspect();
 	doc["Passenger::Core::ApiServer::Schema"] = Passenger::Core::ApiServer::Schema().inspect();
 	doc["Passenger::Core::ControllerSchema"] = Passenger::Core::ControllerSchema().inspect();
 	doc["Passenger::Core::ControllerSingleAppModeSchema"] = Passenger::Core::ControllerSingleAppModeSchema().inspect();
@@ -72,7 +69,6 @@ main(int argc, char *argv[]) {
 	doc["Passenger::ServerKit::Schema"] = Passenger::ServerKit::Schema().inspect();
 	doc["Passenger::Watchdog::ApiServer::Schema"] = Passenger::Watchdog::ApiServer::Schema().inspect();
 	doc["Passenger::Watchdog::Schema"] = Passenger::Watchdog::Schema().inspect();
-	doc["Passenger::WebSocketCommandReverseServer::Schema"] = Passenger::WebSocketCommandReverseServer::Schema().inspect();
 
 	std::cout << doc.toStyledString() << std::endl;
 	return 0;

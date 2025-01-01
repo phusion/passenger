@@ -46,23 +46,6 @@ using namespace std;
  * (do not edit: following text is automatically generated
  * by 'rake configkit_schemas_inline_comments')
  *
- *   admin_panel_auth_type                                                    string             -          default("basic")
- *   admin_panel_close_timeout                                                float              -          default(10.0)
- *   admin_panel_connect_timeout                                              float              -          default(30.0)
- *   admin_panel_data_debug                                                   boolean            -          default(false)
- *   admin_panel_password                                                     string             -          secret
- *   admin_panel_password_file                                                string             -          -
- *   admin_panel_ping_interval                                                float              -          default(30.0)
- *   admin_panel_ping_timeout                                                 float              -          default(30.0)
- *   admin_panel_proxy_password                                               string             -          secret
- *   admin_panel_proxy_timeout                                                float              -          default(30.0)
- *   admin_panel_proxy_url                                                    string             -          -
- *   admin_panel_proxy_username                                               string             -          -
- *   admin_panel_reconnect_timeout                                            float              -          default(5.0)
- *   admin_panel_url                                                          string             -          read_only
- *   admin_panel_username                                                     string             -          -
- *   admin_panel_websocketpp_debug_access                                     boolean            -          default(false)
- *   admin_panel_websocketpp_debug_error                                      boolean            -          default(false)
  *   app_output_log_level                                                     string             -          default("notice")
  *   benchmark_mode                                                           string             -          -
  *   config_manifest                                                          object             -          read_only
@@ -138,7 +121,7 @@ using namespace std;
  *   hook_queue_full_error                                                    string             -          read_only
  *   hook_spawn_failed                                                        string             -          read_only
  *   instance_registry_dir                                                    string             -          default,read_only
- *   integration_mode                                                         string             -          default("standalone")
+ *   integration_mode                                                         string             -          default("standalone"),read_only
  *   log_level                                                                string             -          default("notice")
  *   log_target                                                               any                -          default({"stderr": true})
  *   max_instances_per_app                                                    unsigned integer   -          read_only
@@ -163,7 +146,6 @@ using namespace std;
  *   single_app_mode_app_type                                                 string             -          read_only
  *   single_app_mode_startup_file                                             string             -          read_only
  *   spawn_dir                                                                string             -          default,read_only
- *   standalone_engine                                                        string             -          default
  *   startup_report_file                                                      string             -          -
  *   stat_throttle_rate                                                       unsigned integer   -          default(10)
  *   telemetry_collector_ca_certificate_path                                  string             -          -
@@ -197,7 +179,6 @@ using namespace std;
  *   watchdog_api_server_start_reading_after_accept                           boolean            -          default(true)
  *   watchdog_pid_file                                                        string             -          read_only
  *   watchdog_pid_file_autodelete                                             boolean            -          default(true)
- *   web_server_module_version                                                string             -          read_only
  *   web_server_version                                                       string             -          read_only
  *
  * END

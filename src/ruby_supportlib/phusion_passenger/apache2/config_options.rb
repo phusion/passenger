@@ -292,30 +292,6 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :default   => 0,
     :desc      => 'The maximum number of simultaneously alive application instances a single application may occupy.'
   },
-  {
-    :name      => 'PassengerAdminPanelUrl',
-    :type      => :string,
-    :context   => :global,
-    :desc      => 'Connect to an admin panel at the given connector URL'
-  },
-  {
-    :name      => 'PassengerAdminPanelAuthType',
-    :type      => :string,
-    :context   => :global,
-    :desc      => 'The authentication type to use when connecting to the admin panel'
-  },
-  {
-    :name      => 'PassengerAdminPanelUsername',
-    :type      => :string,
-    :context   => :global,
-    :desc      => 'The username to use when connecting to the admin panel using basic authentication'
-  },
-  {
-    :name      => 'PassengerAdminPanelPassword',
-    :type      => :string,
-    :context   => :global,
-    :desc      => 'The password to use when connecting to the admin panel using basic authentication'
-  },
 
 
   ###### Per-application configuration ######
