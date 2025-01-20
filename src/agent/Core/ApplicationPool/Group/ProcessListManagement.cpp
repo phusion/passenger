@@ -63,6 +63,73 @@ Group::findProcessWithStickySessionId(unsigned int id) const {
 	return NULL;
 }
 
+Process *
+Group::findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
+	int leastBusyProcessIndex = -1;
+	int lowestBusyness = 0;
+	unsigned int i, size = enabledProcessBusynessLevels.size();
+	const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
+	for (i = 0; i < size; i++) {
+		Process *process = enabledProcesses[i].get();
+		if (process->getStickySessionId() == id) {
+			return process;
+		} else if (leastBusyProcessIndex == -1 || enabledProcessBusynessLevels[i] < lowestBusyness) {
+			leastBusyProcessIndex = i;
+			lowestBusyness = enabledProcessBusynessLevels[i];
+		}
+	}
+
+	if (leastBusyProcessIndex == -1) {
+		return NULL;
+	} else {
+		return enabledProcesses[leastBusyProcessIndex].get();
+	}
+}
+
+Process *
+Group::findProcessWithLowestBusyness(const ProcessList &processes) const {
+	if (processes.empty()) {
+		return NULL;
+	}
+
+	int lowestBusyness = -1;
+	Process *leastBusyProcess = NULL;
+	ProcessList::const_iterator it;
+	ProcessList::const_iterator end = processes.end();
+	for (it = processes.begin(); it != end; it++) {
+		Process *process = (*it).get();
+		int busyness = process->busyness();
+		if (lowestBusyness == -1 || lowestBusyness > busyness) {
+			lowestBusyness = busyness;
+			leastBusyProcess = process;
+		}
+	}
+	return leastBusyProcess;
+}
+
+/**
+ * Cache-optimized version of findProcessWithLowestBusyness() for the common case.
+ */
+Process *
+Group::findEnabledProcessWithLowestBusyness() const {
+	if (enabledProcesses.empty()) {
+		return NULL;
+	}
+
+	int leastBusyProcessIndex = -1;
+	int lowestBusyness = 0;
+	unsigned int i, size = enabledProcessBusynessLevels.size();
+	const int *enabledProcessBusynessLevels = &this->enabledProcessBusynessLevels[0];
+
+	for (i = 0; i < size; i++) {
+		if (leastBusyProcessIndex == -1 || enabledProcessBusynessLevels[i] < lowestBusyness) {
+			leastBusyProcessIndex = i;
+			lowestBusyness = enabledProcessBusynessLevels[i];
+		}
+	}
+	return enabledProcesses[leastBusyProcessIndex].get();
+}
+
 /**
  * Return the process with the given sticky session ID if it exists.
  * If not, then find the "best" enabled process to route a request to,

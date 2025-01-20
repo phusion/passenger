@@ -29,6 +29,7 @@
 #ifdef INTELLISENSE
 	#include <Core/ApplicationPool/Pool.h>
 #endif
+#include <Shared/Fundamentals/Utils.h>
 #include <Core/ApplicationPool/Group.h>
 #include <cassert>
 
@@ -63,9 +64,14 @@ using namespace boost;
  */
 Group::RouteResult
 Group::route(const Options &options) const {
+	Process *process = nullptr;
 	if (OXT_LIKELY(enabledCount > 0)) {
 		if (options.stickySessionId == 0) {
-			Process *process = findBestProcess(enabledProcesses);
+			if (OXT_LIKELY(useNewRouting())) {
+				process = findBestProcess(enabledProcesses);
+            } else {
+				process = findEnabledProcessWithLowestBusyness();
+			}
 			if (process != nullptr) {
 				assert(process->canBeRoutedTo());
 				return RouteResult(process);
@@ -73,8 +79,11 @@ Group::route(const Options &options) const {
 				return RouteResult(NULL, true);
 			}
 		} else {
-			Process *process = findBestProcessPreferringStickySessionId(
-				options.stickySessionId);
+			if (OXT_LIKELY(useNewRouting())) {
+				process = findBestProcessPreferringStickySessionId(options.stickySessionId);
+			}else{
+				process = findProcessWithStickySessionIdOrLowestBusyness(options.stickySessionId);
+			}
 			if (process != nullptr) {
 				if (process->canBeRoutedTo()) {
 					return RouteResult(process);
@@ -86,7 +95,11 @@ Group::route(const Options &options) const {
 			}
 		}
 	} else {
-		Process *process = findBestProcess(disablingProcesses);
+		if (OXT_LIKELY(useNewRouting())) {
+			process = findBestProcess(disablingProcesses);
+		} else {
+			process = findProcessWithLowestBusyness(disablingProcesses);
+		}
 		if (process != nullptr) {
 			assert(process->canBeRoutedTo());
 			return RouteResult(process);
@@ -313,7 +326,12 @@ Group::get(const Options &newOptions, const GetCallback &callback,
 		assert(m_spawning || restarting() || poolAtFullCapacity());
 
 		if (disablingCount > 0 && !restarting()) {
-			Process *process = findBestProcess(disablingProcesses);
+			Process *process = nullptr;
+			if (OXT_LIKELY(useNewRouting())) {
+				process = findBestProcess(disablingProcesses);
+			} else {
+				process = findProcessWithLowestBusyness(disablingProcesses);
+			}
 			if (process != nullptr && !process->isTotallyBusy()) {
 				return newSession(process, newOptions.currentTime);
 			}
@@ -341,6 +359,10 @@ Group::get(const Options &newOptions, const GetCallback &callback,
 	}
 }
 
+bool
+Group::useNewRouting() const {
+	return !Agent::Fundamentals::getEnvBool("PASSENGER_OLD_ROUTING", false);
+}
 
 } // namespace ApplicationPool2
 } // namespace Passenger
