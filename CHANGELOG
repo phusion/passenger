@@ -4,6 +4,10 @@ Release 6.0.25 (Not yet released)
  * [Standalone] Adds a config option to specify the stop timeout for Passenger: `--stop-timeout 120` or `PASSENGER_STOP_TIMEOUT=120`.
  * [Standalone] Changes Passenger's (not apps') start timeout to 25s (from 15s), stop timeouts default to 60s.
  * [Ruby] Fixes an issue where Bundler would try to re-exec the process name instead of the script. Closes GH-2567 and GH-2577.
+ * [Enterprise] Adds a temporary flag to allow reverting to previous routing behaviour, in order to mitigate possible performance regressions, this flag will become a no-op and eventually removed once the routing issues have been fixed. Closes GH-2579.
+   - Apache: PassengerOldRouting on
+   - Nginx: passenger_old_routing on;
+   - Standalone: --old-routing
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
    - cmake: 3.31.2 -> 3.31.3
    - curl: 8.11.0 -> 8.11.1

@@ -27,8 +27,6 @@
 #define _PASSENGER_APPLICATION_POOL2_GROUP_H_
 
 #include <string>
-#include <map>
-#include <queue>
 #include <deque>
 #include <boost/thread.hpp>
 #include <boost/bind/bind.hpp>
@@ -202,6 +200,8 @@ public:
 	Callback shutdownCallback;
 	GroupPtr selfPointer;
 
+	// Whether to use the old routing algorithm
+	bool oldRouting;
 
 	/****** Initialization and shutdown ******/
 

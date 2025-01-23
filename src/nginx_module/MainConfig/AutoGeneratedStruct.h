@@ -49,6 +49,7 @@ typedef struct {
     ngx_uint_t log_level;
     ngx_uint_t max_instances_per_app;
     ngx_uint_t max_pool_size;
+    ngx_flag_t old_routing;
     ngx_uint_t pool_idle_time;
     ngx_array_t *prestart_uris;
     ngx_uint_t response_buffer_high_watermark;
@@ -95,6 +96,7 @@ typedef struct {
     ngx_str_t log_level_source_file;
     ngx_str_t max_instances_per_app_source_file;
     ngx_str_t max_pool_size_source_file;
+    ngx_str_t old_routing_source_file;
     ngx_str_t pool_idle_time_source_file;
     ngx_str_t prestart_uris_source_file;
     ngx_str_t response_buffer_high_watermark_source_file;
@@ -129,6 +131,7 @@ typedef struct {
     ngx_uint_t log_level_source_line;
     ngx_uint_t max_instances_per_app_source_line;
     ngx_uint_t max_pool_size_source_line;
+    ngx_uint_t old_routing_source_line;
     ngx_uint_t pool_idle_time_source_line;
     ngx_uint_t prestart_uris_source_line;
     ngx_uint_t response_buffer_high_watermark_source_line;
@@ -163,6 +166,7 @@ typedef struct {
     ngx_int_t log_level_explicitly_set;
     ngx_int_t max_instances_per_app_explicitly_set;
     ngx_int_t max_pool_size_explicitly_set;
+    ngx_int_t old_routing_explicitly_set;
     ngx_int_t pool_idle_time_explicitly_set;
     ngx_int_t prestart_uris_explicitly_set;
     ngx_int_t response_buffer_high_watermark_explicitly_set;

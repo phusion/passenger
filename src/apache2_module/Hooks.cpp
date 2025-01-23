@@ -1380,6 +1380,7 @@ public:
 		config["response_buffer_high_watermark"] = serverConfig.responseBufferHighWatermark;
 		config["stat_throttle_rate"] = serverConfig.statThrottleRate;
 		config["turbocaching"] = serverConfig.turbocaching;
+		config["old_routing"] = serverConfig.oldRouting;
 		config["prestart_urls"] = strsetToJson(serverConfig.prestartURLs);
 		config["admin_panel_url"] = nonEmptyString(serverConfig.adminPanelUrl);
 		config["admin_panel_auth_type"] = nonEmptyString(serverConfig.adminPanelAuthType);

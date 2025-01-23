@@ -302,6 +302,12 @@
          "read_only" : true,
          "type" : "boolean"
       },
+      "old_routing" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
       "request_freelist_limit" : {
          "default_value" : 1024,
          "has_default_value" : "static",
@@ -801,6 +807,12 @@
          "type" : "unsigned integer"
       },
       "multi_app" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "old_routing" : {
          "default_value" : false,
          "has_default_value" : "static",
          "read_only" : true,
@@ -1685,6 +1697,12 @@
          "type" : "unsigned integer"
       },
       "multi_app" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "old_routing" : {
          "default_value" : false,
          "has_default_value" : "static",
          "read_only" : true,

@@ -28,7 +28,6 @@
 
 #include <string>
 #include <vector>
-#include <utility>
 #include <boost/shared_array.hpp>
 #include <WrapperRegistry/Registry.h>
 #include <DataStructures/HashedStaticString.h>
@@ -79,7 +78,7 @@ private:
 	template<typename OptionsClass, typename StaticStringClass>
 	static vector<StaticStringClass *> getStringFields(OptionsClass &options) {
 		vector<StaticStringClass *> result;
-		result.reserve(20);
+		result.reserve(30);
 
 		result.push_back(&options.appRoot);
 		result.push_back(&options.appGroupName);
@@ -443,6 +442,8 @@ public:
 
 	/*********************************/
 
+	bool oldRouting;
+
 	/**
 	 * Creates a new Options object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
@@ -480,7 +481,8 @@ public:
 		  statThrottleRate(DEFAULT_STAT_THROTTLE_RATE),
 		  maxRequests(0),
 		  currentTime(0),
-		  noop(false)
+		  noop(false),
+		  oldRouting(false)
 		  /*********************************/
 	{
 		/*********************************/

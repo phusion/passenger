@@ -206,7 +206,7 @@ Controller::fillPoolOptionsFromConfigCaches(Options &options,
 	options.statThrottleRate = mainConfig.statThrottleRate;
 	options.maxRequests = requestConfig->defaultMaxRequests;
 	options.stickySessionsCookieAttributes = requestConfig->defaultStickySessionsCookieAttributes;
-
+	options.oldRouting = mainConfig.oldRouting;
 	/******************************/
 }
 

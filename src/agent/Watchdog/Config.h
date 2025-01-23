@@ -144,6 +144,7 @@ using namespace std;
  *   max_instances_per_app                                                    unsigned integer   -          read_only
  *   max_pool_size                                                            unsigned integer   -          default(6)
  *   multi_app                                                                boolean            -          default(false),read_only
+ *   old_routing                                                              boolean            -          default(false),read_only
  *   passenger_root                                                           string             required   read_only
  *   pidfiles_to_delete_on_exit                                               array of strings   -          default([])
  *   pool_idle_time                                                           unsigned integer   -          default(300)

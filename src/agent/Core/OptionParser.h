@@ -181,6 +181,8 @@ coreUsage() {
 	printf("                            Vary the turbocache by the cookie of the given name\n");
 	printf("      --disable-turbocaching\n");
 	printf("                            Disable turbocaching\n");
+	printf("      --old-routing\n");
+	printf("                            Revert to old routing algorithm\n");
 	printf("      --no-abort-websockets-on-process-shutdown\n");
 	printf("                            Do not abort WebSocket connections on process\n");
 	printf("                            shutdown or restart\n");
@@ -365,6 +367,9 @@ parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--disable-turbocaching")) {
 		updates["turbocaching"] = false;
+		i++;
+	} else if (p.isFlag(argv[i], '\0', "--old-routing")) {
+		updates["old_routing"] = true;
 		i++;
 	} else if (p.isFlag(argv[i], '\0', "--no-abort-websockets-on-process-shutdown")) {
 		updates["default_abort_websockets_on_process_shutdown"] = false;

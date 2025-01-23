@@ -155,6 +155,7 @@ module PhusionPassenger
           if @options[:turbocaching] == false
             command << " --disable-turbocaching"
           end
+          add_flag_param(command, :old_routing, "--old-routing")
           if @options[:abort_websockets_on_process_shutdown] == false
             command << " --no-abort-websockets-on-process-shutdown"
           end

@@ -115,6 +115,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   max_instances_per_app                               unsigned integer   -          read_only
  *   min_spare_clients                                   unsigned integer   -          default(0)
  *   multi_app                                           boolean            -          default(true),read_only
+ *   old_routing                                         boolean            -          default(false),read_only
  *   request_freelist_limit                              unsigned integer   -          default(1024)
  *   response_buffer_high_watermark                      unsigned integer   -          default(134217728)
  *   server_software                                     string             -          default("Phusion_Passenger/6.0.25")
@@ -138,6 +139,7 @@ private:
 		add("thread_number", UINT_TYPE, REQUIRED | READ_ONLY);
 		add("multi_app", BOOL_TYPE, OPTIONAL | READ_ONLY, true);
 		add("turbocaching", BOOL_TYPE, OPTIONAL | READ_ONLY, true);
+		add("old_routing", BOOL_TYPE, OPTIONAL | READ_ONLY, false);
 		add("integration_mode", STRING_TYPE, OPTIONAL | READ_ONLY, DEFAULT_INTEGRATION_MODE);
 
 		add("user_switching", BOOL_TYPE, OPTIONAL, true);
@@ -349,6 +351,7 @@ public:
 	bool userSwitching: 1;
 	bool defaultStickySessions: 1;
 	bool gracefulExit: 1;
+	bool oldRouting: 1;
 
 	/*******************/
 	/*******************/
@@ -366,7 +369,8 @@ public:
 		  singleAppMode(!config["multi_app"].asBool()),
 		  userSwitching(config["user_switching"].asBool()),
 		  defaultStickySessions(config["default_sticky_sessions"].asBool()),
-		  gracefulExit(config["graceful_exit"].asBool())
+		  gracefulExit(config["graceful_exit"].asBool()),
+		  oldRouting(config["old_routing"].asBool())
 
 		  /*******************/
 	{
@@ -396,6 +400,7 @@ public:
 		SWAP_BITFIELD(bool, userSwitching);
 		SWAP_BITFIELD(bool, defaultStickySessions);
 		SWAP_BITFIELD(bool, gracefulExit);
+		SWAP_BITFIELD(bool, oldRouting);
 
 		/*******************/
 

@@ -278,6 +278,13 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => "Whether to enable turbocaching in #{PROGRAM_NAME}."
   },
   {
+    :name      => 'PassengerOldRouting',
+    :type      => :flag,
+    :context   => :global,
+    :default   => false,
+    :desc      => "Whether to revert to old routing behaviour in #{PROGRAM_NAME}."
+  },
+  {
     :name      => 'PassengerShowVersionInHeader',
     :type      => :flag,
     :context   => :global,

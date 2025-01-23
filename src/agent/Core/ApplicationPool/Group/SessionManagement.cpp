@@ -29,9 +29,7 @@
 #ifdef INTELLISENSE
 	#include <Core/ApplicationPool/Pool.h>
 #endif
-#include <Shared/Fundamentals/Utils.h>
 #include <Core/ApplicationPool/Group.h>
-#include <cassert>
 
 /*************************************************************************
  *
@@ -361,7 +359,7 @@ Group::get(const Options &newOptions, const GetCallback &callback,
 
 bool
 Group::useNewRouting() const {
-	return !Agent::Fundamentals::getEnvBool("PASSENGER_OLD_ROUTING", false);
+	return !oldRouting;
 }
 
 } // namespace ApplicationPool2

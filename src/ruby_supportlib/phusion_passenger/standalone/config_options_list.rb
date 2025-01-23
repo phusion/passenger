@@ -486,6 +486,11 @@ module PhusionPassenger
         end
       },
       {
+        :name      => :old_routing,
+        :type      => :boolean,
+        :desc      => 'Revert to old routing algorithm'
+      },
+      {
         :name      => :unlimited_concurrency_paths,
         :type      => :array,
         :type_desc => 'URI-PATH',
