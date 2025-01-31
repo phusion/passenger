@@ -136,7 +136,6 @@ Group::Group(Pool *_pool, const Options &_options)
 	}
 
 	detachedProcessesCheckerActive = false;
-	oldRouting = _options.oldRouting;
 }
 
 Group::~Group() {

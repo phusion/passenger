@@ -442,8 +442,6 @@ public:
 
 	/*********************************/
 
-	bool oldRouting;
-
 	/**
 	 * Creates a new Options object with the default values filled in.
 	 * One must still set appRoot manually, after having used this constructor.
@@ -481,8 +479,7 @@ public:
 		  statThrottleRate(DEFAULT_STAT_THROTTLE_RATE),
 		  maxRequests(0),
 		  currentTime(0),
-		  noop(false),
-		  oldRouting(false)
+		  noop(false)
 		  /*********************************/
 	{
 		/*********************************/

@@ -359,7 +359,7 @@ Group::get(const Options &newOptions, const GetCallback &callback,
 
 bool
 Group::useNewRouting() const {
-	return !oldRouting;
+	return !pool->context->oldRouting;
 }
 
 } // namespace ApplicationPool2

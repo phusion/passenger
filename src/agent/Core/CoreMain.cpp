@@ -719,7 +719,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawningKitContext->finalize();
 
 	UPDATE_TRACE_POINT();
-	wo->appPoolContext = boost::make_shared<ApplicationPool2::Context>();
+	wo->appPoolContext = boost::make_shared<ApplicationPool2::Context>(coreConfig->get("old_routing").asBool());
 	wo->appPoolContext->spawningKitFactory = boost::make_shared<SpawningKit::Factory>(
 		wo->spawningKitContext.get());
 	wo->appPoolContext->agentConfig = coreConfig->inspectEffectiveValues();

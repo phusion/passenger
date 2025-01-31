@@ -61,6 +61,8 @@ public:
 	boost::object_pool<Process> processObjectPool;
 	mutable boost::mutex agentConfigSyncher;
 
+	// Whether to use the old routing algorithm
+	bool oldRouting;
 
 	/****** Dependencies ******/
 
@@ -68,9 +70,10 @@ public:
 	Json::Value agentConfig;
 
 
-	Context()
+	Context(bool _oldRouting)
 		: sessionObjectPool(64, 1024),
-		  processObjectPool(4, 64)
+		  processObjectPool(4, 64),
+		  oldRouting(_oldRouting)
 		{ }
 
 	void finalize() {

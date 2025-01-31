@@ -200,9 +200,6 @@ public:
 	Callback shutdownCallback;
 	GroupPtr selfPointer;
 
-	// Whether to use the old routing algorithm
-	bool oldRouting;
-
 	/****** Initialization and shutdown ******/
 
 	static ApiKey generateApiKey(const Pool *pool);
