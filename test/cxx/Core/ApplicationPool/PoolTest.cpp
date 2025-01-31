@@ -34,7 +34,8 @@ namespace tut {
 		bool retainSessions;
 
 		Core_ApplicationPool_PoolTest()
-			: skContext(skContextSchema)
+			: skContext(skContextSchema),
+			  context(false)
 		{
 			retainSessions = false;
 			wrapperRegistry.finalize();

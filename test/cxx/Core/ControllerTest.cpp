@@ -60,7 +60,8 @@ namespace tut {
 			: bg(false, true),
 			  context(skSchema),
 			  singleAppModeSchema(&wrapperRegistry),
-			  skContext(skContextSchema)
+			  skContext(skContextSchema),
+			  apContext(false)
 		{
 			config["thread_number"] = 1;
 			config["multi_app"] = false;

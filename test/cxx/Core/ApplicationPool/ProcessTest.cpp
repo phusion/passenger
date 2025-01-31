@@ -19,7 +19,8 @@ namespace tut {
 		FileDescriptor server1, server2, server3;
 
 		Core_ApplicationPool_ProcessTest()
-			: skContext(skContextSchema)
+			: skContext(skContextSchema),
+			  context(false)
 		{
 			wrapperRegistry.finalize();
 			skContext.resourceLocator = resourceLocator;
