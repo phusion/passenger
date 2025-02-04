@@ -397,9 +397,9 @@ thread::make_thread_name(const string &given_name) {
 
 static void
 set_native_thread_name(const string &name) {
-	#if defined(__linux__)
+	#if defined(__linux__) || defined(__FreeBSD__)
 		pthread_setname_np(pthread_self(), name.c_str());
-	#elif defined(__APPLE__) || defined(__FreeBSD__)
+	#elif defined(__APPLE__)
 		pthread_setname_np(name.c_str());
 	#endif
 }
