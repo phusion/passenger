@@ -88,10 +88,11 @@ private:
 	Connection connect() const {
 		Connection connection;
 		P_TRACE(3, "Connecting to " << address);
-		connection.fd = connectToServer(address, __FILE__, __LINE__);
-		connection.fail = true;
+		NConnect_State state(address, __FILE__, __LINE__);
+		connection.fail = state.connectToServer();
+		connection.fd = state.getFd();
 		connection.wantKeepAlive = false;
-		connection.blocking = true;
+		connection.blocking = false;
 		P_LOG_FILE_DESCRIPTOR_PURPOSE(connection.fd, "App " << pid << " connection");
 		return connection;
 	}
