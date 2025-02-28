@@ -52,12 +52,14 @@ struct Connection {
 	bool wantKeepAlive: 1;
 	bool fail: 1;
 	bool blocking: 1;
+	bool ready: 1;
 
 	Connection()
 		: fd(-1),
 		  wantKeepAlive(false),
 		  fail(false),
-		  blocking(true)
+		  blocking(true),
+		  ready(false)
 		{ }
 
 	void close() {
@@ -89,7 +91,8 @@ private:
 		Connection connection;
 		P_TRACE(3, "Connecting to " << address);
 		NConnect_State state(address, __FILE__, __LINE__);
-		connection.fail = state.connectToServer();
+		connection.ready = state.connectToServer();
+		connection.fail = true;
 		connection.fd = state.getFd();
 		connection.wantKeepAlive = false;
 		connection.blocking = false;
