@@ -190,18 +190,17 @@ public:
 		assert(!closed);
 		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));
 		Connection connection = socket->checkoutConnection();
-		if (blocking && !connection.ready) {
-			// for testing purposes
-			connection.wait();
-		}
 		connection.fail = true;
-		if (!blocking) {
-			FdGuard g2(connection.fd, NULL, 0);
-			setNonBlocking(connection.fd);
-			g2.clear();
-		}
+		FdGuard g2(connection.fd, NULL, 0);
+		setNonBlocking(connection.fd);
+		g2.clear();
 		g.clear();
 		this->connection = connection;
+		if (blocking) {
+			// for testing purposes
+			if (!connection.ready) { connection.wait(); }
+			setBlocking(connection.fd);
+		}
 	}
 
 	bool initiated() const {
