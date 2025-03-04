@@ -103,7 +103,7 @@ private:
 		NConnect_State state(address, __FILE__, __LINE__);
 		connection.ready = state.connectToServer();
 		connection.fail = true;
-		connection.fd = state.getFd();
+		connection.fd = state.getFd().detach();
 		connection.wantKeepAlive = false;
 		P_LOG_FILE_DESCRIPTOR_PURPOSE(connection.fd, "App " << pid << " connection");
 		return connection;

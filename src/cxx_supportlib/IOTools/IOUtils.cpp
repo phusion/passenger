@@ -685,7 +685,7 @@ NConnect_State::connectToServer() {
 	}
 }
 
-int
+FileDescriptor &
 NConnect_State::getFd() {
 	switch (type) {
 	case SAT_UNIX:

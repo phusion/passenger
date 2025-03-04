@@ -350,7 +350,6 @@ public:
 	 * @throws SystemException Something went wrong.
 	 * @throws IOException Something went wrong.
 	 * @throws boost::thread_interrupted A system call has been interrupted.
-	 * @ingroup Support
 	 */
 	NConnect_State(const StaticString & restrict_ref address, const char *file, unsigned int line);
 
@@ -365,15 +364,15 @@ public:
 	 * @throws RuntimeException Something went wrong.
 	 * @throws SystemException Something went wrong.
 	 * @throws boost::thread_interrupted A system call has been interrupted.
-	 * @ingroup Support
 	 */
 	bool connectToServer();
+
 	/**
-	 * Gets the fd from the state structure
+	 * Gets the connection file descriptor.
 	 *
-	 * @return the fd from the associated socket.
+	 * @pre \c connectToServer() was called
 	 */
-	int getFd();
+	FileDescriptor &getFd();
 };
 
 /**
