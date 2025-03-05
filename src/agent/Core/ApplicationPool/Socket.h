@@ -78,7 +78,8 @@ struct Connection {
 		pfd.fd = fd;
 		pfd.events = POLLIN | POLLOUT;
 		if (-1 == syscalls::poll(&pfd, 1, timeout)) {
-			throw SystemException("poll() failed", errno);
+			int err = errno;
+			throw SystemException("poll() failed", err);
 		}
 	}
 };
