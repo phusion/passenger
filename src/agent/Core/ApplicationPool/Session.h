@@ -186,21 +186,13 @@ public:
 	}
 
 
-	virtual void initiate(bool blocking = false) override {
+	virtual void initiate() override {
 		assert(!closed);
 		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));
 		Connection connection = socket->checkoutConnection();
 		connection.fail = true;
-		FdGuard g2(connection.fd, NULL, 0);
-		setNonBlocking(connection.fd);
-		g2.clear();
 		g.clear();
 		this->connection = connection;
-		if (blocking) {
-			// for testing purposes
-			if (!connection.ready) { connection.wait(); }
-			setBlocking(connection.fd);
-		}
 	}
 
 	bool initiated() const {

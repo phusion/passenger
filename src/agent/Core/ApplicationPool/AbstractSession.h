@@ -55,7 +55,7 @@ public:
 	virtual int fd() const = 0;
 	virtual bool isClosed() const = 0;
 
-	virtual void initiate(bool blocking = true) = 0;
+	virtual void initiate() = 0;
 
 	virtual void requestOOBW() { /* Do nothing */ }
 
