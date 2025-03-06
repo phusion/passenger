@@ -25,6 +25,7 @@
  */
 #include <DataStructures/LString.h>
 #include <Core/Controller.h>
+#include <IOTools/IOUtils.h>
 #include <Core/SpawningKit/ErrorRenderer.h>
 
 #if defined(__GLIBCXX__) || defined(__APPLE__)
@@ -183,7 +184,21 @@ Controller::initiateSession(Client *client, Request *req) {
 	TRACE_POINT();
 	req->sessionCheckoutTry++;
 	try {
-		req->session->initiate();
+		if (!req->session->initiate()) {
+			unsigned long long timeout = 100000;
+			while (timeout > 0 && !waitUntilWritable(req->session->fd(), &timeout)){}
+			int connect_error = 0;
+			socklen_t connect_error_len = sizeof(connect_error);
+			if (timeout == 0) {
+				throw SystemException("Cannot connect socket", ETIMEDOUT);
+			} else if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connect_error, &connect_error_len)) {
+				int err = errno;
+				throw SystemException("Cannot check socket status", err);
+			} else if (connect_error != 0) {
+				// connect_error uses the same error codes as errno
+				throw SystemException("Cannot connect socket", connect_error);
+			}
+		}
 	} catch (const SystemException &e2) {
 		UPDATE_TRACE_POINT();
 		if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
