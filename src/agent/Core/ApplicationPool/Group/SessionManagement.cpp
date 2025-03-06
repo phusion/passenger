@@ -67,9 +67,44 @@ Group::route(const Options &options) const {
 		if (options.stickySessionId == 0) {
 			if (OXT_LIKELY(useNewRouting())) {
 				process = findBestProcess(enabledProcesses);
+				if (process != nullptr) {
+					assert(process->canBeRoutedTo());
+					return RouteResult(process);
+				} else {
+					return RouteResult(NULL, true);
+				}
             } else {
 				process = findEnabledProcessWithLowestBusyness();
+				if (process && process->canBeRoutedTo()) {
+					return RouteResult(process);
+				} else {
+					return RouteResult(NULL, true);
+				}
 			}
+		} else {
+			if (OXT_LIKELY(useNewRouting())) {
+				process = findBestProcessPreferringStickySessionId(options.stickySessionId);
+				if (process != nullptr) {
+					if (process->canBeRoutedTo()) {
+						return RouteResult(process);
+					} else {
+						return RouteResult(NULL, false);
+					}
+				} else {
+					return RouteResult(NULL, true);
+				}
+			}else{
+				process = findProcessWithStickySessionIdOrLowestBusyness(options.stickySessionId);
+				if (process && process->canBeRoutedTo()) {
+					return RouteResult(process);
+				} else {
+					return RouteResult(NULL, process == nullptr);
+				}
+			}
+		}
+	} else {
+		if (OXT_LIKELY(useNewRouting())) {
+			process = findBestProcess(disablingProcesses);
 			if (process != nullptr) {
 				assert(process->canBeRoutedTo());
 				return RouteResult(process);
@@ -77,32 +112,12 @@ Group::route(const Options &options) const {
 				return RouteResult(NULL, true);
 			}
 		} else {
-			if (OXT_LIKELY(useNewRouting())) {
-				process = findBestProcessPreferringStickySessionId(options.stickySessionId);
-			}else{
-				process = findProcessWithStickySessionIdOrLowestBusyness(options.stickySessionId);
-			}
-			if (process != nullptr) {
-				if (process->canBeRoutedTo()) {
-					return RouteResult(process);
-				} else {
-					return RouteResult(NULL, false);
-				}
+			process = findProcessWithLowestBusyness(disablingProcesses);
+			if (process && process->canBeRoutedTo()) {
+				return RouteResult(process);
 			} else {
 				return RouteResult(NULL, true);
 			}
-		}
-	} else {
-		if (OXT_LIKELY(useNewRouting())) {
-			process = findBestProcess(disablingProcesses);
-		} else {
-			process = findProcessWithLowestBusyness(disablingProcesses);
-		}
-		if (process != nullptr) {
-			assert(process->canBeRoutedTo());
-			return RouteResult(process);
-		} else {
-			return RouteResult(NULL, true);
 		}
 	}
 }
