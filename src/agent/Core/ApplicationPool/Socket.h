@@ -69,19 +69,6 @@ struct Connection {
 			P_LOG_FILE_DESCRIPTOR_CLOSE(fd2);
 		}
 	}
-
-	void wait(int timeout = -1) {
-		boost::this_thread::disable_interruption di;
-        boost::this_thread::disable_syscall_interruption dsi;
-		TRACE_POINT();
-		pollfd pfd;
-		pfd.fd = fd;
-		pfd.events = POLLIN | POLLOUT;
-		if (-1 == syscalls::poll(&pfd, 1, timeout)) {
-			int err = errno;
-			throw SystemException("poll() failed", err);
-		}
-	}
 };
 
 /**
