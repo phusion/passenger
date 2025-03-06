@@ -1196,7 +1196,8 @@ readFileDescriptor(int fd, unsigned long long *timeout) {
 
 	ret = syscalls::recvmsg(fd, &msg, 0);
 	if (ret == -1) {
-		throw SystemException("Cannot read file descriptor with recvmsg()", errno);
+		int err = errno;
+		throw SystemException("Cannot read file descriptor with recvmsg()", err);
 	}
 
 	control_header = CMSG_FIRSTHDR(&msg);
@@ -1266,7 +1267,8 @@ writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout) {
 
 	ret = syscalls::sendmsg(fd, &msg, 0);
 	if (ret == -1) {
-		throw SystemException("Cannot send file descriptor with sendmsg()", errno);
+		int err = errno;
+		throw SystemException("Cannot send file descriptor with sendmsg()", err);
 	}
 }
 
