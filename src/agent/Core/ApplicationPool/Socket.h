@@ -98,6 +98,7 @@ private:
 		return concurrency;
 	}
 
+	/** Initiates a non-blocking connect. */
 	Connection connect() const {
 		Connection connection;
 		P_TRACE(3, "Connecting to " << address);
@@ -178,10 +179,16 @@ public:
 	}
 
 	/**
-	 * Connect to this socket or reuse an existing connection.
+	 * Initiates a non-blocking connection to this socket or reuse an existing connection.
+	 * Use `result.ready` to check whether the connect is finished or whether you need
+	 * to wait for it to finish.
 	 *
 	 * One MUST call checkinConnection() when one's done using the Connection.
 	 * Failure to do so will result in a resource leak.
+	 *
+	 * @throws SystemException Something went wrong.
+	 * @throws RuntimeException Something went wrong.
+	 * @throws boost::thread_interrupted A system call has been interrupted.
 	 */
 	Connection checkoutConnection() {
 		boost::unique_lock<boost::mutex> l(connectionPoolLock);

@@ -185,7 +185,7 @@ public:
 		return getSocket()->protocol;
 	}
 
-
+	// See AbstractSession.h for docs
 	virtual bool initiate() override {
 		assert(!closed);
 		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));

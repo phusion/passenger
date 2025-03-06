@@ -52,9 +52,18 @@ public:
 	virtual StaticString getProtocol() const = 0;
 	virtual unsigned int getStickySessionId() const = 0;
 	virtual const ApiKey &getApiKey() const = 0;
+	/** The connection fd that was established by \c initiate(), or -1 if not initiated yet. Note that this fd is non-blocking. */
 	virtual int fd() const = 0;
 	virtual bool isClosed() const = 0;
 
+	/**
+	 * Initiates a non-blocking connect to the application socket, or reuse an existing connection.
+	 *
+	 * @return Whether the non-blocking connect finished (true) or whether you need to wait for it (false).
+	 * @throws SystemException Something went wrong.
+	 * @throws RuntimeException Something went wrong.
+	 * @throws boost::thread_interrupted A system call has been interrupted.
+	 */
 	virtual bool initiate() = 0;
 
 	virtual void requestOOBW() { /* Do nothing */ }
