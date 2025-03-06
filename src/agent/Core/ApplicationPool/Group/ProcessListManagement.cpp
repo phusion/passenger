@@ -171,7 +171,7 @@ Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
  *
  * If there is no process that can be routed to, then returns nullptr.
  *
- * @post result != nullptr || result.canBeRoutedTo()
+ * @post result == nullptr || result.canBeRoutedTo()
  */
 Process *
 Group::findBestProcess(const ProcessList &processes) const {
