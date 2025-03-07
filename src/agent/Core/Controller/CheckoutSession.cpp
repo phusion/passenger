@@ -185,8 +185,20 @@ void
 Controller::onWritable(EV_P_ ev_io *io, int revents) {
         ControllerFinishInitiatingSessionCallbackPointers *cbs = static_cast<ControllerFinishInitiatingSessionCallbackPointers *>(io->data);
 	    Controller* that = cbs->get<0>();
+		Request * req = cbs->get<2>();
         ev_io_stop(that->getLoop(), io);
-		that->finishInitiatingSession(cbs->get<1>(), cbs->get<2>());
+
+		int connect_error = 0;
+		socklen_t connect_error_len = sizeof(connect_error);
+		if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connect_error, &connect_error_len)) {
+			int err = errno;
+			throw SystemException("Cannot check socket status", err);
+		} else if (connect_error != 0) {
+			// connect_error uses the same error codes as errno
+			throw SystemException("Cannot connect socket", connect_error);
+		}
+
+		that->finishInitiatingSession(cbs->get<1>(), req);
 		delete cbs;
 }
 
@@ -208,21 +220,11 @@ Controller::initiateSession(Client *client, Request *req) {
 	req->sessionCheckoutTry++;
 	try {
 		if (!req->session->initiate()) {
-
 			ev_io connectedWatcher;
 			connectedWatcher.data = new ControllerFinishInitiatingSessionCallbackPointers(this, client, req);
 			ev_io_init(&connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
 			ev_io_start(getLoop(), &connectedWatcher);
-
-			int connect_error = 0;
-			socklen_t connect_error_len = sizeof(connect_error);
-			if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connect_error, &connect_error_len)) {
-				int err = errno;
-				throw SystemException("Cannot check socket status", err);
-			} else if (connect_error != 0) {
-				// connect_error uses the same error codes as errno
-				throw SystemException("Cannot connect socket", connect_error);
-			}
+			return;
 		}
 	} catch (const SystemException &e2) {
 		UPDATE_TRACE_POINT();
