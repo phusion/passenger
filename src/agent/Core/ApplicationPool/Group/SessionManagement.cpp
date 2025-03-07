@@ -78,7 +78,7 @@ Group::route(const Options &options) const {
 				if (process && process->canBeRoutedTo()) {
 					return RouteResult(process);
 				} else {
-					return RouteResult(NULL, true);
+					return RouteResult(NULL, process == nullptr);
 				}
 			}
 		} else {
@@ -116,7 +116,7 @@ Group::route(const Options &options) const {
 			if (process && process->canBeRoutedTo()) {
 				return RouteResult(process);
 			} else {
-				return RouteResult(NULL, true);
+				return RouteResult(NULL, process == nullptr);
 			}
 		}
 	}
