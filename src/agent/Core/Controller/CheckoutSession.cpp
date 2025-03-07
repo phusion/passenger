@@ -179,19 +179,44 @@ Controller::maybeSend100Continue(Client *client, Request *req) {
 	}
 }
 
+typedef boost::tuple<Controller*, Client*, Request*> ControllerFinishInitiatingSessionCallbackPointers;
+
+void
+Controller::onWritable(EV_P_ ev_io *io, int revents) {
+        ControllerFinishInitiatingSessionCallbackPointers *cbs = static_cast<ControllerFinishInitiatingSessionCallbackPointers *>(io->data);
+	    Controller* that = cbs->get<0>();
+        ev_io_stop(that->getLoop(), io);
+		that->finishInitiatingSession(cbs->get<1>(), cbs->get<2>());
+		delete cbs;
+}
+
+void
+Controller::finishInitiatingSession(Client *client, Request *req) {
+	TRACE_POINT();
+	SKC_DEBUG(client, "Session initiated: fd=" << req->session->fd());
+	req->appSink.reinitialize(req->session->fd());
+	req->appSource.reinitialize(req->session->fd());
+	/***************/
+	/***************/
+	reinitializeAppResponse(client, req);
+	sendHeaderToApp(client, req);
+}
+
 void
 Controller::initiateSession(Client *client, Request *req) {
 	TRACE_POINT();
 	req->sessionCheckoutTry++;
 	try {
 		if (!req->session->initiate()) {
-			unsigned long long timeout = 100000;
-			while (timeout > 0 && !waitUntilWritable(req->session->fd(), &timeout)){}
+
+			ev_io connectedWatcher;
+			connectedWatcher.data = new ControllerFinishInitiatingSessionCallbackPointers(this, client, req);
+			ev_io_init(&connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
+			ev_io_start(getLoop(), &connectedWatcher);
+
 			int connect_error = 0;
 			socklen_t connect_error_len = sizeof(connect_error);
-			if (timeout == 0) {
-				throw SystemException("Cannot connect socket", ETIMEDOUT);
-			} else if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connect_error, &connect_error_len)) {
+			if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connect_error, &connect_error_len)) {
 				int err = errno;
 				throw SystemException("Cannot check socket status", err);
 			} else if (connect_error != 0) {
@@ -216,13 +241,7 @@ Controller::initiateSession(Client *client, Request *req) {
 	}
 
 	UPDATE_TRACE_POINT();
-	SKC_DEBUG(client, "Session initiated: fd=" << req->session->fd());
-	req->appSink.reinitialize(req->session->fd());
-	req->appSource.reinitialize(req->session->fd());
-	/***************/
-	/***************/
-	reinitializeAppResponse(client, req);
-	sendHeaderToApp(client, req);
+	finishInitiatingSession(client, req);
 }
 
 void
