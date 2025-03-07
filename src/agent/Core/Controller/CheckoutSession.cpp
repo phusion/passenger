@@ -192,9 +192,11 @@ Controller::onWritable(EV_P_ ev_io *io, int revents) {
 		socklen_t connect_error_len = sizeof(connect_error);
 		if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connect_error, &connect_error_len)) {
 			int err = errno;
+			delete cbs;
 			throw SystemException("Cannot check socket status", err);
 		} else if (connect_error != 0) {
 			// connect_error uses the same error codes as errno
+			delete cbs;
 			throw SystemException("Cannot connect socket", connect_error);
 		}
 
