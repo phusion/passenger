@@ -193,8 +193,7 @@ namespace tut {
 			}
 			if (!currentSession->initiate()) {
 				unsigned long long timeout = 10000;
-				while (timeout > 0 && !waitUntilWritable(currentSession->fd(), &timeout)) { }
-				ensure_gt("(1)", timeout, 0ULL);
+				ensure("(1)", waitUntilWritable(currentSession->fd(), &timeout));
 				int connectError = 0;
 				socklen_t connectErrorLen = sizeof(connectError);
 				ensure_not_equals("(2)", -1, getsockopt(currentSession->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen));
