@@ -29,9 +29,19 @@
 #include <boost/thread.hpp>
 #include <string>
 #include <cassert>
+#include <unistd.h>
+#include <LoggingKit/Logging.h>
 #include <IOTools/IOUtils.h>
 #include <IOTools/BufferedIO.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Core/ApplicationPool/AbstractSession.h>
+#include <Exceptions.h>
+#include <StaticString.h>
+#include <FileDescriptor.h>
+#include <Utils.h>
+#include <Utils/ScopeGuard.h>
+#include <FileTools/FileManip.h>
+#include <oxt/system_calls.hpp>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -165,9 +175,47 @@ public:
 
 	virtual bool initiate() {
 		boost::lock_guard<boost::mutex> l(syncher);
-		connection = createUnixSocketPair(__FILE__, __LINE__);
+
+		// Create a unique temporary directory for the socket
+		string tempDirPathTemplate = StaticString(getSystemTempDir()) + "/passenger.session.XXXXXX";
+		DynamicBuffer tempDirPath(tempDirPathTemplate.size() + 1);
+		memcpy(tempDirPath.data, tempDirPathTemplate.c_str(), tempDirPathTemplate.size() + 1);
+		if (mkdtemp(tempDirPath.data) == NULL) {
+			int e = errno;
+			throw SystemException("Cannot create temporary directory", e);
+		}
+		ScopeGuard g([&]() {
+			try {
+				removeDirTree(tempDirPath.data);
+			} catch (const std::exception &e) {
+				P_ERROR("Error deleting temporary directory " << tempDirPath.data << ": " << e.what());
+			}
+		});
+
+		// Create server socket
+		string socketPath = StaticString(tempDirPath.data) + "/socket";
+		FileDescriptor serverFd(createUnixServer(socketPath.c_str(), 0, true, __FILE__, __LINE__),
+			__FILE__, __LINE__);
+
+		// Create client socket (non-blocking)
+		NUnix_State clientState;
+		setupNonBlockingUnixSocket(clientState, socketPath, __FILE__, __LINE__);
+		bool immediatelyConnected = connectToUnixServer(clientState);
+		connection.first = std::move(clientState.fd);
+
+		// Accept connection (blocking)
+		FileDescriptor serverSideFd(oxt::syscalls::accept(serverFd, NULL, NULL),
+			__FILE__, __LINE__);
+		if (serverSideFd == -1) {
+			int e = errno;
+			throw SystemException("Cannot accept connection", e);
+		}
+
+		// Store the server-side fd.
+		connection.second = std::move(serverSideFd);
 		peerBufferedIO = BufferedIO(connection.second);
-		return true;
+
+		return immediatelyConnected;
 	}
 
 	virtual void close(bool _success, bool _wantKeepAlive = false) override {
