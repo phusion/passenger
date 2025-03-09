@@ -505,25 +505,116 @@ module PhusionPassenger
     end
     memoize :cxx_visibility_flag_generates_warnings?, true
 
-    def self.address_sanitizer_flags
+    def self.cc_supports_fsanitize_address?
       if cc_is_clang?
-        if `#{cc} --help` =~ /-fsanitize=/
-          "-fsanitize=address -fsanitize-address-use-after-return=always"
-        else
-          "-faddress-sanitizer"
-        end
+        `#{cc} --help 2>&1` =~ /-fsanitize=/
+      elsif cc_is_gcc?
+        `#{cc} --help=common 2>&1` =~ /-fsanitize=/
       else
-        nil
+        false
       end
     end
+    memoize :cc_supports_fsanitize_address?, true
 
-    def self.undefined_behavior_sanitizer_flags
-      if cc_is_clang?
-        "-fsanitize=undefined"
+    def self.cxx_supports_fsanitize_address?
+      if cxx_is_clang?
+        `#{cxx} --help 2>&1` =~ /-fsanitize=/
+      elsif cxx_is_gcc?
+        `#{cxx} --help=common 2>&1` =~ /-fsanitize=/
       else
-        nil
+        false
       end
     end
+    memoize :cxx_supports_fsanitize_address?, true
+
+    def self.address_sanitizer_cflags
+      if cc_is_clang?
+        if cc_supports_fsanitize_address?
+          result = "-fsanitize=address -fsanitize-address-use-after-return=always"
+        else
+          result = "-faddress-sanitizer"
+        end
+      elsif cc_supports_fsanitize_address?
+        result = "-fsanitize=address"
+      end
+
+      if result
+        result << " -fno-omit-frame-pointer"
+        result << " -fno-optimize-sibling-calls" if cc_supports_fno_optimize_sibling_calls_flag?
+        result
+      end
+    end
+    memoize :address_sanitizer_cflags
+
+    def self.address_sanitizer_cxxflags
+      if cxx_is_clang?
+        if cxx_supports_fsanitize_address?
+          result = "-fsanitize=address -fsanitize-address-use-after-return=always"
+        else
+          result = "-faddress-sanitizer"
+        end
+      elsif cxx_supports_fsanitize_address?
+        result = "-fsanitize=address"
+      end
+
+      if result
+        result << " -fno-omit-frame-pointer"
+        result << " -fno-optimize-sibling-calls" if cxx_supports_fno_optimize_sibling_calls_flag?
+        result
+      end
+    end
+    memoize :address_sanitizer_cxxflags
+
+    def self.address_sanitizer_c_ldflags
+      if cc_supports_fsanitize_address?
+        "-fsanitize=address"
+      end
+    end
+    memoize :address_sanitizer_c_ldflags
+
+    def self.address_sanitizer_cxx_ldflags
+      if cxx_supports_fsanitize_address?
+        "-fsanitize=address"
+      end
+    end
+    memoize :address_sanitizer_cxx_ldflags
+
+    def self.address_sanitizer_cxx_shlib_ldflags
+      if cxx_supports_fsanitize_address?
+        result = "-fsanitize=address"
+        result << " -shared-libasan" if cxx_is_clang?
+        result
+      end
+    end
+    memoize :address_sanitizer_cxx_shlib_ldflags
+
+    def self.undefined_behavior_sanitizer_cflags
+      if (cc_is_clang? || cc_is_gcc?) && cc_supports_fsanitize_address?
+        "-fsanitize=undefined"
+      end
+    end
+    memoize :undefined_behavior_sanitizer_cflags
+
+    def self.undefined_behavior_sanitizer_cxxflags
+      if (cxx_is_clang? || cxx_is_gcc?) && cxx_supports_fsanitize_address?
+        "-fsanitize=undefined"
+      end
+    end
+    memoize :undefined_behavior_sanitizer_cxxflags
+
+    def self.undefined_behavior_sanitizer_c_ldflags
+      if (cc_is_clang? || cc_is_gcc?) && cc_supports_fsanitize_address?
+        "-fsanitize=undefined"
+      end
+    end
+    memoize :undefined_behavior_sanitizer_c_ldflags
+
+    def self.undefined_behavior_sanitizer_cxx_ldflags
+      if (cxx_is_clang? || cxx_is_gcc?) && cxx_supports_fsanitize_address?
+        "-fsanitize=undefined"
+      end
+    end
+    memoize :undefined_behavior_sanitizer_cxx_ldflags
 
     def self.cxx_11_flag
       # C++11 support on FreeBSD 10.0 + Clang seems to be bugged.

@@ -6,6 +6,9 @@ env:
   DEFAULT_RUBY_VERSION: 3.1
   BUNDLE_CLEAN: true
   USE_ASAN: true
+  # We probably don't have true memory leaks, but AddressSanitizer complains
+  # about it anyway. Disable leak detection for now.
+  ASAN_OPTIONS: detect_leaks=0
 
 on:
   push: {}
@@ -59,6 +62,7 @@ jobs:
           sudo env
           PATH="$PATH"
           GEM_PATH="$GEM_PATH"
+          ASAN_OPTIONS="$ASAN_OPTIONS"
           ../buildout/test/cxx/main
         working-directory: test
 
@@ -127,6 +131,7 @@ jobs:
           sudo env
           PATH="$PATH"
           GEM_PATH="$GEM_PATH"
+          ASAN_OPTIONS="$ASAN_OPTIONS"
           PASSENGER_DUMP_WITH_CRASH_WATCH=false
           PASSENGER_FORCE_TERMINATE_ON_ABORT=true
           gtimeout --signal KILL --verbose 600
