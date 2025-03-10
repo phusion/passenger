@@ -187,7 +187,6 @@ Controller::onTimeout(EV_P_ ev_timer *io, int flag) {
     ev_io_stop(that->getLoop(), &req->connectedWatcher);
 	SystemException e("Waiting on socket connect timed out", ETIMEDOUT);
 	handleInitiateError(e, req, client, that);
-	that->unrefRequest(req, __FILE__, __LINE__);
 }
 
 void
@@ -222,8 +221,6 @@ Controller::onWritable(EV_P_ ev_io *io, int revents) {
 			handleInitiateError(e, req, client, that);
 			return;
         }
-
-		that->unrefRequest(req, __FILE__, __LINE__);
 }
 
 void
@@ -232,13 +229,11 @@ Controller::handleInitiateError(const SystemException &e, Request *req, Client* 
 	if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
 		SKC_DEBUG_FROM_STATIC(that, client, "Error initiating session (" << e.what() << "); retrying (attempt " << int(req->sessionCheckoutTry) << ")");
 		that->getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
-		// checkoutSessionLater unrefs req for us
 	} else {
 		string message = "error initiating a session (";
 		message.append(e.what());
 		message.append(")");
 		that->disconnectWithError(&client, message);
-		that->unrefRequest(req, __FILE__, __LINE__);
 	}
 }
 
@@ -266,8 +261,6 @@ Controller::initiateSession(Client *client, Request *req) {
 			ev_timer_init(&req->connectedWatcherTimout, onTimeout, req->options.connectTimeout/1000.0, 0);
 			req->connectedWatcher.data = req;
 			ev_io_init(&req->connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
-			// only one of timeout or ready handler should fire, so only ref once
-			refRequest(req, __FILE__, __LINE__);
 			ev_io_start(getLoop(), &req->connectedWatcher);
 			ev_timer_start(getLoop(), &req->connectedWatcherTimout);
 			return;
