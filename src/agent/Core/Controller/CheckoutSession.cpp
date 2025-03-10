@@ -180,7 +180,7 @@ Controller::maybeSend100Continue(Client *client, Request *req) {
 }
 
 void
-Controller::onTimeout(EV_P_ ev_timer *io, int flag) {
+Controller::onConnectTimedout(EV_P_ ev_timer *io, int flag) {
 	Request *req = static_cast<Request *>(io->data);
 	Client *client = static_cast<Client *>(req->client);
 	Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
@@ -190,7 +190,7 @@ Controller::onTimeout(EV_P_ ev_timer *io, int flag) {
 }
 
 void
-Controller::onWritable(EV_P_ ev_io *io, int revents) {
+Controller::onSocketConnected(EV_P_ ev_io *io, int revents) {
 		Request *req = static_cast<Request *>(io->data);
 		Client *client = static_cast<Client *>(req->client);
 		Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
@@ -258,9 +258,9 @@ Controller::initiateSession(Client *client, Request *req) {
 			SKC_DEBUG(client, "Waiting on connection to finish, to initiate session appRoot=" << req->options.appRoot);
 
 			req->connectedWatcherTimout.data = req;
-			ev_timer_init(&req->connectedWatcherTimout, onTimeout, req->options.connectTimeout/1000.0, 0);
+			ev_timer_init(&req->connectedWatcherTimout, onConnectTimedout, req->options.connectTimeout/1000.0, 0);
 			req->connectedWatcher.data = req;
-			ev_io_init(&req->connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
+			ev_io_init(&req->connectedWatcher, onSocketConnected, req->session->fd(), EV_WRITE);
 			ev_io_start(getLoop(), &req->connectedWatcher);
 			ev_timer_start(getLoop(), &req->connectedWatcherTimout);
 			return;

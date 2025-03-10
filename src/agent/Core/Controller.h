@@ -296,8 +296,8 @@ private:
 		static void onEventLoopPrepare(EV_P_ struct ev_prepare *w, int revents);
 	#endif
 	static void onEventLoopCheck(EV_P_ struct ev_check *w, int revents);
-	static void onWritable(EV_P_ ev_io *io, int revents);
-	static void onTimeout(EV_P_ ev_timer *io, int flag);
+	static void onSocketConnected(EV_P_ ev_io *io, int revents);
+	static void onConnectTimedout(EV_P_ ev_timer *io, int flag);
 
 
 	/****** Internal utility functions ******/
