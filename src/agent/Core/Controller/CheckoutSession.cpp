@@ -180,57 +180,7 @@ Controller::maybeSend100Continue(Client *client, Request *req) {
 }
 
 void
-Controller::onConnectTimedout(EV_P_ ev_timer *io, int flag) {
-	TRACE_POINT();
-	Request *req = static_cast<Request *>(io->data);
-	Client *client = static_cast<Client *>(req->client);
-	Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
-    ev_io_stop(that->getLoop(), &req->connectedWatcher);
-	SystemException e("Waiting on socket connect timed out", ETIMEDOUT);
-	handleInitiateError(e, req, client, that);
-}
-
-void
-Controller::onSocketConnected(EV_P_ ev_io *io, int revents) {
-	TRACE_POINT();
-	Request *req = static_cast<Request *>(io->data);
-	Client *client = static_cast<Client *>(req->client);
-	Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
-    ev_io_stop(that->getLoop(), io);
-	if (req->connectedWatcherTimout.active) {
-		ev_timer_stop(that->getLoop(), &req->connectedWatcherTimout);
-	}
-
-	if (revents & EV_WRITE) {
-		// connected
-		try {
-			int connectError = 0;
-			socklen_t connectErrorLen = sizeof(connectError);
-			if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
-				int err = errno;
-				throw SystemException("Cannot check socket status", err);
-			} else if (connectError != 0) {
-				// connect_error uses the same error codes as errno
-				throw SystemException("Cannot connect socket", connectError);
-			}
-		} catch (const SystemException &e) {
-			UPDATE_TRACE_POINT();
-			handleInitiateError(e, req, client, that);
-			return;
-		}
-
-		that->finishInitiatingSession(client, req);
-    } else {
-			// something went very wrong
-			int err = errno;
-		SystemException e("Cannot connect socket", err);
-		handleInitiateError(e, req, client, that);
-		return;
-    }
-}
-
-void
-Controller::handleInitiateError(const SystemException &e, Request *req, Client* client, Controller* that) {
+Controller::handleSessionInitiationError(const SystemException &e, Request *req, Client* client, Controller* that) {
 	//TODO: only retry the session initiation if error is recoverable
 	if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
 		SKC_DEBUG_FROM_STATIC(that, client, "Error initiating session (" << e.what() << "); retrying (attempt " << int(req->sessionCheckoutTry) << ")");
@@ -241,6 +191,35 @@ Controller::handleInitiateError(const SystemException &e, Request *req, Client* 
 		message.append(")");
 		that->disconnectWithError(&client, message);
 	}
+}
+
+void
+Controller::initiateSession(Client *client, Request *req) {
+	TRACE_POINT();
+	req->sessionCheckoutTry++;
+	try {
+		if (!req->session->initiate()) {
+			SKC_DEBUG(client, "Session socket connection in progress");
+
+			req->connectedWatcher.data = req;
+			ev_io_init(&req->connectedWatcher, onSessionSocketConnected, req->session->fd(), EV_WRITE);
+			ev_io_start(getLoop(), &req->connectedWatcher);
+			ev_timer_start(getLoop(), &req->connectedWatcherTimout);
+
+			req->connectedWatcherTimout.data = req;
+			ev_timer_init(&req->connectedWatcherTimout, onSessionSocketConnectTimeout, req->options.connectTimeout / 1000.0, 0);
+
+			return;
+		}
+	} catch (const SystemException &e2) {
+		UPDATE_TRACE_POINT();
+		handleSessionInitiationError(e2, req, client, this);
+		return;
+	}
+
+	UPDATE_TRACE_POINT();
+	SKC_DEBUG(client, "Session socket immediately connected");
+	finishInitiatingSession(client, req);
 }
 
 void
@@ -256,31 +235,55 @@ Controller::finishInitiatingSession(Client *client, Request *req) {
 }
 
 void
-Controller::initiateSession(Client *client, Request *req) {
-	TRACE_POINT();
-	req->sessionCheckoutTry++;
-	try {
-		if (!req->session->initiate()) {
-			SKC_DEBUG(client, "Waiting on connection to finish, to initiate session appRoot=" << req->options.appRoot);
+Controller::onSessionSocketConnected(EV_P_ ev_io *io, int revents) {
+	Request *req = static_cast<Request *>(io->data);
+	Client *client = static_cast<Client *>(req->client);
+	Controller *self = static_cast<Controller *>(Controller::getServerFromClient(client));
 
-			req->connectedWatcherTimout.data = req;
-			ev_timer_init(&req->connectedWatcherTimout, onConnectTimedout, req->options.connectTimeout/1000.0, 0);
-			req->connectedWatcher.data = req;
-			ev_io_init(&req->connectedWatcher, onSocketConnected, req->session->fd(), EV_WRITE);
-			ev_io_start(getLoop(), &req->connectedWatcher);
-			ev_timer_start(getLoop(), &req->connectedWatcherTimout);
-			return;
-        } else {
-			SKC_DEBUG(client, "Connection ready immediately, initiating session appRoot=" << req->options.appRoot);
-        }
-	} catch (const SystemException &e2) {
-		UPDATE_TRACE_POINT();
-		handleInitiateError(e2, req, client, this);
-		return;
+	TRACE_POINT();
+
+    ev_io_stop(self->getLoop(), io);
+	if (req->connectedWatcherTimout.active) {
+		ev_timer_stop(self->getLoop(), &req->connectedWatcherTimout);
 	}
 
-	UPDATE_TRACE_POINT();
-	finishInitiatingSession(client, req);
+	if (revents & EV_WRITE) {
+		// connected
+		try {
+			int connectError = 0;
+			socklen_t connectErrorLen = sizeof(connectError);
+			if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
+				int err = errno;
+				throw SystemException("Cannot check socket status", err);
+			} else if (connectError != 0) {
+				// connectError uses the same error codes as errno
+				throw SystemException("Cannot connect socket", connectError);
+			}
+		} catch (const SystemException &e) {
+			UPDATE_TRACE_POINT();
+			handleSessionInitiationError(e, req, client, self);
+			return;
+		}
+
+		self->finishInitiatingSession(client, req);
+	} else {
+		// Something went very wrong
+		int err = errno;
+		SystemException e("Cannot connect socket", err);
+		handleSessionInitiationError(e, req, client, self);
+	}
+}
+
+void
+Controller::onSessionSocketConnectTimeout(EV_P_ ev_timer *io, int flag) {
+	Request *req = static_cast<Request *>(io->data);
+	Client *client = static_cast<Client *>(req->client);
+	Controller *self = static_cast<Controller *>(Controller::getServerFromClient(client));
+
+	TRACE_POINT();
+	ev_io_stop(self->getLoop(), &req->connectedWatcher);
+	SystemException e("Waiting on socket connect timed out", ETIMEDOUT);
+	handleSessionInitiationError(e, req, client, self);
 }
 
 void
