@@ -84,6 +84,7 @@ public:
 	const LString *host;
 	ControllerRequestConfigPtr config;
 	ev_io connectedWatcher;
+	ev_timer connectedWatcherTimout;
 
 	ServerKit::FdSinkChannel appSink;
 	ServerKit::FdSourceChannel appSource;

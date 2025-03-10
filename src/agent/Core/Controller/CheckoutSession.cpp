@@ -180,24 +180,66 @@ Controller::maybeSend100Continue(Client *client, Request *req) {
 }
 
 void
+Controller::onTimeout(EV_P_ ev_timer *io, int flag) {
+	Request *req = static_cast<Request *>(io->data);
+	Client *client = static_cast<Client *>(req->client);
+	Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
+    ev_io_stop(that->getLoop(), &req->connectedWatcher);
+	SystemException e("Waiting on socket connect timed out", ETIMEDOUT);
+	handleInitiateError(e, req, client, that);
+	that->unrefRequest(req, __FILE__, __LINE__);
+}
+
+void
 Controller::onWritable(EV_P_ ev_io *io, int revents) {
 		Request *req = static_cast<Request *>(io->data);
 		Client *client = static_cast<Client *>(req->client);
 		Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
         ev_io_stop(that->getLoop(), io);
 
-		int connect_error = 0;
-		socklen_t connect_error_len = sizeof(connect_error);
-		if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connect_error, &connect_error_len)) {
-			int err = errno;
-			throw SystemException("Cannot check socket status", err);
-		} else if (connect_error != 0) {
-			// connect_error uses the same error codes as errno
-			throw SystemException("Cannot connect socket", connect_error);
-		}
+		if (revents & EV_WRITE) {
+			// connected
+			try {
+				int connectError = 0;
+				socklen_t connectErrorLen = sizeof(connectError);
+				if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
+					int err = errno;
+					throw SystemException("Cannot check socket status", err);
+				} else if (connectError != 0) {
+					// connect_error uses the same error codes as errno
+					throw SystemException("Cannot connect socket", connectError);
+				}
+			} catch (const SystemException &e) {
+				handleInitiateError(e, req, client, that);
+				return;
+			}
 
-		that->finishInitiatingSession(client, req);
+			that->finishInitiatingSession(client, req);
+        } else {
+			// something went very wrong
+			int err = errno;
+			SystemException e("Cannot connect socket", err);
+			handleInitiateError(e, req, client, that);
+			return;
+        }
+
 		that->unrefRequest(req, __FILE__, __LINE__);
+}
+
+void
+Controller::handleInitiateError(const SystemException &e, Request *req, Client* client, Controller* that) {
+	//TODO: only retry the session initiation if error is recoverable
+	if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
+		SKC_DEBUG_FROM_STATIC(that, client, "Error initiating session (" << e.what() << "); retrying (attempt " << int(req->sessionCheckoutTry) << ")");
+		that->getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
+		// checkoutSessionLater unrefs req for us
+	} else {
+		string message = "error initiating a session (";
+		message.append(e.what());
+		message.append(")");
+		that->disconnectWithError(&client, message);
+		that->unrefRequest(req, __FILE__, __LINE__);
+	}
 }
 
 void
@@ -218,28 +260,24 @@ Controller::initiateSession(Client *client, Request *req) {
 	req->sessionCheckoutTry++;
 	try {
 		if (!req->session->initiate()) {
-			req->connectedWatcher.data = req;
-			refRequest(req, __FILE__, __LINE__);
-			ev_io_init(&req->connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
-			ev_io_start(getLoop(), &req->connectedWatcher);
 			SKC_DEBUG(client, "Waiting on connection to finish, to initiate session appRoot=" << req->options.appRoot);
+
+			req->connectedWatcherTimout.data = req;
+			// TODO: get timeout from config var
+			ev_timer_init(&req->connectedWatcherTimout, onTimeout, 30, 0);
+			req->connectedWatcher.data = req;
+			ev_io_init(&req->connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
+			// only one of timeout or ready handler should fire, so only ref once
+			refRequest(req, __FILE__, __LINE__);
+			ev_io_start(getLoop(), &req->connectedWatcher);
+			ev_timer_start(getLoop(), &req->connectedWatcherTimout);
 			return;
         } else {
 			SKC_DEBUG(client, "Connection ready immediately, initiating session appRoot=" << req->options.appRoot);
         }
 	} catch (const SystemException &e2) {
 		UPDATE_TRACE_POINT();
-		if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
-			SKC_DEBUG(client, "Error initiating session (" << e2.what() <<
-				"); retrying (attempt " << int(req->sessionCheckoutTry) << ")");
-			refRequest(req, __FILE__, __LINE__);
-			getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
-		} else {
-			string message = "error initiating a session (";
-			message.append(e2.what());
-			message.append(")");
-			disconnectWithError(&client, message);
-		}
+		handleInitiateError(e2, req, client, this);
 		return;
 	}
 

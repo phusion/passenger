@@ -194,6 +194,7 @@ private:
 	void sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 		const AbstractSessionPtr &session, const ExceptionPtr &e);
 	void maybeSend100Continue(Client *client, Request *req);
+	static void handleInitiateError(const SystemException &e, Request *req, Client* client, Controller* that);
 	void finishInitiatingSession(Client *client, Request *req);
 	void initiateSession(Client *client, Request *req);
 	static void checkoutSessionLater(Request *req);
@@ -296,6 +297,7 @@ private:
 	#endif
 	static void onEventLoopCheck(EV_P_ struct ev_check *w, int revents);
 	static void onWritable(EV_P_ ev_io *io, int revents);
+	static void onTimeout(EV_P_ ev_timer *io, int flag);
 
 
 	/****** Internal utility functions ******/
