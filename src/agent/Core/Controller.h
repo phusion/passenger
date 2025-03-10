@@ -48,6 +48,7 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <utility>
+#include <exception>
 #include <cstdio>
 #include <cstdlib>
 #include <cstddef>
@@ -201,7 +202,7 @@ private:
 	static void checkoutSessionLater(Request *req);
 	void reportSessionCheckoutError(Client *client, Request *req,
 		const ExceptionPtr &e);
-	static void handleSessionInitiationError(const SystemException &e, Request *req, Client* client, Controller* that);
+	void handleSessionInitiationError(Client *client, Request *req, const std::exception &e);
 	int lookupCodeFromHeader(Request *req, const char* header, int statusCode);
 	void writeRequestQueueFullExceptionErrorResponse(Client *client,
 		Request *req, const boost::shared_ptr<RequestQueueFullException> &e);

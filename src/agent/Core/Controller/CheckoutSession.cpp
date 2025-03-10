@@ -180,16 +180,16 @@ Controller::maybeSend100Continue(Client *client, Request *req) {
 }
 
 void
-Controller::handleSessionInitiationError(const SystemException &e, Request *req, Client* client, Controller* that) {
-	//TODO: only retry the session initiation if error is recoverable
+Controller::handleSessionInitiationError(Client *client, Request *req, const std::exception &e) {
+	// TODO: only retry the session initiation if error is recoverable
 	if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
-		SKC_DEBUG_FROM_STATIC(that, client, "Error initiating session (" << e.what() << "); retrying (attempt " << int(req->sessionCheckoutTry) << ")");
-		that->getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
+		SKC_DEBUG(client, "Error initiating session (" << e.what() << "); retrying (attempt " << int(req->sessionCheckoutTry) << ")");
+		getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
 	} else {
 		string message = "error initiating a session (";
 		message.append(e.what());
 		message.append(")");
-		that->disconnectWithError(&client, message);
+		disconnectWithError(&client, message);
 	}
 }
 
@@ -211,9 +211,13 @@ Controller::initiateSession(Client *client, Request *req) {
 
 			return;
 		}
-	} catch (const SystemException &e2) {
+	} catch (const SystemException &e) {
 		UPDATE_TRACE_POINT();
-		handleSessionInitiationError(e2, req, client, this);
+		handleSessionInitiationError(client, req, e);
+		return;
+	} catch (const RuntimeException &e) {
+		UPDATE_TRACE_POINT();
+		handleSessionInitiationError(client, req, e);
 		return;
 	}
 
@@ -249,28 +253,25 @@ Controller::onSessionSocketConnected(EV_P_ ev_io *io, int revents) {
 
 	if (revents & EV_WRITE) {
 		// connected
-		try {
-			int connectError = 0;
-			socklen_t connectErrorLen = sizeof(connectError);
-			if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
-				int err = errno;
-				throw SystemException("Cannot check socket status", err);
-			} else if (connectError != 0) {
-				// connectError uses the same error codes as errno
-				throw SystemException("Cannot connect socket", connectError);
-			}
-		} catch (const SystemException &e) {
-			UPDATE_TRACE_POINT();
-			handleSessionInitiationError(e, req, client, self);
+		int connectError = 0;
+		socklen_t connectErrorLen = sizeof(connectError);
+		if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
+			int err = errno;
+			SystemException e("Cannot check session socket status", err);
+			self->handleSessionInitiationError(client, req, e);
+			return;
+		} else if (connectError != 0) {
+			// connectError uses the same error codes as errno
+			SystemException e("Cannot connect to session socket", connectError);
+			self->handleSessionInitiationError(client, req, e);
 			return;
 		}
 
 		self->finishInitiatingSession(client, req);
 	} else {
 		// Something went very wrong
-		int err = errno;
-		SystemException e("Cannot connect socket", err);
-		handleSessionInitiationError(e, req, client, self);
+		RuntimeException e("Unknown error occurred while waiting for socket connect to finish");
+		self->handleSessionInitiationError(client, req, e);
 	}
 }
 
@@ -283,7 +284,7 @@ Controller::onSessionSocketConnectTimeout(EV_P_ ev_timer *io, int flag) {
 	TRACE_POINT();
 	ev_io_stop(self->getLoop(), &req->connectedWatcher);
 	SystemException e("Waiting on socket connect timed out", ETIMEDOUT);
-	handleSessionInitiationError(e, req, client, self);
+	self->handleSessionInitiationError(client, req, e);
 }
 
 void
