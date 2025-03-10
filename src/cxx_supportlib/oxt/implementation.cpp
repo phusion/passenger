@@ -34,8 +34,10 @@
 #include "thread.hpp"
 #include "spin_lock.hpp"
 #include "detail/context.hpp"
-#ifdef __linux__
+#if defined(__linux__)
 	#include <sys/syscall.h>
+#elif defined(__FreeBSD__)
+	#include <pthread_np.h> // for pthread_set_name_np()
 #endif
 
 #ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
@@ -434,8 +436,10 @@ static void
 set_native_thread_name(const string &name) {
 	#if defined(__linux__)
 		pthread_setname_np(pthread_self(), name.c_str());
-	#elif defined(__APPLE__) || defined(__FreeBSD__)
+	#elif defined(__APPLE__)
 		pthread_setname_np(name.c_str());
+	#elif defined(__FreeBSD__)
+		pthread_set_name_np(pthread_self(), name.c_str());
 	#endif
 }
 
