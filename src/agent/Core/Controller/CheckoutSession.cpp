@@ -181,6 +181,7 @@ Controller::maybeSend100Continue(Client *client, Request *req) {
 
 void
 Controller::onConnectTimedout(EV_P_ ev_timer *io, int flag) {
+	TRACE_POINT();
 	Request *req = static_cast<Request *>(io->data);
 	Client *client = static_cast<Client *>(req->client);
 	Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
@@ -191,36 +192,38 @@ Controller::onConnectTimedout(EV_P_ ev_timer *io, int flag) {
 
 void
 Controller::onSocketConnected(EV_P_ ev_io *io, int revents) {
-		Request *req = static_cast<Request *>(io->data);
-		Client *client = static_cast<Client *>(req->client);
-		Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
-        ev_io_stop(that->getLoop(), io);
+	TRACE_POINT();
+	Request *req = static_cast<Request *>(io->data);
+	Client *client = static_cast<Client *>(req->client);
+	Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
+    ev_io_stop(that->getLoop(), io);
 
-		if (revents & EV_WRITE) {
-			// connected
-			try {
-				int connectError = 0;
-				socklen_t connectErrorLen = sizeof(connectError);
-				if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
-					int err = errno;
-					throw SystemException("Cannot check socket status", err);
-				} else if (connectError != 0) {
-					// connect_error uses the same error codes as errno
-					throw SystemException("Cannot connect socket", connectError);
-				}
-			} catch (const SystemException &e) {
-				handleInitiateError(e, req, client, that);
-				return;
+	if (revents & EV_WRITE) {
+		// connected
+		try {
+			int connectError = 0;
+			socklen_t connectErrorLen = sizeof(connectError);
+			if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
+				int err = errno;
+				throw SystemException("Cannot check socket status", err);
+			} else if (connectError != 0) {
+				// connect_error uses the same error codes as errno
+				throw SystemException("Cannot connect socket", connectError);
 			}
-
-			that->finishInitiatingSession(client, req);
-        } else {
-			// something went very wrong
-			int err = errno;
-			SystemException e("Cannot connect socket", err);
+		} catch (const SystemException &e) {
+			UPDATE_TRACE_POINT();
 			handleInitiateError(e, req, client, that);
 			return;
-        }
+		}
+
+		that->finishInitiatingSession(client, req);
+    } else {
+			// something went very wrong
+			int err = errno;
+		SystemException e("Cannot connect socket", err);
+		handleInitiateError(e, req, client, that);
+		return;
+    }
 }
 
 void
