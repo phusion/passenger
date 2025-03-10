@@ -197,6 +197,9 @@ Controller::onSocketConnected(EV_P_ ev_io *io, int revents) {
 	Client *client = static_cast<Client *>(req->client);
 	Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
     ev_io_stop(that->getLoop(), io);
+	if (req->connectedWatcherTimout.active) {
+		ev_timer_stop(that->getLoop(), &req->connectedWatcherTimout);
+	}
 
 	if (revents & EV_WRITE) {
 		// connected
