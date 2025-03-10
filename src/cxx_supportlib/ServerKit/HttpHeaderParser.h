@@ -133,14 +133,16 @@ private:
 			goto happy_path;
 		case HPE_OK:
 			rc = llhttp_execute(parser, data, len);
-		happy_path:
-			if (rc == HPE_OK) {
-				return len;
-            }
-			// deliberate fall through
-        default:
+			goto happy_path;
+		default:
 			return (llhttp_get_error_pos(parser) - data);
 		}
+
+		happy_path:
+		if (rc == HPE_OK) {
+			return len;
+		}
+		return (llhttp_get_error_pos(parser) - data);
 	}
 
 	static int _onURL(llhttp_t *parser, const char *data, size_t len) {
