@@ -263,8 +263,7 @@ Controller::initiateSession(Client *client, Request *req) {
 			SKC_DEBUG(client, "Waiting on connection to finish, to initiate session appRoot=" << req->options.appRoot);
 
 			req->connectedWatcherTimout.data = req;
-			// TODO: get timeout from config var
-			ev_timer_init(&req->connectedWatcherTimout, onTimeout, 30, 0);
+			ev_timer_init(&req->connectedWatcherTimout, onTimeout, req->options.connectTimeout/1000.0, 0);
 			req->connectedWatcher.data = req;
 			ev_io_init(&req->connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
 			// only one of timeout or ready handler should fire, so only ref once

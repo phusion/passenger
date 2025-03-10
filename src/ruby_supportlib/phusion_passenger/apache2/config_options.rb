@@ -399,6 +399,14 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => 'A timeout for application startup.'
   },
   {
+    :name      => "PassengerAppConnectTimeout",
+    :type      => :integer,
+    :min_value => 1,
+    :default   => DEFAULT_CONNECT_TIMEOUT / 1000,
+    :default_expr => 'DEFAULT_CONNECT_TIMEOUT / 1000',
+    :desc      => 'A timeout for application to accept socket connections.'
+  },
+  {
     :name      => 'PassengerMaxRequestQueueSize',
     :type      => :integer,
     :min_value => 0,

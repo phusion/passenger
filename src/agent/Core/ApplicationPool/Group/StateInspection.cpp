@@ -251,6 +251,7 @@ Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
 	result["spawn_method"] = SVAL(options.spawnMethod, DEFAULT_SPAWN_METHOD);
 	result["bind_address"] = SVAL(options.bindAddress, DEFAULT_BIND_ADDRESS);
 	result["start_timeout"] = VAL(options.startTimeout / 1000.0, DEFAULT_START_TIMEOUT / 1000.0);
+	result["connect_timeout"] = VAL(options.connectTimeout / 1000.0, DEFAULT_CONNECT_TIMEOUT / 1000.0);
 	result["max_preloader_idle_time"] = VAL((Json::UInt) options.maxPreloaderIdleTime,
 		(Json::UInt) DEFAULT_MAX_PRELOADER_IDLE_TIME);
 	result["max_out_of_band_work_instances"] = VAL(options.maxOutOfBandWorkInstances,

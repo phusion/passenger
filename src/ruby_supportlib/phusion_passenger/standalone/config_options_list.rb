@@ -393,6 +393,14 @@ module PhusionPassenger
                       "with SIGKILL, and logged with an error.\nDefault: #{DEFAULT_START_TIMEOUT / 1000}"
       },
       {
+        :name      => :app_connect_timeout,
+        :type      => :integer,
+        :type_desc => 'SECONDS',
+        :desc      => "The maximum time an application process may\n" \
+                      "take to accept a socket connection\n" \
+                      "Default: #{DEFAULT_CONNECT_TIMEOUT / 1000}"
+      },
+      {
         :name      => :concurrency_model,
         :type_desc => 'NAME',
         :desc      => "The concurrency model to use, either\n" \

@@ -40,6 +40,7 @@
 
 typedef struct {
     ngx_flag_t abort_websockets_on_process_shutdown;
+    ngx_uint_t app_connect_timeout;
     ngx_array_t *base_uris;
     ngx_flag_t buffer_upload;
     ngx_flag_t debugger;
@@ -85,6 +86,7 @@ typedef struct {
     ngx_str_t vary_turbocache_by_cookie;
 
     ngx_str_t abort_websockets_on_process_shutdown_source_file;
+    ngx_str_t app_connect_timeout_source_file;
     ngx_str_t app_group_name_source_file;
     ngx_str_t app_log_file_source_file;
     ngx_str_t app_rights_source_file;
@@ -141,6 +143,7 @@ typedef struct {
     ngx_str_t vary_turbocache_by_cookie_source_file;
 
     ngx_uint_t abort_websockets_on_process_shutdown_source_line;
+    ngx_uint_t app_connect_timeout_source_line;
     ngx_uint_t app_group_name_source_line;
     ngx_uint_t app_log_file_source_line;
     ngx_uint_t app_rights_source_line;
@@ -197,6 +200,7 @@ typedef struct {
     ngx_uint_t vary_turbocache_by_cookie_source_line;
 
     ngx_int_t abort_websockets_on_process_shutdown_explicitly_set;
+    ngx_int_t app_connect_timeout_explicitly_set;
     ngx_int_t app_group_name_explicitly_set;
     ngx_int_t app_log_file_explicitly_set;
     ngx_int_t app_rights_explicitly_set;

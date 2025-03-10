@@ -402,6 +402,12 @@ NGINX_CONFIGURATION_OPTIONS = [
     :default  => DEFAULT_START_TIMEOUT / 1000
   },
   {
+    :name     => 'passenger_app_connect_timeout',
+    :scope    => :application,
+    :type     => :uinteger,
+    :default  => DEFAULT_CONNECT_TIMEOUT / 1000
+  },
+  {
     :name     => 'passenger_user',
     :scope    => :application,
     :type     => :string,
