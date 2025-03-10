@@ -222,10 +222,9 @@ Controller::initiateSession(Client *client, Request *req) {
 	req->sessionCheckoutTry++;
 	try {
 		if (!req->session->initiate()) {
-			ev_io connectedWatcher;
-			connectedWatcher.data = new ControllerFinishInitiatingSessionCallbackPointers(this, client, req);
-			ev_io_init(&connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
-			ev_io_start(getLoop(), &connectedWatcher);
+			req->connectedWatcher.data = new ControllerFinishInitiatingSessionCallbackPointers(this, client, req);
+			ev_io_init(&req->connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
+			ev_io_start(getLoop(), &req->connectedWatcher);
 			return;
 		}
 	} catch (const SystemException &e2) {

@@ -83,6 +83,7 @@ public:
 	AbstractSessionPtr session;
 	const LString *host;
 	ControllerRequestConfigPtr config;
+	ev_io connectedWatcher;
 
 	ServerKit::FdSinkChannel appSink;
 	ServerKit::FdSourceChannel appSource;
