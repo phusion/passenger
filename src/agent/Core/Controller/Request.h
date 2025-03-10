@@ -113,7 +113,9 @@ public:
 
 	Request()
 		: BaseHttpRequest()
-		{ }
+		{
+			connectedWatcher.active = false;
+		}
 
 	const char *getStateString() const {
 		switch (state) {

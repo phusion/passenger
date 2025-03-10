@@ -154,6 +154,11 @@ Controller::reinitializeRequest(Client *client, Request *req) {
 
 void
 Controller::deinitializeRequest(Client *client, Request *req) {
+	if (req->connectedWatcher.active) {
+		Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
+		ev_io_stop(that->getLoop(), &req->connectedWatcher);
+	}
+
 	req->session.reset();
 	req->config.reset();
 
