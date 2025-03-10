@@ -179,29 +179,25 @@ Controller::maybeSend100Continue(Client *client, Request *req) {
 	}
 }
 
-typedef boost::tuple<Controller*, Client*, Request*> ControllerFinishInitiatingSessionCallbackPointers;
-
 void
 Controller::onWritable(EV_P_ ev_io *io, int revents) {
-        ControllerFinishInitiatingSessionCallbackPointers *cbs = static_cast<ControllerFinishInitiatingSessionCallbackPointers *>(io->data);
-	    Controller* that = cbs->get<0>();
-		Request * req = cbs->get<2>();
+		Request *req = static_cast<Request *>(io->data);
+		Client *client = static_cast<Client *>(req->client);
+		Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
         ev_io_stop(that->getLoop(), io);
 
 		int connect_error = 0;
 		socklen_t connect_error_len = sizeof(connect_error);
 		if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connect_error, &connect_error_len)) {
 			int err = errno;
-			delete cbs;
 			throw SystemException("Cannot check socket status", err);
 		} else if (connect_error != 0) {
 			// connect_error uses the same error codes as errno
-			delete cbs;
 			throw SystemException("Cannot connect socket", connect_error);
 		}
 
-		that->finishInitiatingSession(cbs->get<1>(), req);
-		delete cbs;
+		that->finishInitiatingSession(client, req);
+		that->unrefRequest(req, __FILE__, __LINE__);
 }
 
 void
@@ -222,7 +218,8 @@ Controller::initiateSession(Client *client, Request *req) {
 	req->sessionCheckoutTry++;
 	try {
 		if (!req->session->initiate()) {
-			req->connectedWatcher.data = new ControllerFinishInitiatingSessionCallbackPointers(this, client, req);
+			req->connectedWatcher.data = req;
+			refRequest(req, __FILE__, __LINE__);
 			ev_io_init(&req->connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
 			ev_io_start(getLoop(), &req->connectedWatcher);
 			return;
