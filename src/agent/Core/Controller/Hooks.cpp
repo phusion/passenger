@@ -23,6 +23,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include "Constants.h"
 #include <Core/Controller.h>
 
 /*************************************************************************
@@ -138,6 +139,7 @@ Controller::reinitializeRequest(Client *client, Request *req) {
 	req->appResponseInitialized = false;
 	req->strip100ContinueHeader = false;
 	req->hasPragmaHeader = false;
+	req->connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 	req->host = NULL;
 	req->config = requestConfig;
 	req->bodyBytesBuffered = 0;

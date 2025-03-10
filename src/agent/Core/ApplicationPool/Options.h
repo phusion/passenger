@@ -211,11 +211,6 @@ public:
 	 * on spawning the process or the preloader. */
 	unsigned int startTimeout;
 
-	/** The maximum amount of time, in milliseconds, that may be spent
-	 * waiting on the process to accept controller's connection on the
-	 * socket. */
-	unsigned int connectTimeout;
-
 	/**
 	 * The RAILS_ENV/RACK_ENV environment that should be used. May not be an
 	 * empty string.
@@ -454,7 +449,6 @@ public:
 	Options()
 		: logLevel(DEFAULT_LOG_LEVEL),
 		  startTimeout(DEFAULT_START_TIMEOUT),
-		  connectTimeout(DEFAULT_CONNECT_TIMEOUT),
 		  environment(DEFAULT_APP_ENV, sizeof(DEFAULT_APP_ENV) - 1),
 		  baseURI("/", 1),
 		  spawnMethod(DEFAULT_SPAWN_METHOD, sizeof(DEFAULT_SPAWN_METHOD) - 1),
@@ -584,7 +578,6 @@ public:
 			appendKeyValue (vec, "process_title",      getProcessTitle(wrapperRegistry));
 			appendKeyValue2(vec, "log_level",          logLevel);
 			appendKeyValue3(vec, "start_timeout",      startTimeout);
-			appendKeyValue3(vec, "connect_timeout",    connectTimeout);
 			appendKeyValue (vec, "environment",        environment);
 			appendKeyValue (vec, "base_uri",           baseURI);
 			appendKeyValue (vec, "spawn_method",       spawnMethod);

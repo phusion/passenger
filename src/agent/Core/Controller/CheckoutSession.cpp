@@ -202,20 +202,16 @@ Controller::initiateSession(Client *client, Request *req) {
 			SKC_DEBUG(client, "Session socket connection in progress");
 
 			req->connectedWatcher.data = req;
+			req->connectedWatcherTimout.data = req;
+
 			ev_io_init(&req->connectedWatcher, onSessionSocketConnected, req->session->fd(), EV_WRITE);
+			ev_timer_init(&req->connectedWatcherTimout, onSessionSocketConnectTimeout, req->connectTimeout, 0);
+
 			ev_io_start(getLoop(), &req->connectedWatcher);
 			ev_timer_start(getLoop(), &req->connectedWatcherTimout);
-
-			req->connectedWatcherTimout.data = req;
-			ev_timer_init(&req->connectedWatcherTimout, onSessionSocketConnectTimeout, req->options.connectTimeout / 1000.0, 0);
-
 			return;
 		}
-	} catch (const SystemException &e) {
-		UPDATE_TRACE_POINT();
-		handleSessionInitiationError(client, req, e);
-		return;
-	} catch (const RuntimeException &e) {
+	} catch (const oxt::tracable_exception &e) {
 		UPDATE_TRACE_POINT();
 		handleSessionInitiationError(client, req, e);
 		return;
@@ -253,16 +249,18 @@ Controller::onSessionSocketConnected(EV_P_ ev_io *io, int revents) {
 
 	if (revents & EV_WRITE) {
 		// connected
-		int connectError = 0;
-		socklen_t connectErrorLen = sizeof(connectError);
-		if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
-			int err = errno;
-			SystemException e("Cannot check session socket status", err);
-			self->handleSessionInitiationError(client, req, e);
-			return;
-		} else if (connectError != 0) {
-			// connectError uses the same error codes as errno
-			SystemException e("Cannot connect to session socket", connectError);
+		try {
+			int connectError = 0;
+			socklen_t connectErrorLen = sizeof(connectError);
+			if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
+				int err = errno;
+				throw SystemException("Cannot check socket status", err);
+			} else if (connectError != 0) {
+				// connectError uses the same error codes as errno
+				throw SystemException("Cannot connect socket", connectError);
+			}
+		} catch (const SystemException &e) {
+			UPDATE_TRACE_POINT();
 			self->handleSessionInitiationError(client, req, e);
 			return;
 		}

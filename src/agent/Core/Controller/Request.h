@@ -78,6 +78,7 @@ public:
 	bool appResponseInitialized: 1;
 	bool strip100ContinueHeader: 1;
 	bool hasPragmaHeader: 1;
+	unsigned int connectTimeout;
 
 	Options options;
 	AbstractSessionPtr session;
