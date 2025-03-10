@@ -123,6 +123,10 @@ Controller::reinitializeRequest(Client *client, Request *req) {
 	// bodyBuffer is initialized in Controller::beginBufferingBody().
 	// appSink and appSource are initialized in Controller::checkoutSession().
 
+
+	req->connectedWatcher.active = false;
+	req->connectedWatcherTimout.active = false;
+
 	req->startedAt = 0;
 	req->state = Request::ANALYZING_REQUEST;
 	req->dechunkResponse = false;
