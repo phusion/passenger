@@ -116,6 +116,7 @@ public:
 		: BaseHttpRequest()
 		{
 			connectedWatcher.active = false;
+			connectedWatcherTimout.active = false;
 		}
 
 	const char *getStateString() const {

@@ -158,6 +158,10 @@ Controller::deinitializeRequest(Client *client, Request *req) {
 		Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
 		ev_io_stop(that->getLoop(), &req->connectedWatcher);
 	}
+	if (req->connectedWatcherTimout.active) {
+		Controller *that = static_cast<Controller *>(Controller::getServerFromClient(client));
+		ev_timer_stop(that->getLoop(), &req->connectedWatcherTimout);
+	}
 
 	req->session.reset();
 	req->config.reset();
