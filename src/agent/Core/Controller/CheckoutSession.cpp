@@ -222,8 +222,11 @@ Controller::initiateSession(Client *client, Request *req) {
 			refRequest(req, __FILE__, __LINE__);
 			ev_io_init(&req->connectedWatcher, onWritable, req->session->fd(), EV_WRITE);
 			ev_io_start(getLoop(), &req->connectedWatcher);
+			SKC_DEBUG(client, "Waiting on connection to finish, to initiate session appRoot=" << req->options.appRoot);
 			return;
-		}
+        } else {
+			SKC_DEBUG(client, "Connection ready immediately, initiating session appRoot=" << req->options.appRoot);
+        }
 	} catch (const SystemException &e2) {
 		UPDATE_TRACE_POINT();
 		if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
