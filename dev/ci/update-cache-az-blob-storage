@@ -34,5 +34,6 @@ az storage blob upload \
 	-n "$BLOB_NAME" \
 	-f "$CACHE_PATH.tar.zstd" \
 	--overwrite \
-	--no-progress
+	--no-progress \
+	--validate-content
 rm "$CACHE_PATH.tar.zstd"
