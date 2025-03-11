@@ -405,7 +405,7 @@ NGINX_CONFIGURATION_OPTIONS = [
     :name     => 'passenger_app_connect_timeout',
     :scope    => :application,
     :type     => :uinteger,
-    :default  => DEFAULT_CONNECT_TIMEOUT / 1000
+    :default  => DEFAULT_CONNECT_TIMEOUT
   },
   {
     :name     => 'passenger_user',

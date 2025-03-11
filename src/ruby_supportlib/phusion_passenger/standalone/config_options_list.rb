@@ -398,7 +398,7 @@ module PhusionPassenger
         :type_desc => 'SECONDS',
         :desc      => "The maximum time an application process may\n" \
                       "take to accept a socket connection\n" \
-                      "Default: #{DEFAULT_CONNECT_TIMEOUT / 1000}"
+                      "Default: #{DEFAULT_CONNECT_TIMEOUT}"
       },
       {
         :name      => :concurrency_model,

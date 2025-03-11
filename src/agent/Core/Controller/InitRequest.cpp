@@ -465,7 +465,7 @@ Controller::onRequestBegin(Client *client, Request *req) {
 		req->startedAt = ev_now(getLoop());
 		req->bodyChannel.stop();
 
-		fillPoolOptionSecToMsec(req, req->connectTimeout, "!~PASSENGER_APP_CONNECT_TIMEOUT");
+		fillPoolOption(req, req->connectTimeout, "!~PASSENGER_APP_CONNECT_TIMEOUT");
 
 		initializeFlags(client, req, analysis);
 		if (respondFromTurboCache(client, req)) {

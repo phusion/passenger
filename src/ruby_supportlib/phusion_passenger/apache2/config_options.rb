@@ -402,8 +402,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerAppConnectTimeout",
     :type      => :integer,
     :min_value => 1,
-    :default   => DEFAULT_CONNECT_TIMEOUT / 1000,
-    :default_expr => 'DEFAULT_CONNECT_TIMEOUT / 1000',
+    :default   => DEFAULT_CONNECT_TIMEOUT,
+    :default_expr => 'DEFAULT_CONNECT_TIMEOUT',
     :desc      => 'A timeout for application to accept socket connections.'
   },
   {
