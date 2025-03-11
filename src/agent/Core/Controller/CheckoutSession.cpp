@@ -248,19 +248,17 @@ Controller::onSessionSocketConnected(EV_P_ ev_io *io, int revents) {
 	}
 
 	if (revents & EV_WRITE) {
-		// connected
-		try {
-			int connectError = 0;
-			socklen_t connectErrorLen = sizeof(connectError);
-			if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
-				int err = errno;
-				throw SystemException("Cannot check socket status", err);
-			} else if (connectError != 0) {
-				// connectError uses the same error codes as errno
-				throw SystemException("Cannot connect socket", connectError);
-			}
-		} catch (const SystemException &e) {
-			UPDATE_TRACE_POINT();
+		// Socket connect finished
+		int connectError = 0;
+		socklen_t connectErrorLen = sizeof(connectError);
+		if (-1 == getsockopt(req->session->fd(), SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen)) {
+			int err = errno;
+			SystemException e("Cannot check socket status", err);
+			self->handleSessionInitiationError(client, req, e);
+			return;
+		} else if (connectError != 0) {
+			// connectError uses the same error codes as errno
+			SystemException e("Cannot connect socket", connectError);
 			self->handleSessionInitiationError(client, req, e);
 			return;
 		}
