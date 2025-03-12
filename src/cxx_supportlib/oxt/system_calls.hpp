@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <signal.h> // IWYU pragma: keep; for SIGUSR1
 #include <cstdio>
 #include <ctime>
 #include "macros.hpp"
@@ -111,8 +112,8 @@
 // This is one of the things that Java is good at and C++ sucks at. Sigh...
 
 namespace oxt {
-	static const int INTERRUPTION_SIGNAL = SIGUSR1; // SIGUSR2 is reserved by Valgrind...
-	#define OXT_MAX_ERROR_CHANCES 16
+	static constexpr int INTERRUPTION_SIGNAL = SIGUSR1; // SIGUSR2 is reserved by Valgrind...
+	static constexpr unsigned int OXT_MAX_ERROR_CHANCES = 16;
 
 	struct ErrorChance {
 		double chance;
