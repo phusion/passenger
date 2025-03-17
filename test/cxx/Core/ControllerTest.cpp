@@ -1168,7 +1168,7 @@ namespace tut {
 	TEST_METHOD(60) {
 		set_test_name("Testing async connect flow.");
 		init();
-		mockNextSession();
+		mockNextSession(10); // Technically this might not be immediate even if we don't force it, Controller::MAX_SESSION_CHECKOUT_TRY tries
 		testSession.setupAsync();
 
 		connectToServer();
@@ -1179,6 +1179,14 @@ namespace tut {
 			"\r\n");
 
 		waitUntilSessionInitiated();
+
+		readPeerRequestHeader();
+		sendPeerResponse(
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Type: text/plain\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+
 		waitUntilSessionClosed();
 		ensure("(1)", testSession.isSuccessful());
     }
