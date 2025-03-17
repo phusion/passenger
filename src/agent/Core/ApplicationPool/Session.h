@@ -186,13 +186,14 @@ public:
 	}
 
 
-	virtual void initiate() override {
+	virtual bool initiate() override {
 		assert(!closed);
 		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));
 		Connection connection = socket->checkoutConnection();
 		connection.fail = true;
 		g.clear();
 		this->connection = connection;
+		return connection.ready;
 	}
 
 	bool initiated() const {

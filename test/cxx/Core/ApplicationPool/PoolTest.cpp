@@ -190,7 +190,13 @@ namespace tut {
 				P_ERROR("get() exception: " << currentException->what());
 				abort();
 			}
-			currentSession->initiate(true);
+			bool ready = currentSession->initiate();
+			setBlocking(currentSession->fd());
+			if (!ready) {
+				Connection connection;
+				connection.fd = currentSession->fd();
+				connection.wait();
+			}
 			sendHeaders(currentSession->fd(),
 				"PATH_INFO", path,
 				"REQUEST_METHOD", "GET",
@@ -1887,7 +1893,7 @@ namespace tut {
 		);
 
 		try {
-			currentSession->initiate(true);
+			currentSession->initiate();
 			fail("Initiate is supposed to fail");
 		} catch (const SystemException &e) {
 			ensure_equals(e.code(), ECONNREFUSED);

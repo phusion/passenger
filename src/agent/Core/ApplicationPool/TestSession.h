@@ -163,10 +163,11 @@ public:
 		return wantKeepAlive;
 	}
 
-	virtual void initiate() {
+	virtual bool initiate() {
 		boost::lock_guard<boost::mutex> l(syncher);
 		connection = createUnixSocketPair(__FILE__, __LINE__);
 		peerBufferedIO = BufferedIO(connection.second);
+		return true;
 	}
 
 	virtual void close(bool _success, bool _wantKeepAlive = false) override {
