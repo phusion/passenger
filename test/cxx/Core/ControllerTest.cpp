@@ -1214,6 +1214,6 @@ namespace tut {
 			"\r\n");
 
 		client.close();
-	    waitUntilSessionClosed();
+		waitUntilSessionClosed();
 	}
 }
