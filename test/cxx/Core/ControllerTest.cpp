@@ -64,11 +64,16 @@ namespace tut {
 				if (forceAsyncToWait) {
 					return EV_READ;
 				} else {
-					return EV_WRITE;
+					return Controller::ioConditions();
 				}
 			}
+
 			virtual double sessionSocketConnectTimeout(Request *req) override {
-				return req->connectTimeout / 1000.0;
+				if (forceAsyncToWait) {
+					return req->connectTimeout / 1000.0;
+				} else {
+					return Controller::sessionSocketConnectTimeout(req);
+				}
 			}
 
 		public:

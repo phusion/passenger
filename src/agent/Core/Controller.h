@@ -199,7 +199,6 @@ private:
 	void finishInitiatingSession(Client *client, Request *req);
 	static void onSessionSocketConnected(EV_P_ ev_io *io, int revents);
 	static void onSessionSocketConnectTimeout(EV_P_ ev_timer *io, int flag);
-	virtual double sessionSocketConnectTimeout(Request *req);
 	static void checkoutSessionLater(Request *req);
 	void reportSessionCheckoutError(Client *client, Request *req,
 		const ExceptionPtr &e);
@@ -363,6 +362,7 @@ protected:
 	virtual void asyncGetFromApplicationPool(Request *req,
 		ApplicationPool2::GetCallback callback);
 	virtual int ioConditions();
+	virtual double sessionSocketConnectTimeout(Request *req);
 
 
 public:
