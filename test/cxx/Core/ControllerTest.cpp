@@ -59,11 +59,12 @@ namespace tut {
 					mockException.reset();
 				}
 			}
+
 			virtual int ioConditions() override {
 				if (forceAsyncToWait) {
 					return EV_READ;
-                } else {
-                    return EV_WRITE;
+				} else {
+					return EV_WRITE;
 				}
 			}
 			virtual double sessionSocketConnectTimeout(Request *req) override {
