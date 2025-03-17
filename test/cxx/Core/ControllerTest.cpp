@@ -1222,6 +1222,9 @@ namespace tut {
 		FileDescriptor &client = connectToServer();
 		sendRequest(
 			"GET /hello HTTP/1.1\r\n"
+			"!~: \r\n"
+			"!~PASSENGER_APP_CONNECT_TIMEOUT: 10000\r\n"
+			"!~: \r\n"
 			"Host: localhost\r\n"
 			"Connection: close\r\n"
 			"\r\n");
