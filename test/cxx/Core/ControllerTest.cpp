@@ -7,6 +7,7 @@
 #include <IOTools/MessageIO.h>
 #include <Core/ApplicationPool/TestSession.h>
 #include <Core/Controller.h>
+#include <ev.h>
 
 using namespace std;
 using namespace boost;
@@ -55,6 +56,9 @@ namespace tut {
 				callback(mockSession, mockException);
 				mockSession.reset();
 				mockException.reset();
+			}
+			virtual int ioConditions() override {
+				return EV_NONE;
 			}
 
 		public:
@@ -1144,4 +1148,61 @@ namespace tut {
 		string header = readResponseHeader();
 		ensure(containsSubstring(header, "HTTP/1.1 502"));
 	}
+
+	/***** Application async connection *****/
+
+	TEST_METHOD(60) {
+		set_test_name("Testing async connect flow.");
+		init();
+		mockNextSession();
+		testSession.setupAsync();
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+
+		waitUntilSessionInitiated();
+    }
+
+	TEST_METHOD(61) {
+		set_test_name("Testing async connect timeout.");
+
+		init();
+		mockNextSession();
+		testSession.setupAsync();
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"!~: \r\n"
+			"!~PASSENGER_APP_CONNECT_TIMEOUT: 1\r\n"
+			"!~: \r\n"
+			"Host: localhost\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+
+		waitUntilSessionClosed();
+	}
+
+	TEST_METHOD(62) {
+		set_test_name("Testing disconnect while async connect in progress.");
+
+		init();
+		mockNextSession();
+		testSession.setupAsync();
+
+		FileDescriptor &client = connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+
+		client.close();
+	    waitUntilSessionClosed();
+	}
+
 }

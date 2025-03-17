@@ -42,6 +42,7 @@
 #include <Utils/ScopeGuard.h>
 #include <FileTools/FileManip.h>
 #include <oxt/system_calls.hpp>
+#include <ev.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -67,6 +68,7 @@ private:
 	mutable bool closed;
 	mutable bool success;
 	mutable bool wantKeepAlive;
+	mutable bool async;
 
 public:
 	TestSession()
@@ -77,7 +79,8 @@ public:
 		  stickySessionId(0),
 		  closed(false),
 		  success(false),
-		  wantKeepAlive(false)
+		  wantKeepAlive(false),
+		  async(false)
 		{ }
 
 	virtual void ref() const override {
@@ -172,8 +175,12 @@ public:
 		boost::lock_guard<boost::mutex> l(syncher);
 		return wantKeepAlive;
 	}
+	void setupAsync(){
+		boost::lock_guard<boost::mutex> l(syncher);
+		async = true;
+	}
 
-	virtual bool initiate() {
+	virtual bool initiate() override {
 		boost::lock_guard<boost::mutex> l(syncher);
 
 		// Create a unique temporary directory for the socket
@@ -195,7 +202,7 @@ public:
 		// Create server socket
 		string socketPath = StaticString(tempDirPath.data) + "/socket";
 		FileDescriptor serverFd(createUnixServer(socketPath.c_str(), 0, true, __FILE__, __LINE__),
-			__FILE__, __LINE__);
+								__FILE__, __LINE__);
 
 		// Create client socket (non-blocking)
 		NUnix_State clientState;
@@ -215,7 +222,11 @@ public:
 		connection.second = std::move(serverSideFd);
 		peerBufferedIO = BufferedIO(connection.second);
 
-		return immediatelyConnected;
+		if (async) {
+			return false;
+		} else {
+			return immediatelyConnected;
+		}
 	}
 
 	virtual void close(bool _success, bool _wantKeepAlive = false) override {

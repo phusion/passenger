@@ -193,6 +193,11 @@ Controller::handleSessionInitiationError(Client *client, Request *req, const std
 	}
 }
 
+int
+Controller::ioConditions() {
+		return EV_WRITE;
+}
+
 void
 Controller::initiateSession(Client *client, Request *req) {
 	TRACE_POINT();
@@ -204,7 +209,7 @@ Controller::initiateSession(Client *client, Request *req) {
 			req->connectedWatcher.data = req;
 			req->connectedWatcherTimout.data = req;
 
-			ev_io_init(&req->connectedWatcher, onSessionSocketConnected, req->session->fd(), EV_WRITE);
+			ev_io_init(&req->connectedWatcher, onSessionSocketConnected, req->session->fd(), ioConditions());
 			ev_timer_init(&req->connectedWatcherTimout, onSessionSocketConnectTimeout, req->connectTimeout, 0);
 
 			ev_io_start(getLoop(), &req->connectedWatcher);

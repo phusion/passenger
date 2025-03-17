@@ -360,6 +360,7 @@ protected:
 
 	virtual void asyncGetFromApplicationPool(Request *req,
 		ApplicationPool2::GetCallback callback);
+	virtual int ioConditions();
 
 
 public:
