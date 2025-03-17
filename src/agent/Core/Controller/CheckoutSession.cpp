@@ -184,6 +184,7 @@ Controller::handleSessionInitiationError(Client *client, Request *req, const std
 	// TODO: only retry the session initiation if error is recoverable
 	if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {
 		SKC_DEBUG(client, "Error initiating session (" << e.what() << "); retrying (attempt " << int(req->sessionCheckoutTry) << ")");
+		refRequest(req, __FILE__, __LINE__);
 		getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
 	} else {
 		string message = "error initiating a session (";
