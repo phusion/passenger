@@ -1179,6 +1179,8 @@ namespace tut {
 			"\r\n");
 
 		waitUntilSessionInitiated();
+		waitUntilSessionClosed();
+		ensure("(1)", testSession.isSuccessful());
     }
 
 	TEST_METHOD(61) {
@@ -1225,6 +1227,6 @@ namespace tut {
 			"\r\n");
 
 		client.close();
-		waitUntilSessionClosed();
+	    waitUntilSessionClosed();
 	}
 }
