@@ -1231,7 +1231,8 @@ namespace tut {
 		sendRequest(
 			"GET /hello HTTP/1.1\r\n"
 			"!~: \r\n"
-			"!~PASSENGER_APP_CONNECT_TIMEOUT: 10000\r\n" // slow so client has time to disconnect
+			// slow so client has time to disconnect, tests divide this value by 1000 so we need a huge value
+			"!~PASSENGER_APP_CONNECT_TIMEOUT: 10000\r\n"
 			"!~: \r\n"
 			"Host: localhost\r\n"
 			"Connection: close\r\n"
