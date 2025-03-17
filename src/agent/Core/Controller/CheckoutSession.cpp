@@ -187,10 +187,7 @@ Controller::handleSessionInitiationError(Client *client, Request *req, const std
 		refRequest(req, __FILE__, __LINE__);
 		getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
 	} else {
-		string message = "error initiating a session (";
-		message.append(e.what());
-		message.append(")");
-		disconnectWithError(&client, message);
+		endRequestAsGatewayTimeout(&client, &req);
 	}
 }
 

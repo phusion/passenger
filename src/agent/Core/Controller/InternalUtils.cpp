@@ -168,6 +168,18 @@ Controller::endRequestAsBadGateway(Client **client, Request **req) {
 }
 
 void
+Controller::endRequestAsGatewayTimeout(Client **client, Request **req) {
+	if ((*req)->responseBegun) {
+		disconnectWithError(client, "gateway timeout");
+	} else {
+		ServerKit::HeaderTable headers = getHeadersWithContentType(*req);
+		headers.insert((*req)->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		writeSimpleResponse(*client, 504, &headers, getFormattedMessage(*req, "Gateway Timeout"));
+		endRequest(client, req);
+	}
+}
+
+void
 Controller::writeBenchmarkResponse(Client **client, Request **req, bool end) {
 	if (canKeepAlive(*req)) {
 		writeResponse(*client, P_STATIC_STRING(

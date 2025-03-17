@@ -1195,6 +1195,8 @@ namespace tut {
 		// We'll want to assert that the Core Controller responds with a timeout error.
 		waitUntilSessionClosed();
 		ensure_not("(1)", testSession.isSuccessful());
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "HTTP/1.1 504 Gateway Timeout"));
 	}
 
 	TEST_METHOD(62) {

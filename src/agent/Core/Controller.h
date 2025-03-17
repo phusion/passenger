@@ -316,6 +316,7 @@ private:
 	void endRequestWithSimpleResponse(Client **c, Request **r,
 		const StaticString &body, int code = 200);
 	void endRequestAsBadGateway(Client **client, Request **req);
+	void endRequestAsGatewayTimeout(Client **client, Request **req);
 	void writeBenchmarkResponse(Client **client, Request **req,
 		bool end = true);
 	bool getBoolOption(Request *req, const HashedStaticString &name,
