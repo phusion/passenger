@@ -54,8 +54,10 @@ namespace tut {
 				//   what's going on.
 				assert(mockSession != nullptr || mockException != nullptr);
 				callback(mockSession, mockException);
-				mockSession.reset();
-				mockException.reset();
+				if (--mockedSessionCount == 0) {
+					mockSession.reset();
+					mockException.reset();
+				}
 			}
 			virtual int ioConditions() override {
 				return EV_NONE;
@@ -64,6 +66,7 @@ namespace tut {
 		public:
 			ApplicationPool2::AbstractSessionPtr mockSession;
 			ApplicationPool2::ExceptionPtr mockException;
+			unsigned int mockedSessionCount;
 
 			TestController(ServerKit::Context *context,
 				const Core::ControllerSchema &schema,
@@ -71,7 +74,8 @@ namespace tut {
 				const Core::ControllerSingleAppModeSchema &singleAppModeSchema,
 				const Json::Value &singleAppModeConfig)
 				: Core::Controller(context, schema, initialConfig, ConfigKit::DummyTranslator(),
-					&singleAppModeSchema, &singleAppModeConfig, ConfigKit::DummyTranslator())
+								  &singleAppModeSchema, &singleAppModeConfig, ConfigKit::DummyTranslator()),
+			mockedSessionCount(0)
 				{ }
 		};
 
@@ -204,8 +208,9 @@ namespace tut {
 		 * Note that this only works for the next invocation of `appPool->asyncGet()`. Subsequent calls
 		 * get nullptr unless you call `mockNextSession()` again before that happens.
 		 */
-		void mockNextSession() {
+		void mockNextSession(unsigned int sessions = 1) {
 			bg.safe->runSync([&] {
+				controller->mockedSessionCount = sessions;
 				controller->mockSession.reset(&testSession, false);
 			});
 		}
@@ -1171,7 +1176,7 @@ namespace tut {
 		set_test_name("Testing async connect timeout.");
 
 		init();
-		mockNextSession();
+		mockNextSession(10); // Controller::MAX_SESSION_CHECKOUT_TRY
 		testSession.setupAsync();
 
 		connectToServer();
@@ -1184,14 +1189,19 @@ namespace tut {
 			"Connection: close\r\n"
 			"\r\n");
 
+		EVENTUALLY(5,
+				   result = controller->mockedSessionCount == 0;
+			);
+		// We'll want to assert that the Core Controller responds with a timeout error.
 		waitUntilSessionClosed();
+		ensure_not("(1)", testSession.isSuccessful());
 	}
 
 	TEST_METHOD(62) {
 		set_test_name("Testing disconnect while async connect in progress.");
 
 		init();
-		mockNextSession();
+		mockNextSession(10); // Controller::MAX_SESSION_CHECKOUT_TRY
 		testSession.setupAsync();
 
 		FileDescriptor &client = connectToServer();
@@ -1204,5 +1214,4 @@ namespace tut {
 		client.close();
 	    waitUntilSessionClosed();
 	}
-
 }
