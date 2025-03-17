@@ -183,7 +183,7 @@ Controller::initiateSession(Client *client, Request *req) {
 	TRACE_POINT();
 	req->sessionCheckoutTry++;
 	try {
-		req->session->initiate(false);
+		req->session->initiate();
 	} catch (const SystemException &e2) {
 		UPDATE_TRACE_POINT();
 		if (req->sessionCheckoutTry < MAX_SESSION_CHECKOUT_TRY) {

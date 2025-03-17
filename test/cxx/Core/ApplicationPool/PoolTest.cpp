@@ -190,7 +190,7 @@ namespace tut {
 				P_ERROR("get() exception: " << currentException->what());
 				abort();
 			}
-			currentSession->initiate();
+			currentSession->initiate(true);
 			sendHeaders(currentSession->fd(),
 				"PATH_INFO", path,
 				"REQUEST_METHOD", "GET",
@@ -1887,7 +1887,7 @@ namespace tut {
 		);
 
 		try {
-			currentSession->initiate();
+			currentSession->initiate(true);
 			fail("Initiate is supposed to fail");
 		} catch (const SystemException &e) {
 			ensure_equals(e.code(), ECONNREFUSED);

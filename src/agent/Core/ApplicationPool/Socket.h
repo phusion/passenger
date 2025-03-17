@@ -51,14 +51,12 @@ struct Connection {
 	int fd;
 	bool wantKeepAlive: 1;
 	bool fail: 1;
-	bool blocking: 1;
 	bool ready: 1;
 
 	Connection()
 		: fd(-1),
 		  wantKeepAlive(false),
 		  fail(false),
-		  blocking(true),
 		  ready(false)
 		{ }
 
@@ -69,6 +67,18 @@ struct Connection {
 			wantKeepAlive = false;
 			safelyClose(fd2);
 			P_LOG_FILE_DESCRIPTOR_CLOSE(fd2);
+		}
+	}
+
+	void wait(int timeout = -1) {
+		boost::this_thread::disable_interruption di;
+        boost::this_thread::disable_syscall_interruption dsi;
+		TRACE_POINT();
+		pollfd pfd;
+		pfd.fd = fd;
+		pfd.events = POLLIN | POLLOUT;
+		if (-1 == syscalls::poll(&pfd, 1, timeout)) {
+			throw SystemException("poll() failed", errno);
 		}
 	}
 };
@@ -95,7 +105,6 @@ private:
 		connection.fail = true;
 		connection.fd = state.getFd();
 		connection.wantKeepAlive = false;
-		connection.blocking = false;
 		P_LOG_FILE_DESCRIPTOR_PURPOSE(connection.fd, "App " << pid << " connection");
 		return connection;
 	}
