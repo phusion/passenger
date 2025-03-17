@@ -28,7 +28,9 @@
 
 #include <boost/thread.hpp>
 #include <string>
+#include <utility>
 #include <cassert>
+#include <cstring>
 #include <unistd.h>
 #include <LoggingKit/Logging.h>
 #include <IOTools/IOUtils.h>
@@ -42,7 +44,6 @@
 #include <Utils/ScopeGuard.h>
 #include <FileTools/FileManip.h>
 #include <oxt/system_calls.hpp>
-#include <ev.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
