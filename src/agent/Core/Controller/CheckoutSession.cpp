@@ -196,6 +196,11 @@ Controller::ioConditions() {
 		return EV_WRITE;
 }
 
+double
+Controller::sessionSocketConnectTimeout(Request *req) {
+	return req->connectTimeout;
+}
+
 void
 Controller::initiateSession(Client *client, Request *req) {
 	TRACE_POINT();
@@ -208,7 +213,7 @@ Controller::initiateSession(Client *client, Request *req) {
 			req->connectedWatcherTimout.data = req;
 
 			ev_io_init(&req->connectedWatcher, onSessionSocketConnected, req->session->fd(), ioConditions());
-			ev_timer_init(&req->connectedWatcherTimout, onSessionSocketConnectTimeout, req->connectTimeout, 0);
+			ev_timer_init(&req->connectedWatcherTimout, onSessionSocketConnectTimeout, sessionSocketConnectTimeout(req), 0);
 
 			ev_io_start(getLoop(), &req->connectedWatcher);
 			ev_timer_start(getLoop(), &req->connectedWatcherTimout);

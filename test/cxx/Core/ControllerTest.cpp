@@ -60,13 +60,21 @@ namespace tut {
 				}
 			}
 			virtual int ioConditions() override {
-				return EV_NONE;
+				if (forceAsyncToWait) {
+					return EV_READ;
+                } else {
+                    return EV_WRITE;
+				}
+			}
+			virtual double sessionSocketConnectTimeout(Request *req) override {
+				return req->connectTimeout / 1000.0;
 			}
 
 		public:
 			ApplicationPool2::AbstractSessionPtr mockSession;
 			ApplicationPool2::ExceptionPtr mockException;
 			unsigned int mockedSessionCount;
+			bool forceAsyncToWait;
 
 			TestController(ServerKit::Context *context,
 				const Core::ControllerSchema &schema,
@@ -75,7 +83,8 @@ namespace tut {
 				const Json::Value &singleAppModeConfig)
 				: Core::Controller(context, schema, initialConfig, ConfigKit::DummyTranslator(),
 								  &singleAppModeSchema, &singleAppModeConfig, ConfigKit::DummyTranslator()),
-			mockedSessionCount(0)
+				  mockedSessionCount(0),
+				  forceAsyncToWait(false)
 				{ }
 		};
 
@@ -1178,6 +1187,7 @@ namespace tut {
 		init();
 		mockNextSession(10); // Controller::MAX_SESSION_CHECKOUT_TRY
 		testSession.setupAsync();
+		controller->forceAsyncToWait = true;
 
 		connectToServer();
 		sendRequest(
@@ -1205,6 +1215,7 @@ namespace tut {
 		init();
 		mockNextSession(10); // Controller::MAX_SESSION_CHECKOUT_TRY
 		testSession.setupAsync();
+		controller->forceAsyncToWait = true;
 
 		FileDescriptor &client = connectToServer();
 		sendRequest(
