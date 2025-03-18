@@ -37,7 +37,8 @@ namespace tut {
 	struct Core_ControllerTest: public TestBase {
 		/*
 		 * Works just like the normal Core::Controller, but allows the `appPool->asyncGet()`
-		 * result to be mocked by assigning the corresponding fields.
+		 * result as well as the session socket connect timeout to be mocked by assigning the corresponding fields.
+		 * It also allows causing the session socket to delay connecting forever by setting forceAsyncToWait.
 		 */
 		class TestController: public Core::Controller {
 		protected:
@@ -47,11 +48,12 @@ namespace tut {
 			{
 				// If this assertion fails then it means one of:
 				// - You didn't call `mockNextSession()`, or:
-				// - The controller called `appPool->asyncGet()` multiple times.
+				// - The controller called `appPool->asyncGet()` too many times.
 				//   Remember that `mockNextSession()` only mocks the session object
-				//   on the very next call, not subsequent calls. There's probably
+				//   for the specified number of calls. There's probably
 				//   something deeper wrong here, so increase log level to figure out
-				//   what's going on.
+				//   what's going on. One example is an EVENTUALLY timeout causing a
+				//   varying number of calls to asyncGet to happen, and you mocked too few.
 				assert(mockSession != nullptr || mockException != nullptr);
 				callback(mockSession, mockException);
 				if (--mockedSessionCount == 0) {
