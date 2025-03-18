@@ -176,7 +176,8 @@ public:
 		boost::lock_guard<boost::mutex> l(syncher);
 		return wantKeepAlive;
 	}
-	void setupAsync(){
+
+	void setupAsync() {
 		boost::lock_guard<boost::mutex> l(syncher);
 		async = true;
 	}
