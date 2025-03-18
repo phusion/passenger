@@ -27,8 +27,6 @@
 #define _PASSENGER_REQUEST_HANDLER_REQUEST_H_
 
 #include <ev++.h>
-#include <string>
-#include <cstring>
 
 #include <ServerKit/HttpRequest.h>
 #include <ServerKit/FdSinkChannel.h>
