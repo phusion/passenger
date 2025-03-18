@@ -101,10 +101,6 @@ private:
 	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
 	typedef ServerKit::FileBufferedFdSinkChannel FileBufferedFdSinkChannel;
 
-	// If you change this value, make sure that Request::sessionCheckoutTry
-	// has enough bits.
-	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
-
 	ControllerMainConfig mainConfig;
 	ControllerRequestConfigPtr requestConfig;
 	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
@@ -366,6 +362,10 @@ protected:
 
 
 public:
+	// If you change this value, make sure that Request::sessionCheckoutTry
+	// has enough bits.
+	static constexpr unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
+
 	typedef ControllerConfigChangeRequest ConfigChangeRequest;
 
 	// Dependencies

@@ -1173,8 +1173,9 @@ namespace tut {
 
 	TEST_METHOD(60) {
 		set_test_name("Testing async connect flow.");
+
 		init();
-		mockNextSession(10); // Technically this might not be immediate even if we don't force it, Controller::MAX_SESSION_CHECKOUT_TRY tries
+		mockNextSession();
 		testSession.setupAsync();
 
 		connectToServer();
@@ -1183,7 +1184,6 @@ namespace tut {
 			"Host: localhost\r\n"
 			"Connection: close\r\n"
 			"\r\n");
-
 		waitUntilSessionInitiated();
 
 		readPeerRequestHeader();
@@ -1201,7 +1201,7 @@ namespace tut {
 		set_test_name("Testing async connect timeout.");
 
 		init();
-		mockNextSession(10); // Controller::MAX_SESSION_CHECKOUT_TRY
+		mockNextSession(Controller::MAX_SESSION_CHECKOUT_TRY);
 		testSession.setupAsync();
 		controller->forceAsyncToWait = true;
 
@@ -1216,8 +1216,8 @@ namespace tut {
 			"\r\n");
 
 		EVENTUALLY(5,
-				   result = controller->mockedSessionCount == 0;
-			);
+			result = controller->mockedSessionCount == 0;
+		);
 		// We'll want to assert that the Core Controller responds with a timeout error.
 		waitUntilSessionClosed();
 		ensure_not("(1)", testSession.isSuccessful());
