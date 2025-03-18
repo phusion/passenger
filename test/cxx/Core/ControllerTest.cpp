@@ -238,6 +238,12 @@ namespace tut {
 			return result;
 		}
 
+		unsigned int getRemainingMockedRequests() {
+			unsigned int result;
+			bg.safe->runSync([&] { result = controller->mockedSessionCount; });
+			return result;
+		}
+
 		Json::Value inspectStateAsJson() {
 			Json::Value result;
 			bg.safe->runSync([&] { result = controller->inspectStateAsJson(); });
@@ -1218,7 +1224,7 @@ namespace tut {
 			"\r\n");
 
 		EVENTUALLY(5,
-			result = controller->mockedSessionCount == 0;
+			result = getRemainingMockedRequests() == 0;
 		);
 		// We'll want to assert that the Core Controller responds with a timeout error.
 		waitUntilSessionClosed();
