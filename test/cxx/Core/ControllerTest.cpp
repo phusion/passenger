@@ -38,7 +38,7 @@ namespace tut {
 		/*
 		 * Works just like the normal Core::Controller, but allows the `appPool->asyncGet()`
 		 * result as well as the session socket connect timeout to be mocked by assigning the corresponding fields.
-		 * It also allows causing the session socket to delay connecting forever by setting forceAsyncToWait.
+		 * It also allows causing the session socket to delay connecting forever by setting forceSessionSocketConnectTimeout.
 		 */
 		class TestController: public Core::Controller {
 		protected:
@@ -62,19 +62,19 @@ namespace tut {
 				}
 			}
 
-			virtual int ioConditions() override {
-				if (forceAsyncToWait) {
+			virtual int getSessionSocketConnectIoWatchConditions() const override {
+				if (forceSessionSocketConnectTimeout) {
 					return EV_READ;
 				} else {
-					return Controller::ioConditions();
+					return Controller::getSessionSocketConnectIoWatchConditions();
 				}
 			}
 
-			virtual double sessionSocketConnectTimeout(Request *req) override {
-				if (forceAsyncToWait) {
+			virtual double getSessionSocketEffectiveConnectTimeout(Request *req) const override {
+				if (forceSessionSocketConnectTimeout) {
 					return req->connectTimeout / 1000.0;
 				} else {
-					return Controller::sessionSocketConnectTimeout(req);
+					return Controller::getSessionSocketEffectiveConnectTimeout(req);
 				}
 			}
 
@@ -82,7 +82,7 @@ namespace tut {
 			ApplicationPool2::AbstractSessionPtr mockSession;
 			ApplicationPool2::ExceptionPtr mockException;
 			unsigned int mockedSessionCount;
-			bool forceAsyncToWait;
+			bool forceSessionSocketConnectTimeout;
 
 			TestController(ServerKit::Context *context,
 				const Core::ControllerSchema &schema,
@@ -92,7 +92,7 @@ namespace tut {
 				: Core::Controller(context, schema, initialConfig, ConfigKit::DummyTranslator(),
 								  &singleAppModeSchema, &singleAppModeConfig, ConfigKit::DummyTranslator()),
 				  mockedSessionCount(0),
-				  forceAsyncToWait(false)
+				  forceSessionSocketConnectTimeout(false)
 				{ }
 		};
 
@@ -1185,7 +1185,7 @@ namespace tut {
 
 		init();
 		mockNextSession();
-		testSession.setupAsync();
+		testSession.forceNonInstantConnect();
 
 		connectToServer();
 		sendRequest(
@@ -1212,8 +1212,8 @@ namespace tut {
 
 		init();
 		mockNextSession(Controller::MAX_SESSION_CHECKOUT_TRY);
-		testSession.setupAsync();
-		controller->forceAsyncToWait = true;
+		testSession.forceNonInstantConnect();
+		controller->forceSessionSocketConnectTimeout = true;
 
 		connectToServer();
 		sendRequest(

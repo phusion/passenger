@@ -69,7 +69,7 @@ private:
 	mutable bool closed;
 	mutable bool success;
 	mutable bool wantKeepAlive;
-	mutable bool async;
+	mutable bool forcingNonInstantConnect;
 
 public:
 	TestSession()
@@ -81,7 +81,7 @@ public:
 		  closed(false),
 		  success(false),
 		  wantKeepAlive(false),
-		  async(false)
+		  forcingNonInstantConnect(false)
 		{ }
 
 	virtual void ref() const override {
@@ -177,9 +177,9 @@ public:
 		return wantKeepAlive;
 	}
 
-	void setupAsync() {
+	void forceNonInstantConnect() {
 		boost::lock_guard<boost::mutex> l(syncher);
-		async = true;
+		forcingNonInstantConnect = true;
 	}
 
 	virtual bool initiate() override {
@@ -224,7 +224,7 @@ public:
 		connection.second = std::move(serverSideFd);
 		peerBufferedIO = BufferedIO(connection.second);
 
-		if (async) {
+		if (forcingNonInstantConnect) {
 			return false;
 		} else {
 			return immediatelyConnected;

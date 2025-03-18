@@ -192,12 +192,12 @@ Controller::handleSessionInitiationError(Client *client, Request *req, const std
 }
 
 int
-Controller::ioConditions() {
+Controller::getSessionSocketConnectIoWatchConditions() const {
 		return EV_WRITE;
 }
 
 double
-Controller::sessionSocketConnectTimeout(Request *req) {
+Controller::getSessionSocketEffectiveConnectTimeout(Request *req) const {
 	return req->connectTimeout;
 }
 
@@ -212,8 +212,8 @@ Controller::initiateSession(Client *client, Request *req) {
 			req->connectedWatcher.data = req;
 			req->connectedWatcherTimout.data = req;
 
-			ev_io_init(&req->connectedWatcher, onSessionSocketConnected, req->session->fd(), ioConditions());
-			ev_timer_init(&req->connectedWatcherTimout, onSessionSocketConnectTimeout, sessionSocketConnectTimeout(req), 0);
+			ev_io_init(&req->connectedWatcher, onSessionSocketConnected, req->session->fd(), getSessionSocketConnectIoWatchConditions());
+			ev_timer_init(&req->connectedWatcherTimout, onSessionSocketConnectTimeout, getSessionSocketEffectiveConnectTimeout(req), 0);
 
 			ev_io_start(getLoop(), &req->connectedWatcher);
 			ev_timer_start(getLoop(), &req->connectedWatcherTimout);

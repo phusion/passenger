@@ -357,8 +357,8 @@ protected:
 
 	virtual void asyncGetFromApplicationPool(Request *req,
 		ApplicationPool2::GetCallback callback);
-	virtual int ioConditions();
-	virtual double sessionSocketConnectTimeout(Request *req);
+	virtual int getSessionSocketConnectIoWatchConditions() const;
+	virtual double getSessionSocketEffectiveConnectTimeout(Request *req) const;
 
 
 public:
