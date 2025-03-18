@@ -222,8 +222,8 @@ namespace tut {
 		 * Ensures that the next time the controller calls `appPool->asyncGet()`, it gets `testSession`
 		 * instead of a real Session.
 		 *
-		 * Note that this only works for the next invocation of `appPool->asyncGet()`. Subsequent calls
-		 * get nullptr unless you call `mockNextSession()` again before that happens.
+		 * Note that this only works for the next `sessions` number of invocations of `appPool->asyncGet()`.
+		 * Subsequent calls get nullptr unless you call `mockNextSession()` again before that happens.
 		 */
 		void mockNextSession(unsigned int sessions = 1) {
 			bg.safe->runSync([&] {

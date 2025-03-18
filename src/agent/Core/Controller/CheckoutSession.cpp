@@ -25,7 +25,6 @@
  */
 #include <DataStructures/LString.h>
 #include <Core/Controller.h>
-#include <IOTools/IOUtils.h>
 #include <Core/SpawningKit/ErrorRenderer.h>
 
 #if defined(__GLIBCXX__) || defined(__APPLE__)
@@ -193,7 +192,7 @@ Controller::handleSessionInitiationError(Client *client, Request *req, const std
 
 int
 Controller::getSessionSocketConnectIoWatchConditions() const {
-		return EV_WRITE;
+	return EV_WRITE;
 }
 
 double
@@ -217,6 +216,7 @@ Controller::initiateSession(Client *client, Request *req) {
 
 			ev_io_start(getLoop(), &req->connectedWatcher);
 			ev_timer_start(getLoop(), &req->connectedWatcherTimout);
+
 			return;
 		}
 	} catch (const oxt::tracable_exception &e) {
