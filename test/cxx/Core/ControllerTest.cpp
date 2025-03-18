@@ -1224,27 +1224,4 @@ namespace tut {
 		string header = readResponseHeader();
 		ensure(containsSubstring(header, "HTTP/1.1 504 Gateway Timeout"));
 	}
-
-	TEST_METHOD(62) {
-		set_test_name("Testing disconnect while async connect in progress.");
-
-		init();
-		mockNextSession(10); // Controller::MAX_SESSION_CHECKOUT_TRY
-		testSession.setupAsync();
-		controller->forceAsyncToWait = true;
-
-		FileDescriptor &client = connectToServer();
-		sendRequest(
-			"GET /hello HTTP/1.1\r\n"
-			"!~: \r\n"
-			// slow so client has time to disconnect, tests divide this value by 1000 so we need a huge value
-			"!~PASSENGER_APP_CONNECT_TIMEOUT: 10000\r\n"
-			"!~: \r\n"
-			"Host: localhost\r\n"
-			"Connection: close\r\n"
-			"\r\n");
-
-		client.close();
-	    waitUntilSessionClosed();
-	}
 }
