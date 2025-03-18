@@ -1119,8 +1119,8 @@ namespace tut {
 	}
 
 	TEST_METHOD(55) {
-		set_test_name("Session protocol: if application decides not to "
-			" finish the response (close), and the client is still there "
+		set_test_name("Session protocol: if application decides not to"
+			" finish the response (close), and the client is still there"
 			" we should send a 502 (which should log warn)");
 
 		init();
@@ -1148,8 +1148,8 @@ namespace tut {
 	}
 
 	TEST_METHOD(56) {
-		set_test_name("HTTP protocol: if application decides not to "
-			" finish the response (close), and the client is still there "
+		set_test_name("HTTP protocol: if application decides not to"
+			" finish the response (close), and the client is still there"
 			" we should send a 502 (which should log warn)");
 
 		init();
@@ -1177,10 +1177,11 @@ namespace tut {
 		ensure(containsSubstring(header, "HTTP/1.1 502"));
 	}
 
-	/***** Application async connection *****/
+	/***** Application connection non-instant connect *****/
 
 	TEST_METHOD(60) {
-		set_test_name("Testing async connect flow.");
+		set_test_name("If app connection is not instantly established,"
+			" then it waits until establishment finishes");
 
 		init();
 		mockNextSession();
@@ -1206,7 +1207,8 @@ namespace tut {
     }
 
 	TEST_METHOD(61) {
-		set_test_name("Testing async connect timeout.");
+		set_test_name("If app connection establishment keeps timing out,"
+			" then it returns a 504 Gateway Timeout error");
 
 		init();
 		mockNextSession(Controller::MAX_SESSION_CHECKOUT_TRY);
