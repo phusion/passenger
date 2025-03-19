@@ -17,7 +17,7 @@ using namespace Passenger::Core;
 namespace tut {
 	/*
 	 * How this test suite works:
-     *
+	 *
 	 * 1. Initialization:
 	 *    Call init() early, which creates a controller and starts a background event loop.
 	 *
@@ -27,7 +27,7 @@ namespace tut {
 	 *
 	 * 3. Testing requests to the controller:
 	 *    1. Establish a connection with connectToServer().
-     *    2. Use sendRequest() to send an HTTP requests.
+	 *    2. Use sendRequest() to send an HTTP requests.
 	 *    3. Optional: call waitUntilSessionInitiated() to wait until the controller
 	 *       has initiated a session. This adds an extra check so that if the test fails
 	 *       then you at least know whether the problem is before or after session initiation.
@@ -90,7 +90,7 @@ namespace tut {
 				const Core::ControllerSingleAppModeSchema &singleAppModeSchema,
 				const Json::Value &singleAppModeConfig)
 				: Core::Controller(context, schema, initialConfig, ConfigKit::DummyTranslator(),
-								  &singleAppModeSchema, &singleAppModeConfig, ConfigKit::DummyTranslator()),
+				   &singleAppModeSchema, &singleAppModeConfig, ConfigKit::DummyTranslator()),
 				  mockedSessionCount(0),
 				  forceSessionSocketConnectTimeout(false)
 				{ }
@@ -1204,7 +1204,7 @@ namespace tut {
 
 		waitUntilSessionClosed();
 		ensure("(1)", testSession.isSuccessful());
-    }
+	}
 
 	TEST_METHOD(61) {
 		set_test_name("If app connection establishment keeps timing out,"
