@@ -5,6 +5,21 @@ Release 6.0.27 (Not yet released)
  * [Ruby] Fix compatibility with Rack 2 While maintaining compatibility with Rack 3. Closes GH-2595.
  * [Ruby] Use non-deprecated functions in native extensions.
  * Fix an issue where Passenger could freeze while connecting to application processes (event loop blocking).
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - ccache: 4.10.2 -> 4.11.2
+   - cmake: 3.31.3 -> 3.31.6
+   - curl: 8.11.1 -> 8.12.1
+   - git: 2.47.1 -> 2.49.0
+   - libassuan: 3.0.1 -> 3.0.2
+   - libffi: 3.4.6 -> 3.4.7
+   - openssl: 3.4.0 -> 3.4.1
+   - pcre2: 10.44 -> 10.45
+   - rubies
+     - 3.2.6 -> 3.2.7
+     - 3.3.6 -> 3.3.7
+     - 3.4.1 -> 3.4.2
+   - rubygems: 3.6.2 -> 3.6.6
+   - zstd: 1.5.6 -> 1.5.7
  * 
 
 

@@ -27,7 +27,6 @@
 #define _PASSENGER_REQUEST_HANDLER_CLIENT_H_
 
 #include <ev++.h>
-#include <ostream>
 #include <ServerKit/HttpClient.h>
 #include <Core/Controller/Request.h>
 

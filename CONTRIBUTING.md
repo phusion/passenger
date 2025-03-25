@@ -140,9 +140,9 @@ The `test:cxx` unit test suite contains many different test groups. You can run 
 
     rake test:cxx GROUPS='ApplicationPool2_PoolTest,UtilsTest'
 
-You can also run just a single test within a suite. Pass the relevant test number like this:
+You can also run specific tests within a suite. Pass the relevant test number(s) like this:
 
-    rake test:cxx GROUPS='ApplicationPool2_PoolTest:82'
+    rake test:cxx GROUPS='ApplicationPool2_PoolTest:82,83'
 
 You can also run the C++ tests in GDB or Valgrind. We have a useful GDB config file in `test/gdbinit.example`. You should copy it to `test/.gdbinit` and edit it.
 

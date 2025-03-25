@@ -27,7 +27,6 @@
 #define _PASSENGER_SECURITY_UPDATE_CHECKER_H_
 
 #include <string>
-#include <cassert>
 #include <boost/config.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <oxt/thread.hpp>

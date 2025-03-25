@@ -32,7 +32,6 @@
 #include <oxt/thread.hpp>
 #include <string>
 #include <cstring>
-#include <exception>
 #include <sys/types.h>
 
 #include <jsoncpp/json.h>

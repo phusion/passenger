@@ -42,7 +42,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <cstdlib>
-#include <cassert>
 #include <MemoryKit/palloc.h>
 #include <WrapperRegistry/Registry.h>
 #include <Hooks.h>
