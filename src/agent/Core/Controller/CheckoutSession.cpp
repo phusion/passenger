@@ -186,6 +186,7 @@ Controller::handleSessionInitiationError(Client *client, Request *req, const std
 		refRequest(req, __FILE__, __LINE__);
 		getContext()->libev->runLater(boost::bind(checkoutSessionLater, req));
 	} else {
+		SKC_ERROR(client, "Error initiating session (" << e.what() << "); giving up after too many retries");
 		endRequestAsGatewayTimeout(&client, &req);
 	}
 }
