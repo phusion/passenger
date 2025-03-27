@@ -181,6 +181,7 @@ public:
 		boost::unique_lock<boost::mutex> l(connectionPoolLock);
 
 		if (!idleConnections.empty()) {
+			TRACE_POINT();
 			P_TRACE(3, "Socket " << address << ": checking out connection from connection pool (" <<
 				idleConnections.size() << " -> " << (idleConnections.size() - 1) <<
 				" items). Current total number of connections: " << totalConnections);
@@ -189,6 +190,7 @@ public:
 			totalIdleConnections--;
 			return connection;
 		} else {
+			TRACE_POINT();
 			Connection connection = connect();
 			totalConnections++;
 			P_TRACE(3, "Socket " << address << ": there are now " <<
