@@ -41,7 +41,7 @@ require 'rbconfig'
 require 'rackup' if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('2.4.0')
 
 # Rackup was removed in Rack 3, it is now a separate gem
-if Object.const_defined? :Rackup
+if Object.const_defined?(:Rackup) && ::Rackup.const_defined?(:Handler)
   module Rackup
     module Handler
       module PhusionPassenger
@@ -57,7 +57,7 @@ if Object.const_defined? :Rackup
       register :passenger, PhusionPassenger
     end
   end
-elsif Object.const_defined?(:Rack) && Rack.release < '3'
+elsif Object.const_defined?(:Rack) && ::Rack.release < '3'
   module Rack
     module Handler
       module PhusionPassenger
