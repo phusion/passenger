@@ -370,16 +370,21 @@ public:
 	FdGuard(const FdGuard &other) = delete;
 	FdGuard(FdGuard &&other);
 	FdGuard(int fd, const char *sourceFile, unsigned int sourceLine);
-	~FdGuard();
+	/** @throws SystemException File descriptor close error. If exception is already being thrown, then only warns. */
+	~FdGuard() noexcept(false);
 
 	FdGuard &operator=(const FdGuard &other) = delete;
 	FdGuard &operator=(FdGuard &&other);
 
 	/** Don't close file descriptor at object destruction. */
-	void clear();
+	void clear() noexcept;
 
-	/** Close file descriptor now. Idempotent. */
-	void runNow();
+	/**
+	 * Close file descriptor now. Idempotent.
+	 *
+	 * @throws SystemException
+	 */
+	void runNow() noexcept(false);
 };
 
 

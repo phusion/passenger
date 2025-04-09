@@ -29,6 +29,7 @@
 	// https://bugzilla.redhat.com/show_bug.cgi?id=165427
 	// Also needed for SO_PEERCRED.
 	#define _GNU_SOURCE
+#include <exception>
 #endif
 
 #include <oxt/system_calls.hpp>
@@ -672,13 +673,23 @@ FdGuard::FdGuard(int fd, const char *sourceFile, unsigned int sourceLine)
 	}
 }
 
-FdGuard::~FdGuard() {
+FdGuard::~FdGuard() noexcept(false) {
 	if (mFd != -1) {
 		try {
 			safelyClose(mFd);
 		} catch (const std::exception &e) {
-			P_WARN("Error closing file descriptor " << mFd << ": " << e.what());
-			return;
+			bool uncaughtException =
+				#if __cplusplus >= 201703L
+					std::uncaught_exceptions() > 0;
+				#else
+					std::uncaught_exception();
+				#endif
+			if (uncaughtException) {
+				P_WARN("Error closing file descriptor " << mFd << ": " << e.what());
+				return;
+			} else {
+				throw e;
+			}
 		}
 		P_LOG_FILE_DESCRIPTOR_CLOSE(mFd);
 	}
@@ -698,12 +709,12 @@ FdGuard::operator=(FdGuard &&other) {
 }
 
 void
-FdGuard::clear() {
+FdGuard::clear() noexcept {
 	mFd = -1;
 }
 
 void
-FdGuard::runNow() {
+FdGuard::runNow() noexcept(false) {
 	if (mFd != -1) {
 		safelyClose(mFd);
 		P_LOG_FILE_DESCRIPTOR_CLOSE(mFd);
