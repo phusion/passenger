@@ -550,10 +550,10 @@ dumpFileDescriptorInfo(AbortHandlerWorkingState &state) {
 }
 
 static void
-dumpWithCrashWatch(AbortHandlerWorkingState &state) {
+dumpWithCrashWatch(AbortHandlerWorkingState &state, bool toStderr) {
 	int fd = -1;
 
-	if (state.crashLogDirFd != -1) {
+	if (state.crashLogDirFd != -1 && !toStderr) {
 		fd = openat(state.crashLogDirFd, "backtrace.log", O_WRONLY | O_CREAT | O_TRUNC, 0600);
 		if (fd != -1) {
 			printCrashLogFileCreated(state, "backtrace.log");
@@ -594,7 +594,25 @@ dumpWithCrashWatch(AbortHandlerWorkingState &state) {
 		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 	} else {
-		waitpid(child, NULL, 0);
+		int status = -1;
+		int ret = waitpid(child, &status, 0);
+		int e = errno;
+		if (ret == -1 || status != 0) {
+			pos = state.messageBuf;
+			pos = ASSU::appendData(pos, end, "ERROR running 'crash-watch' (");
+			if (ret == -1) {
+				pos = ASSU::appendData(pos, end, "waitpid() failed, errno=");
+				pos = ASSU::appendInteger<int, 10>(pos, end, e);
+			} else if (WIFSIGNALED(status)) {
+				pos = ASSU::appendData(pos, end, "exited with signal ");
+				pos = ASSU::appendInteger<int, 10>(pos, end, WTERMSIG(status));
+			} else {
+				pos = ASSU::appendData(pos, end, "exit status ");
+				pos = ASSU::appendInteger<int, 10>(pos, end, WEXITSTATUS(status));
+			}
+			pos = ASSU::appendData(pos, end, ")\n");
+			write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+		}
 	}
 
 	if (fd != -1) {
@@ -852,7 +870,7 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 			pos = ASSU::appendData(pos, end, " ] Dumping a backtrace with crash-watch...\n");
 		#endif
 		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
-		dumpWithCrashWatch(state);
+		dumpWithCrashWatch(state, ctx->config->dumpCrashWatchToStderr);
 	} else {
 		write_nowarn(STDERR_FILENO, "\n", 1);
 	}
@@ -969,7 +987,7 @@ forkAndRedirectToTeeAndMainLogFile(const char *crashLogDir) {
 		execlp("/usr/bin/cat", "cat", (char *) 0);
 		ASSU::printError("ERROR: cannot execute 'tee' or 'cat'; crash log will be lost!\n");
 		_exit(1);
-		return false;
+		return false; // Unreachable
 	} else if (pid == -1) {
 		ASSU::printError("ERROR: cannot fork a process for executing 'tee'\n");
 		return false;

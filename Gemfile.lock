@@ -10,6 +10,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     comp_tree (1.1.3)
+    crash-watch (1.2.0)
     diff-lcs (1.5.1)
     drake (0.9.2.0.3.1)
       comp_tree (>= 1.1.3)
@@ -45,6 +46,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  crash-watch
   drake
   json
   mime-types (~> 3.5.1)
