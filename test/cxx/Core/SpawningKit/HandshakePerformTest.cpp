@@ -12,7 +12,7 @@ using namespace Passenger;
 using namespace Passenger::SpawningKit;
 
 namespace tut {
-	struct Core_SpawningKit_HandshakePerformTest: public TestBase {
+	struct Core_SpawningKit_HandshakePerformTest final: public TestBase {
 		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema schema;
 		SpawningKit::Context context;
@@ -105,19 +105,19 @@ namespace tut {
 		}
 	};
 
-	struct FreePortDebugSupport: public HandshakePerform::DebugSupport {
+	struct FreePortDebugSupport final: public HandshakePerform::DebugSupport {
 		Core_SpawningKit_HandshakePerformTest *test;
 		HandshakeSession *session;
 		AtomicInt expectedStartPort;
 
-		virtual void beginWaitUntilSpawningFinished() {
+		virtual void beginWaitUntilSpawningFinished() override {
 			expectedStartPort = session->expectedStartPort;
 			test->counter++;
 		}
 	};
 
-	struct CrashingDebugSupport: public HandshakePerform::DebugSupport {
-		virtual void beginWaitUntilSpawningFinished() {
+	struct CrashingDebugSupport final: public HandshakePerform::DebugSupport {
+		virtual void beginWaitUntilSpawningFinished() override {
 			throw RuntimeException("oh no!");
 		}
 	};

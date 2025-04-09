@@ -479,180 +479,129 @@ connectToTcpServer(const StaticString &hostname, unsigned int port,
 
 /****** Socket connection establishment (non-blocking) ******/
 
-void
-setupNonBlockingUnixSocket(NUnix_State &state, const StaticString &filename,
-	const char *file, unsigned int line)
-{
-	state.fd.assign(syscalls::socket(PF_UNIX, SOCK_STREAM, 0), file, line);
-	if (state.fd == -1) {
-		int e = errno;
-		throw SystemException("Cannot create a Unix socket file descriptor", e);
-	}
-
-	state.filename = filename;
-	setNonBlocking(state.fd);
-}
-
-bool
-connectToUnixServer(NUnix_State &state) {
-	struct sockaddr_un addr;
-	int ret;
-
-	if (state.filename.size() > sizeof(addr.sun_path) - 1) {
-		string message = "Cannot connect to Unix socket '";
-		message.append(state.filename.data(), state.filename.size());
-		message.append("': filename is too long.");
-		throw RuntimeException(message);
-	}
-
-	addr.sun_family = AF_UNIX;
-	memcpy(addr.sun_path, state.filename.data(), state.filename.size());
-	addr.sun_path[state.filename.size()] = '\0';
-
-	ret = syscalls::connect(state.fd, (const sockaddr *) &addr, sizeof(addr));
-	if (ret == -1) {
-		if (errno == EINPROGRESS || errno == EWOULDBLOCK) {
-			return false;
-		} else if (errno == EISCONN) {
-			return true;
-		} else {
-			int e = errno;
-			string message = "Cannot connect to Unix socket '";
-			message.append(state.filename.data(), state.filename.size());
-			message.append("'");
-			throw SystemException(message, e);
-		}
-	} else {
-		return true;
-	}
-}
-
-void
-setupNonBlockingTcpSocket(NTCP_State &state, const StaticString &hostname, int port,
-	const char *file, unsigned int line)
-{
-	int ret;
-
-	memset(&state.hints, 0, sizeof(state.hints));
-	state.hints.ai_family   = PF_UNSPEC;
-	state.hints.ai_socktype = SOCK_STREAM;
-	ret = getaddrinfo(hostname.toString().c_str(), toString(port).c_str(),
-		&state.hints, &state.res);
-	if (ret != 0) {
-		string message = "Cannot resolve IP address '";
-		message.append(hostname.data(), hostname.size());
-		message.append(":");
-		message.append(toString(port));
-		message.append("': ");
-		message.append(gai_strerror(ret));
-		throw IOException(message);
-	}
-
-	state.fd.assign(syscalls::socket(PF_INET, SOCK_STREAM, 0), file, line);
-	if (state.fd == -1) {
-		int e = errno;
-		throw SystemException("Cannot create a TCP socket file descriptor", e);
-	}
-
-	state.hostname = hostname;
-	state.port = port;
-	setNonBlocking(state.fd);
-}
-
-bool
-connectToTcpServer(NTCP_State &state) {
-	int ret;
-
-	ret = syscalls::connect(state.fd, state.res->ai_addr, state.res->ai_addrlen);
-	if (ret == -1) {
-		if (errno == EINPROGRESS || errno == EWOULDBLOCK) {
-			return false;
-		} else if (errno == EISCONN) {
-			freeaddrinfo(state.res);
-			state.res = NULL;
-			return true;
-		} else {
-			int e = errno;
-			string message = "Cannot connect to TCP socket '";
-			message.append(state.hostname);
-			message.append(":");
-			message.append(toString(state.port));
-			message.append("'");
-			throw SystemException(message, e);
-		}
-	} else {
-		freeaddrinfo(state.res);
-		state.res = NULL;
-		return true;
-	}
-}
-
-NConnect_State::NConnect_State(const StaticString &address, const char *file, unsigned int line)
-{
+std::pair<int, bool>
+createNonBlockingSocketConnection(const StaticString &address, const char *file, unsigned int line) {
 	TRACE_POINT();
-	type = getSocketAddressType(address);
-	switch (type) {
+	switch (getSocketAddressType(address)) {
 	case SAT_UNIX:
-		setupNonBlockingUnixSocket(s_unix, parseUnixSocketAddress(address),
-			file, line);
-		break;
+		return createNonBlockingUnixSocketConnection(parseUnixSocketAddress(address), file, line);
 	case SAT_TCP: {
 		string host;
 		unsigned short port;
 
 		parseTcpSocketAddress(address, host, port);
-		setupNonBlockingTcpSocket(s_tcp, host, port, file, line);
-		break;
+		return createNonBlockingTcpSocketConnection(host, port, file, line);
 	}
 	default:
 		throw ArgumentException(string("Unknown address type for '") + address + "'");
 	}
 }
 
-bool
-NConnect_State::connectToServer() {
-	switch (type) {
-	case SAT_UNIX:
-		return connectToUnixServer(s_unix);
-	case SAT_TCP:
-		return connectToTcpServer(s_tcp);
-	default:
-		throw RuntimeException("Unknown address type");
+std::pair<int, bool>
+createNonBlockingUnixSocketConnection(const StaticString &filename, const char *file, unsigned int line) {
+	struct sockaddr_un addr;
+
+	if (filename.size() > sizeof(addr.sun_path) - 1) {
+		string message = "Cannot connect to Unix socket '";
+		message.append(filename.data(), filename.size());
+		message.append("': filename is too long.");
+		throw ArgumentException(message);
+	}
+
+
+	int fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
+	if (fd == -1) {
+		int e = errno;
+		throw SystemException("Cannot create a Unix socket file descriptor", e);
+	}
+
+	int ret;
+	FdGuard guard(fd, nullptr, 0, true);
+	P_LOG_FILE_DESCRIPTOR_OPEN4(fd, file, line, "NonBlockingUnixSocketConnection");
+	setNonBlocking(fd);
+
+	addr.sun_family = AF_UNIX;
+	memcpy(addr.sun_path, filename.data(), filename.size());
+	addr.sun_path[filename.size()] = '\0';
+
+	ret = syscalls::connect(fd, (const sockaddr *) &addr, sizeof(addr));
+	if (ret == -1) {
+		if (errno == EINPROGRESS || errno == EWOULDBLOCK) {
+			guard.clear();
+			return std::make_pair(fd, false);
+		} else if (errno == EISCONN) {
+			guard.clear();
+			return std::make_pair(fd, true);
+		} else {
+			int e = errno;
+			string message = "Cannot connect to Unix socket '";
+			message.append(filename.data(), filename.size());
+			message.append("'");
+			throw SystemException(message, e);
+		}
+	} else {
+		guard.clear();
+		return std::make_pair(fd, true);
 	}
 }
 
-FileDescriptor &
-NConnect_State::getFd() {
-	switch (type) {
-	case SAT_UNIX:
-		return s_unix.fd;
-	case SAT_TCP:
-		return s_tcp.fd;
-	default:
-		throw RuntimeException("Unknown address type");
+std::pair<int, bool>
+createNonBlockingTcpSocketConnection(const StaticString &hostname, unsigned int port, const char *file, unsigned int line) {
+	const string hostnameCopy = string(hostname.data(), hostname.size());
+	const string portString = toString(port);
+	struct addrinfo hints, *res;
+	int ret;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family   = PF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	ret = getaddrinfo(hostnameCopy.c_str(), portString.c_str(),
+		&hints, &res);
+	if (ret != 0) {
+		string message = "Cannot resolve IP address '";
+		message.append(hostname.data(), hostname.size());
+		message.append(":");
+		message.append(portString);
+		message.append("': ");
+		message.append(gai_strerror(ret));
+		throw IOException(message);
 	}
-}
 
-NUnix_State &
-NConnect_State::asNUnix_State() {
-	// When we're ready for C++14:
-	// if (type == SAT_UNIX) {
-	// 	return *reinterpret_cast<NUnix_State *>(storage);
-	// } else {
-	// 	P_BUG("Address type is not TCP");
-	// }
-	return s_unix;
-}
 
-NTCP_State &
-NConnect_State::asNTCP_State() {
-	// When we're ready for C++14:
-	// if (type == SAT_TCP) {
-	// 	return *reinterpret_cast<NTCP_State *>(storage);
-	// } else {
-	// 	P_BUG("Address type is not TCP");
-	// }
-	return s_tcp;
+	int fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
+	if (fd == -1) {
+		int e = errno;
+		throw SystemException("Cannot create a TCP socket file descriptor", e);
+	}
+
+	FdGuard guard(fd, nullptr, 0, true);
+	P_LOG_FILE_DESCRIPTOR_OPEN4(fd, file, line, "NonBlockingTcpSocketConnection");
+	setNonBlocking(fd);
+
+
+	ret = syscalls::connect(fd, res->ai_addr, res->ai_addrlen);
+	if (ret == -1) {
+		if (errno == EINPROGRESS || errno == EWOULDBLOCK) {
+			guard.clear();
+			return make_pair(fd, false);
+		} else if (errno == EISCONN) {
+			freeaddrinfo(res);
+			guard.clear();
+			return make_pair(fd, true);
+		} else {
+			int e = errno;
+			string message = "Cannot connect to TCP socket '";
+			message.append(hostname);
+			message.append(":");
+			message.append(portString);
+			message.append("'");
+			throw SystemException(message, e);
+		}
+	} else {
+		freeaddrinfo(res);
+		guard.clear();
+		return make_pair(fd, true);
+	}
 }
 
 
@@ -736,14 +685,10 @@ callAccept4(int sock, struct sockaddr *addr, socklen_t *addr_len, int options) {
 bool
 pingTcpServer(const StaticString &host, unsigned int port, unsigned long long *timeout) {
 	TRACE_POINT();
-	NTCP_State state;
-
-	setupNonBlockingTcpSocket(state, host, port, __FILE__, __LINE__);
+	std::pair<int, bool> nbcResult;
 
 	try {
-		if (connectToTcpServer(state)) {
-			return true;
-		}
+		nbcResult = createNonBlockingTcpSocketConnection(host, port, __FILE__, __LINE__);
 	} catch (const SystemException &e) {
 		if (e.code() == ECONNREFUSED) {
 			return false;
@@ -751,13 +696,17 @@ pingTcpServer(const StaticString &host, unsigned int port, unsigned long long *t
 			throw e;
 		}
 	}
+	FdGuard guard(nbcResult.first, nullptr, 0, true);
+	if (nbcResult.second) {
+		return true;
+	}
 
 	// Cannot connect to the port yet, but that may not mean the
 	// port is unavailable. So poll the socket.
 
 	bool connectable;
 	try {
-		connectable = waitUntilWritable(state.fd, timeout);
+		connectable = waitUntilWritable(nbcResult.first, timeout);
 	} catch (const SystemException &e) {
 		throw SystemException("Error polling TCP socket "
 			+ host + ":" + toString(port), e.code());
@@ -767,24 +716,21 @@ pingTcpServer(const StaticString &host, unsigned int port, unsigned long long *t
 		return false;
 	}
 
-	// Try to connect the socket one last time.
+	// Now check the final connection establishment status.
 
-	try {
-		return connectToTcpServer(state);
-	} catch (const SystemException &e) {
-		if (e.code() == ECONNREFUSED) {
-			return false;
-		} else if (e.code() == EISCONN || e.code() == EINVAL) {
-			#ifdef __FreeBSD__
-				// Work around bug in FreeBSD (discovered on
-				// January 20 2013 in daemon_controller)
-				return false;
-			#else
-				throw e;
-			#endif
-		} else {
-			throw e;
-		}
+	int connectError = 0;
+	socklen_t connectErrorLen = sizeof(connectError);
+	if (getsockopt(nbcResult.first, SOL_SOCKET, SO_ERROR, &connectError, &connectErrorLen) == -1) {
+		throw SystemException("Error checking TCP socket " + host + ":" + toString(port)
+			+ " connection establishment status", connectError);
+	}
+	if (connectError == 0) {
+		return true;
+	} else if (connectError == ECONNREFUSED) {
+		return false;
+	} else {
+		throw SystemException("Error connecting to TCP socket " + host + ":"
+			+ toString(port), connectError);
 	}
 }
 
