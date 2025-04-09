@@ -101,6 +101,8 @@ public:
 		  // information is in Group::attach().
 		  //stickySessionId(getJsonUintField(json, "sticky_session_id", 0))
 	{
+		P_WARN("BasicProcessInfo: json type = " << (int) json.type());
+		P_WARN("BasicProcessInfo: json = " << json.toStyledString());
 		StaticString gupid = getJsonStaticStringField(json, "gupid");
 		assert(gupid.size() <= GUPID_MAX_SIZE);
 		memcpy(this->gupid, gupid.data(), gupid.size());
