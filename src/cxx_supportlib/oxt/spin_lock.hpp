@@ -31,13 +31,18 @@
 namespace oxt {
 
 /**
- * A spin lock. It's more efficient than a mutex for locking very small
- * critical sections with few contentions, but less efficient otherwise.
- *
- * The interface is similar to that of boost::mutex.
+ * A spin lock is more efficient than a mutex when there are few contentions,
+ * but less efficient otherwise.
  */
 class spin_lock {
 private:
+	// Our main use case is to allow threads to only be interruptable when
+	// blocked on certain system calls (oxt::thread_local_context::syscall_interruption_lock).
+	// That is locked most of the time, only unlocked during a syscall.
+	// An oxt::thread::interrupt() call may need to wait for a long time before it's unlocked.
+	// So keep the spin count low so we yield the CPU often.
+	static constexpr unsigned int MAX_SPINS = 100;
+
 	std::atomic_flag flag = ATOMIC_FLAG_INIT;
 
 public:
@@ -66,7 +71,7 @@ public:
 	*/
 	void lock() noexcept {
 		while (true) {
-			for (unsigned int i = 0; i < 100; i++) {
+			for (unsigned int i = 0; i < MAX_SPINS; i++) {
 				if (flag.test_and_set(std::memory_order_acquire)) {
 					#if defined(__cpp_lib_atomic_wait) && __cpp_lib_atomic_wait >= 201907L
 						flag.wait(true, std::memory_order_relaxed);
