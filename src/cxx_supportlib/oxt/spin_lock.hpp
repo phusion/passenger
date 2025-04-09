@@ -66,12 +66,14 @@ public:
 	*/
 	void lock() noexcept {
 		while (true) {
-			unsigned int i = 1000;
-			while (i > 0) {
-				if (!flag.test_and_set(std::memory_order_acquire)) {
-					return;
+			for (unsigned int i = 0; i < 100; i++) {
+				if (flag.test_and_set(std::memory_order_acquire)) {
+					#if defined(__cpp_lib_atomic_wait) && __cpp_lib_atomic_wait >= 201907L
+						flag.wait(true, std::memory_order_relaxed);
+					#endif
+				} else {
+					return; // lock acquired
 				}
-				i--;
 			}
 
 			// Yield the CPU every once in a while to allow other threads to
@@ -86,6 +88,9 @@ public:
 	*/
 	void unlock() noexcept {
 		flag.clear(std::memory_order_release);
+		#if defined(__cpp_lib_atomic_wait) && __cpp_lib_atomic_wait >= 201907L
+			flag.notify_one();
+		#endif
 	}
 
 	bool try_lock() noexcept {
