@@ -25,28 +25,74 @@
 #ifndef _OXT_SPIN_LOCK_HPP_
 #define _OXT_SPIN_LOCK_HPP_
 
-#include "macros.hpp"
+#include <thread>
+#include <atomic>
 
-// These operating systems don't support pthread spin locks:
-// - OpenBSD 4.3 (last checked: July 22, 2008)
-// - Solaris 9 (last checked: July 22, 2008)
-// - MacOS X (last checked: July 22, 2012)
-#if defined(__OpenBSD__) || defined(__SOLARIS9__) || defined(__APPLE__)
-	#define OXT_NO_PTHREAD_SPINLOCKS
-#endif
+namespace oxt {
 
-#if defined(__APPLE__)
-	#include "detail/spin_lock_darwin.hpp"
-#elif (OXT_GCC_VERSION > 40100 && (defined(__i386__) || defined(__x86_64__))) || defined(IN_DOXYGEN)
-	// GCC 4.0 doesn't support __sync instructions while GCC 4.2
-	// does. I'm not sure whether support for it started in 4.1 or
-	// 4.2, so the above version check may have to be changed later.
-	#include "detail/spin_lock_gcc_x86.hpp"
-#elif !defined(WIN32) && !defined(OXT_NO_PTHREAD_SPINLOCKS)
-	#include "detail/spin_lock_pthreads.hpp"
-#else
-	#include "detail/spin_lock_portable.hpp"
-#endif
+/**
+ * A spin lock. It's more efficient than a mutex for locking very small
+ * critical sections with few contentions, but less efficient otherwise.
+ *
+ * The interface is similar to that of boost::mutex.
+ */
+class spin_lock {
+private:
+	std::atomic_flag flag = ATOMIC_FLAG_INIT;
+
+public:
+	/**
+	* Instantiate this class to lock a spin lock within a scope.
+	*/
+	class scoped_lock {
+	private:
+		spin_lock &l;
+
+	public:
+		scoped_lock(const scoped_lock &other) = delete;
+		scoped_lock &operator=(const scoped_lock &other) = delete;
+
+		scoped_lock(spin_lock &lock) noexcept: l(lock) {
+			l.lock();
+		}
+
+		~scoped_lock() noexcept {
+			l.unlock();
+		}
+	};
+
+	/**
+	* Lock this spin lock.
+	*/
+	void lock() noexcept {
+		while (true) {
+			unsigned int i = 1000;
+			while (i > 0) {
+				if (!flag.test_and_set(std::memory_order_acquire)) {
+					return;
+				}
+				i--;
+			}
+
+			// Yield the CPU every once in a while to allow other threads to
+			// run. On systems with bad schedulers (including Valgrind),
+			// not yielding can lead to starvation, which looks like a deadlock.
+			std::this_thread::yield();
+		}
+	}
+
+	/**
+	* Unlock this spin lock.
+	*/
+	void unlock() noexcept {
+		flag.clear(std::memory_order_release);
+	}
+
+	bool try_lock() noexcept {
+		return !flag.test_and_set(std::memory_order_acquire);
+	}
+};
+
+} // namespace oxt
 
 #endif /* _OXT_SPIN_LOCK_HPP_ */
-

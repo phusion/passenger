@@ -50,9 +50,9 @@ namespace tut {
 		// Receive with zero timeout.
 		unsigned long long timeoutUSec = 0;
 		Timer<> timer;
-		ensure_equals(box->recv("hi", &timeoutUSec), MessagePtr());
-		ensure(timer.elapsed() < 10);
-		ensure_equals(timeoutUSec, 0ull);
+		ensure_equals("(1)", box->recv("hi", &timeoutUSec), MessagePtr());
+		ensure("(2)", timer.elapsed() < 100);
+		ensure_equals("(3)", timeoutUSec, 0ull);
 	}
 
 	TEST_METHOD(4) {

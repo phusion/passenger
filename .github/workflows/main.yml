@@ -65,7 +65,85 @@ jobs:
       - name: Archive logs
         uses: actions/upload-artifact@v4
         with:
-          name: cxx-test-logs-macos
+          name: cxx-test-logs-linux
+          path: 'buildout/testlogs/*'
+          if-no-files-found: ignore
+        if: '!cancelled()'
+
+      - name: Teardown sccache
+        run: ./dev/ci/teardown-sccache
+        if: '!cancelled()'
+
+  cxx-linux-valgrind:
+    name: C++ tests on Valgrind
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      USE_ASAN: false
+      EXTRA_CFLAGS: '-fdiagnostics-color'
+      EXTRA_CXXFLAGS: '-fdiagnostics-color'
+      SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+      SCCACHE_AZURE_KEY_PREFIX: sccache/cxx-ubuntu-valgrind
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Setup sccache
+        run: ./dev/ci/setup-sccache
+        timeout-minutes: 1
+        env:
+          ARCH_AND_OS: x86_64-unknown-linux-musl
+          SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+
+      - name: Setup dependencies
+        run: >
+          sudo apt update &&
+          sudo apt install -y valgrind gdb libcurl4-openssl-dev
+
+      - name: Setup misc
+        run: |
+          set -x
+          sudo chmod 755 "$HOME"
+          cp test/config.json.github-ci-linux test/config.json
+
+      - name: Build C++ tests
+        run: bundle exec drake -j4 test:cxx:build
+
+      - name: Run C++ tests
+        timeout-minutes: 11
+        run: >
+          sudo env
+          PATH="$PATH"
+          GEM_PATH="$GEM_PATH"
+          PASSENGER_ABORT_HANDLER=false
+          /usr/bin/timeout --signal KILL --verbose 800
+          valgrind --leak-check=full --log-file=valgrind.%p.log
+          ../buildout/test/cxx/main
+        working-directory: test
+
+      - name: Print Valgrind logs
+        run: |
+          shopt -s nullglob
+          for LOGFILE in valgrind.*.log; do
+            echo "::group::${LOGFILE}"
+            cat "$LOGFILE"
+            echo "::endgroup::"
+          done
+        if: '!cancelled()'
+
+      - name: Archive logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cxx-test-logs-valgrind
           path: 'buildout/testlogs/*'
           if-no-files-found: ignore
         if: '!cancelled()'
