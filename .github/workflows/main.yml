@@ -40,10 +40,10 @@ jobs:
           ARCH_AND_OS: x86_64-unknown-linux-musl
           SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
 
-      - name: Setup library dependencies
+      - name: Setup dependencies
         run: >
           sudo apt update &&
-          sudo apt install -y libcurl4-openssl-dev
+          sudo apt install -y gdb libcurl4-openssl-dev
 
       - name: Setup misc
         run: |
@@ -55,17 +55,28 @@ jobs:
         run: bundle exec drake -j4 test:cxx:build
 
       - name: Run C++ tests
+        # The AbortHandler doesn't work so well on Github's Linux runners:
+        # - Triggering the original signal handler makes the runner freeze, so we force
+        #   terminate the process.
+        # - force killing the process may not work, so we enforce a low timeout to prevent
+        #   the test from haging for a long time. We enforce this primarily using the 'timeout'
+        #   command from coreutils instead of Github Actions' timeout, because the latter
+        #   could put the entire job in the "skipped" state and refuse to show logs.
+        timeout-minutes: 11
         run: >
           sudo env
           PATH="$PATH"
           GEM_PATH="$GEM_PATH"
+          PASSENGER_DUMP_CRASH_WATCH_TO_STDERR=true
+          PASSENGER_FORCE_TERMINATE_ON_ABORT=true
+          /usr/bin/timeout --signal KILL --verbose 600
           ../buildout/test/cxx/main
         working-directory: test
 
       - name: Archive logs
         uses: actions/upload-artifact@v4
         with:
-          name: cxx-test-logs-macos
+          name: cxx-test-logs-linux
           path: 'buildout/testlogs/*'
           if-no-files-found: ignore
         if: '!cancelled()'
@@ -116,18 +127,17 @@ jobs:
 
       - name: Run C++ tests
         # The AbortHandler doesn't work so well on Github's macOS runners:
-        # - crash-watch invocation freezes the runner, so we disable this.
         # - resuming the parent process after SIGSTOP doesn't work, so we force kill the parent.
         # - force killing the parent may not work, so we enforce a low timeout to prevent
         #   the test from haging for a long time. We enforce this primarily using the 'timeout'
-        #   command from coreutils instead of Github Actions' timeout,  because the latter
+        #   command from coreutils instead of Github Actions' timeout, because the latter
         #   could put the entire job in the "skipped" state and refuse to show logs.
         timeout-minutes: 11
         run: >
           sudo env
           PATH="$PATH"
           GEM_PATH="$GEM_PATH"
-          PASSENGER_DUMP_WITH_CRASH_WATCH=false
+          PASSENGER_DUMP_CRASH_WATCH_TO_STDERR=true
           PASSENGER_FORCE_TERMINATE_ON_ABORT=true
           gtimeout --signal KILL --verbose 600
           ../buildout/test/cxx/main

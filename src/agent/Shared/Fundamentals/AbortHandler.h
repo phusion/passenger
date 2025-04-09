@@ -26,8 +26,6 @@
 #ifndef _PASSENGER_AGENT_FUNDAMENTALS_ABORT_HANDLER_H_
 #define _PASSENGER_AGENT_FUNDAMENTALS_ABORT_HANDLER_H_
 
-#include <cstddef>
-
 namespace Passenger {
 	class ResourceLocator;
 }
@@ -38,7 +36,7 @@ namespace Fundamentals {
 
 
 struct AbortHandlerConfig {
-	static const unsigned int MAX_DIAGNOSTICS_DUMPERS = 5;
+	static constexpr unsigned int MAX_DIAGNOSTICS_DUMPERS = 5;
 	typedef void (*DiagnosticsDumperFunc)(void *userData);
 
 	struct DiagnosticsDumper {
@@ -56,26 +54,16 @@ struct AbortHandlerConfig {
 	};
 
 
-	char *ruby;
-	char **origArgv;
-	unsigned int randomSeed;
-	bool dumpWithCrashWatch;
-	bool beep;
-	bool stopProcess;
-	bool forceTerminateProcess;
-	ResourceLocator *resourceLocator;
+	char *ruby = nullptr;
+	char **origArgv = nullptr;
+	unsigned int randomSeed = 0;
+	bool dumpWithCrashWatch = false;
+	bool dumpCrashWatchToStderr = false;
+	bool beep = false;
+	bool stopProcess = false;
+	bool forceTerminateProcess = false;
+	ResourceLocator *resourceLocator = nullptr;
 	DiagnosticsDumper diagnosticsDumpers[MAX_DIAGNOSTICS_DUMPERS];
-
-	AbortHandlerConfig()
-		: ruby(NULL),
-		  origArgv(NULL),
-		  randomSeed(0),
-		  dumpWithCrashWatch(false),
-		  beep(false),
-		  stopProcess(false),
-		  forceTerminateProcess(false),
-		  resourceLocator(NULL)
-		{ }
 };
 
 void installAbortHandler(const AbortHandlerConfig *config);

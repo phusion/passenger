@@ -83,6 +83,7 @@ namespace tut {
 			HandshakePerform performer(*session, pid, FileDescriptor(), stdoutAndErr.first);
 			performer.debugSupport = debugSupport;
 			performer.execute();
+			throw RuntimeException("test");
 			counter++;
 		}
 
