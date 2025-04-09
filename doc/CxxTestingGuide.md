@@ -18,7 +18,7 @@ using namespace Passenger;
 namespace tut {
     // Each test suite has a corresponding context struct, created and
     // deleted for every test case. You can put test case-local state here.
-    struct SomethingTest final: public TestBase {
+    struct SomethingTest: public TestBase {
         Something something;
     };
 
