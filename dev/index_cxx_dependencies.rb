@@ -10,9 +10,9 @@ SEARCH_PATHS = [
   "test/cxx"
 ]
 SCAN_FILES = Dir[
-  "src/**/*.{c,cpp,h,hpp}",
-  "test/oxt/**/*.{c,cpp,h,hpp}",
-  "test/cxx/**/*.{c,cpp,h,hpp}"
+  "src/**/*.{c,cpp,h,hpp,tpp}",
+  "test/oxt/**/*.{c,cpp,h,hpp,tpp}",
+  "test/cxx/**/*.{c,cpp,h,hpp,tpp}"
 ]
 EXCLUDE_FILES = Dir[
   "src/cxx_supportlib/vendor-copy/**/*",
@@ -36,6 +36,7 @@ EXCLUDE_NAMES = %w{
   algorithm
   iomanip
   ios
+  iosfwd
   memory
   new
   unordered_map

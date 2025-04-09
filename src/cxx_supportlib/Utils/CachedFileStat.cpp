@@ -23,8 +23,9 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#include "CachedFileStat.h"
-#include "CachedFileStat.hpp"
+
+#include <Utils/CachedFileStat.h>
+#include <Utils/CachedFileStat.hpp>
 
 extern "C" {
 

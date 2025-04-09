@@ -24,7 +24,6 @@
  *  THE SOFTWARE.
  */
 #include <oxt/thread.hpp>
-#include <set>
 #include <cerrno>
 #include <cstring>
 #include <string.h>

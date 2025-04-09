@@ -25,7 +25,6 @@
  */
 
 #include <new>
-#include <exception>
 
 #include <WrapperRegistry/CBindings.h>
 #include <WrapperRegistry/Entry.h>

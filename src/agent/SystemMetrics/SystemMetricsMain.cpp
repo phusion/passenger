@@ -24,7 +24,6 @@
  *  THE SOFTWARE.
  */
 #include <iostream>
-#include <string>
 #include <unistd.h>
 #include <cstdio>
 #include <cstring>

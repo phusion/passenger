@@ -24,16 +24,15 @@
  *  THE SOFTWARE.
  */
 
-#include <SecurityKit/Crypto.h>
 #include <modp_b64.h>
-#include <LoggingKit/LoggingKit.h>
 #include <string>
+#include <SecurityKit/Crypto.h>
+#include <LoggingKit/LoggingKit.h>
 #include <SystemTools/SystemTime.h>
 #include <StrIntTools/StrIntUtils.h>
 
-#if BOOST_OS_MACOS
-#else
-#include <openssl/aes.h>
+#if !BOOST_OS_MACOS
+	#include <openssl/aes.h>
 #endif
 
 #define AES_KEY_BYTESIZE (256/8)

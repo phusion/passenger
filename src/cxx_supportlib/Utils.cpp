@@ -28,7 +28,6 @@
 #include <boost/thread.hpp>
 #include <boost/shared_array.hpp>
 
-#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>

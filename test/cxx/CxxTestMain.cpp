@@ -5,7 +5,6 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <signal.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
