@@ -50,6 +50,7 @@
 #include <FileDescriptor.h>
 #include <FileTools/FileManip.h>
 #include <FileTools/PathManip.h>
+#include <IOTools/IOUtils.h>
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <SystemTools/SystemTime.h>

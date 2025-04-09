@@ -117,38 +117,6 @@ public:
 	}
 };
 
-class FdGuard: public noncopyable {
-private:
-	int fd;
-	bool ignoreErrors;
-
-public:
-	FdGuard(int _fd, const char *file, unsigned int line, bool _ignoreErrors = false)
-		: fd(_fd),
-		  ignoreErrors(_ignoreErrors)
-	{
-		if (_fd != -1 && file != NULL) {
-			P_LOG_FILE_DESCRIPTOR_OPEN3(_fd, file, line);
-		}
-	}
-
-	~FdGuard() {
-		runNow();
-	}
-
-	void clear() {
-		fd = -1;
-	}
-
-	void runNow() {
-		if (fd != -1) {
-			safelyClose(fd, ignoreErrors);
-			P_LOG_FILE_DESCRIPTOR_CLOSE(fd);
-			fd = -1;
-		}
-	}
-};
-
 
 } // namespace Passenger
 

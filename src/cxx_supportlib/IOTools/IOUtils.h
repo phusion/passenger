@@ -358,6 +358,31 @@ public:
 };
 
 
+/****** Scope guards ******/
+
+/** RAII construct for ensuring that a file descriptor gets closed at scope exit. */
+class FdGuard {
+private:
+	int mFd = -1;
+
+public:
+	FdGuard() { }
+	FdGuard(const FdGuard &other) = delete;
+	FdGuard(FdGuard &&other);
+	FdGuard(int fd, const char *sourceFile, unsigned int sourceLine);
+	~FdGuard();
+
+	FdGuard &operator=(const FdGuard &other) = delete;
+	FdGuard &operator=(FdGuard &&other);
+
+	/** Don't close file descriptor at object destruction. */
+	void clear();
+
+	/** Close file descriptor now. Idempotent. */
+	void runNow();
+};
+
+
 /****** Other ******/
 
 typedef ssize_t (*WritevFunction)(int fildes, const struct iovec *iov, int iovcnt);

@@ -88,6 +88,7 @@
 #include <Utils.h>
 #include <Utils/Timer.h>
 #include <IOTools/MessageIO.h>
+#include <IOTools/IOUtils.h>
 #include <Core/OptionParser.h>
 #include <Core/Controller.h>
 #include <Core/ApiServer.h>
