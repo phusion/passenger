@@ -195,6 +195,7 @@ main(int argc, char *argv[]) {
 		ConfigKit::DummyTranslator(), parseOptions);
 	resourceLocator = Agent::Fundamentals::context->resourceLocator;
 	loadConfigFile();
+	throw RuntimeException("test");
 
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {
