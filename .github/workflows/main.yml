@@ -153,7 +153,6 @@ jobs:
             if [[ "$LINES" -le 6 ]]; then
               echo "Deleting $LOGFILE"
               rm "$LOGFILE"
-              continue
             fi
           done
         if: '!cancelled()'
