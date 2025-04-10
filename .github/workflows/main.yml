@@ -126,15 +126,44 @@ jobs:
           GEM_PATH="$GEM_PATH"
           PASSENGER_ABORT_HANDLER=false
           /usr/bin/timeout --signal KILL --verbose 800
-          valgrind --leak-check=full --log-file=valgrind.%p.log
+          valgrind
+          --error-exitcode=1
+          --child-silent-after-fork=yes
+          --leak-check=full
+          --show-leak-kinds=definite
+          --errors-for-leak-kinds=none
+          --log-file=../valgrind.log.%p
           ../buildout/test/cxx/main
         working-directory: test
+
+      - name: Preprocess Valgrind logs
+        run: |
+          set -o pipefail
+          shopt -s nullglob
+
+          for LOGFILE in valgrind.log.*; do
+            # Remove PID prefixes
+            sed -E -i 's|^==[0-9]+== ||' "$LOGFILE"
+
+            # Delete all files containing only the Valgrind intro message.
+            # Don't take into account complaints about closeAllFileDescriptors()
+            # closing arbitrary file descriptors because the test suite spawns a
+            # lot of subprocesses that call that function first.
+            LINES=$(grep -vE 'invalid file descriptor .*? in syscall close|Use --log-fd' "$LOGFILE" | wc -l | awk '{ print $1 }')
+            if [[ "$LINES" -le 6 ]]; then
+              echo "Deleting $LOGFILE"
+              rm "$LOGFILE"
+              continue
+            fi
+          done
+        if: '!cancelled()'
 
       - name: Print Valgrind logs
         run: |
           shopt -s nullglob
-          for LOGFILE in valgrind.*.log; do
-            echo "::group::${LOGFILE}"
+          for LOGFILE in valgrind.log.*; do
+            ERROR_SUMMARY=$(grep 'ERROR SUMMARY' "$LOGFILE" | cut -d':' -f2-)
+            echo "::group::${LOGFILE} — ${ERROR_SUMMARY}"
             cat "$LOGFILE"
             echo "::endgroup::"
           done
