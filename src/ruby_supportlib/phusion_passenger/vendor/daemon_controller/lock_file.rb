@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # daemon_controller, library for robust daemon management
 # Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -19,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-require 'fcntl'
+require "fcntl"
 
 module PhusionPassenger
 class DaemonController
@@ -60,7 +62,7 @@ class DaemonController
     # The lock file *must* be writable, otherwise an Errno::EACCESS
     # exception will be raised.
     def exclusive_lock
-      File.open(@filename, 'w') do |f|
+      File.open(@filename, "w") do |f|
         if Fcntl.const_defined? :F_SETFD
           f.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end
@@ -78,7 +80,7 @@ class DaemonController
     # The lock file *must* be writable, otherwise an Errno::EACCESS
     # exception will be raised.
     def shared_lock
-      File.open(@filename, 'w+') do |f|
+      File.open(@filename, "w+") do |f|
         if Fcntl.const_defined? :F_SETFD
           f.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end
@@ -93,7 +95,7 @@ class DaemonController
     #
     # If a lock can be obtained, then the given block will be yielded.
     def try_shared_lock
-      File.open(@filename, 'w+') do |f|
+      File.open(@filename, "w+") do |f|
         if Fcntl.const_defined? :F_SETFD
           f.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end
@@ -111,7 +113,7 @@ class DaemonController
     #
     # If a lock can be obtained, then the given block will be yielded.
     def try_exclusive_lock
-      File.open(@filename, 'w') do |f|
+      File.open(@filename, "w") do |f|
         if Fcntl.const_defined? :F_SETFD
           f.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC)
         end

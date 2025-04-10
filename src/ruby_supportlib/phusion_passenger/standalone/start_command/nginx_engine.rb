@@ -44,7 +44,7 @@ module PhusionPassenger
           test_nginx_config(nginx_config_path, 'nginx.conf')
 
           Standalone::ControlUtils.require_daemon_controller
-          @engine = DaemonController.new(build_daemon_controller_options)
+          @engine = DaemonController.new(**build_daemon_controller_options)
 
           begin
             @engine.start

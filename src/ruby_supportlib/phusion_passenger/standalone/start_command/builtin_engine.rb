@@ -39,7 +39,7 @@ module PhusionPassenger
       private
         def start_engine_real
           Standalone::ControlUtils.require_daemon_controller
-          @engine = DaemonController.new(build_daemon_controller_options)
+          @engine = DaemonController.new(**build_daemon_controller_options)
           start_engine_no_create
         end
 

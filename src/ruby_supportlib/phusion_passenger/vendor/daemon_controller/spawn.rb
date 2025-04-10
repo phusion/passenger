@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # daemon_controller, library for robust daemon management
 # Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -20,7 +22,6 @@
 # THE SOFTWARE.
 
 # This helper script is used for daemonizing a command by executing it and
-# then exiting ourselves. Used on Ruby 1.9 and JRuby because forking may not
-# be safe/supported on all platforms.
+# then exiting ourselves. Used because Process.spawn has no setsid support.
 Process.setsid
 Process.spawn(ARGV[0])
