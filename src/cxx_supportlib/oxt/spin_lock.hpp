@@ -31,8 +31,23 @@
 namespace oxt {
 
 /**
- * A spin lock is more efficient than a mutex when there are few contentions,
- * but less efficient otherwise.
+ * A spin lock that's specifically designed to yield the CPU once in a while to
+ * avoid starving other threads.
+ *
+ * We use spin locks because on many platforms, mutexes are slower when there's little
+ * or no contention. OS-native mutexes work better in highly contended scenarios due
+ * to better scheduler integration. However, in Passenger we have a couple of scenarios
+ * where we know there's going to be little or no contention. In oxt::system_calls,
+ * contention is rare and mostly limited to thread interruption during aborts or process
+ * shutdown. As a result, we use spin locks to prioritize performance in the uncontended
+ * case.
+ *
+ * We avoid OS-native spinlocks for two reasons:
+ * - There's no widely-available standard spinlock. We want to keep the code simple,
+ *   avoiding OS-specific implementations.
+ * - OS-native spinlocks such as pthread_spin_lock_t don't guarantee scheduler integration,
+ *   but we need it in order to avoid starvation that would interfere with thread
+ *   interruption.
  */
 class spin_lock {
 private:
