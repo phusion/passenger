@@ -105,8 +105,8 @@ jobs:
           SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
 
       - name: Setup dependencies
-        run: >
-          sudo apt update &&
+        run: |
+          sudo apt update
           sudo apt install -y valgrind gdb libcurl4-openssl-dev
 
       - name: Setup misc
