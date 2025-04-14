@@ -55,7 +55,7 @@ module PhusionPassenger
         extra_ldflags = [
           PlatformInfo.openssl_extra_ldflags,
           PlatformInfo.pcre_extra_ldflags,
-          address_sanitizer ? PlatformInfo.address_sanitizer_flags : nil,
+          address_sanitizer ? PlatformInfo.address_sanitizer_c_ldflags : nil,
         ].compact.join(" ").strip
         if !extra_ldflags.empty?
           result << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
