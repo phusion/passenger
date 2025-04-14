@@ -41,8 +41,8 @@ jobs:
           SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
 
       - name: Setup library dependencies
-        run: >
-          sudo apt update &&
+        run: |
+          sudo apt update
           sudo apt install -y libcurl4-openssl-dev
 
       - name: Setup misc
@@ -306,8 +306,8 @@ jobs:
           sed "s|_USER_|$(whoami)|; s|_SOURCE_ROOT_|$(pwd)|" ${{ matrix.config_file }} > test/config.json
 
       - name: Setup Linux dependencies
-        run: >
-          sudo apt update &&
+        run: |
+          sudo apt update
           sudo apt install -y libcurl4-openssl-dev apache2-dev libapr1-dev libaprutil1-dev
         if: matrix.name == 'Linux'
 
@@ -455,8 +455,8 @@ jobs:
           sed "s|_USER_|$(whoami)|" ${{ matrix.config_file }} > test/config.json
 
       - name: Setup Linux dependencies
-        run: >
-          sudo apt update &&
+        run: |
+          sudo apt update
           sudo apt install -y libcurl4-openssl-dev
         if: matrix.name == 'Linux'
 
@@ -530,8 +530,8 @@ jobs:
           SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
 
       - name: Setup Linux dependencies
-        run: >
-          sudo apt update &&
+        run: |
+          sudo apt update
           sudo apt install -y libcurl4-openssl-dev
         if: matrix.name == 'Linux'
 
@@ -606,8 +606,8 @@ jobs:
           SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
 
       - name: Setup Linux dependencies
-        run: >
-          sudo apt update &&
+        run: |
+          sudo apt update
           sudo apt install -y libcurl4-openssl-dev
         if: matrix.name == 'Linux'
 
@@ -671,8 +671,8 @@ jobs:
           sed "s|_USER_|$(whoami)|" ${{ matrix.config_file }} > test/config.json
 
       - name: Setup Linux dependencies
-        run: >
-          sudo apt update &&
+        run: |
+          sudo apt update
           sudo apt install -y libcurl4-openssl-dev
         if: matrix.name == 'Linux'
 
