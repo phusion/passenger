@@ -89,6 +89,8 @@ module PhusionPassenger
 
         begin
           config = PhusionPassenger::Utils::JSON.parse(data)
+        rescue FrozenError => e
+          raise ConfigLoadError, "cannot parse config file #{filename} (#{e}): #{e.backtrace.join("\n")}"
         rescue => e
           raise ConfigLoadError, "cannot parse config file #{filename} (#{e})"
         end

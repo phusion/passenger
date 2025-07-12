@@ -72,15 +72,11 @@ module PhusionPassenger
 
     def self.run_compiler(description, command, source_file, source, capture_output = false)
       if verbose?
-        message = "#{description}\n" <<
-          "Running: #{command}\n"
+        message = "#{description}\nRunning: #{command}\n"
         if source.strip.empty?
-          message << "Source file is empty."
+          message += "Source file is empty."
         else
-          message << "Source file contains:\n" <<
-            "-------------------------\n" <<
-            unindent(source) <<
-            "\n-------------------------"
+          message += "Source file contains:\n-------------------------\n#{unindent(source)}\n-------------------------"
         end
         log(message)
       end
@@ -92,10 +88,7 @@ module PhusionPassenger
           result = nil
           exec_error_reason = e.message
         end
-        log("Output:\n" <<
-          "-------------------------\n" <<
-          output.to_s <<
-          "\n-------------------------")
+        log("Output:\n-------------------------\n#{output}\n-------------------------")
       elsif verbose?
         result = system(command)
       else
@@ -588,7 +581,7 @@ module PhusionPassenger
         result = '-g'
       end
       if cc_supports_fno_limit_debug_info_flag?
-        result << ' -fno-limit-debug-info'
+        result += ' -fno-limit-debug-info'
       end
       result
     end
@@ -606,7 +599,7 @@ module PhusionPassenger
         result = '-g'
       end
       if cxx_supports_fno_limit_debug_info_flag?
-        result << ' -fno-limit-debug-info'
+        result += ' -fno-limit-debug-info'
       end
       result
     end

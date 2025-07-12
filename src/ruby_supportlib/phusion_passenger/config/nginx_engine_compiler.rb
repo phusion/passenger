@@ -355,7 +355,7 @@ module PhusionPassenger
       end
 
       def compile_nginx
-        backlog = ""
+        backlog = String.new
         e_nginx_source_dir = Shellwords.escape("#{@working_dir}/nginx-#{@nginx_version}")
 
         # Capture and index the `make --dry-run` output for
@@ -390,7 +390,7 @@ module PhusionPassenger
       end
 
       def run_command_yield_activity(command)
-        backlog = ""
+        backlog = String.new
         IO.popen("#{command} 2>&1", "rb") do |io|
           while !io.eof?
             backlog << io.readline

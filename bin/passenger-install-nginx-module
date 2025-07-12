@@ -525,10 +525,7 @@ private
   def insert_passenger_config_snippets(prefix)
     config_file = locate_nginx_config_file(prefix)
     contents = File.read(config_file)
-    contents.sub!(/^http \{/,
-      "http {\n" <<
-      "    passenger_root #{PhusionPassenger.install_spec};\n" <<
-      "    passenger_ruby #{PlatformInfo.ruby_command};\n")
+    contents.sub!(/^http \{/, "http {\n    passenger_root #{PhusionPassenger.install_spec};\n    passenger_ruby #{PlatformInfo.ruby_command};\n")
     File.open(config_file, 'w') do |f|
       f.write(contents)
     end
@@ -556,20 +553,20 @@ private
     ].compact.join(" ").strip
 
     command = "sh ./configure --prefix='#{prefix}' "
-    command << "--with-http_ssl_module "
-    command << "--with-http_v2_module "
-    command << "--with-http_realip_module "
-    command << "--with-http_gzip_static_module "
-    command << "--with-http_stub_status_module "
-    command << "--with-http_addition_module "
-    command << "--with-cc-opt=#{Shellwords.escape extra_cflags} "
-    command << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
+    command += "--with-http_ssl_module "
+    command += "--with-http_v2_module "
+    command += "--with-http_realip_module "
+    command += "--with-http_gzip_static_module "
+    command += "--with-http_stub_status_module "
+    command += "--with-http_addition_module "
+    command += "--with-cc-opt=#{Shellwords.escape extra_cflags} "
+    command += "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
     if @pcre_source_dir
-      command << "--with-pcre='#{@pcre_source_dir}' "
+      command += "--with-pcre='#{@pcre_source_dir}' "
     elsif !pcre_is_installed?
-      command << "--without-http_rewrite_module "
+      command += "--without-http_rewrite_module "
     end
-    command << "--add-module='#{PhusionPassenger.nginx_module_source_dir}' #{extra_configure_flags}"
+    command += "--add-module='#{PhusionPassenger.nginx_module_source_dir}' #{extra_configure_flags}"
     command.strip!
     return command
   end
@@ -583,11 +580,15 @@ private
           end
           Dir.chdir("#{safe_tmpdir}") do
             # Nginx checks for PCRE in multiple places...
-            system("(gcc -I/usr/local/include -I/usr/include/pcre2 " <<
-              "-I/usr/pkg/include -I/opt/local/include " <<
-              "-I/opt/homebrew/include " <<
-              "-DPCRE2_CODE_UNIT_WIDTH=8 " <<
-              "-c passenger-check.c) >/dev/null 2>/dev/null")
+            system(["gcc",
+                    "-I/usr/local/include",
+                    "-I/usr/include/pcre2",
+                    "-I/usr/pkg/include",
+                    "-I/opt/local/include",
+                    "-I/opt/homebrew/include",
+                    "-DPCRE2_CODE_UNIT_WIDTH=8",
+                    "-c", "passenger-check.c",
+                    ">/dev/null", "2>/dev/null"].join(' '))
           end
         ensure
           File.unlink("#{safe_tmpdir}/passenger-check.c") rescue nil
@@ -602,8 +603,7 @@ private
     # We do this instead of using #file, for Ruby 1.8.5 support.
     digest = Digest::SHA256.new
     File.open(path, "rb") do |f|
-      buf = ''
-      buf.force_encoding('binary') if buf.respond_to?(:force_encoding)
+      buf = String.new(encoding: Encoding::BINARY)
       while !f.eof?
         f.read(1024 * 16, buf)
         digest.update(buf)
@@ -625,33 +625,31 @@ parser = OptionParser.new do |opts|
 
   indent = ' ' * 37
   opts.separator "Options:"
-  opts.on("--auto", "Automatically confirm 'Press ENTER to\n" <<
-          "#{indent}continue' prompts.") do
+  opts.on("--auto", "Automatically confirm 'Press ENTER to\n#{indent}continue' prompts.") do
     options[:auto] = true
   end
-  opts.on("--prefix=DIR", String, "Use the given Nginx install prefix instead\n" <<
-          "#{indent}of asking for it interactively.") do |dir|
+  opts.on("--prefix=DIR", String, "Use the given Nginx install prefix instead\n#{indent}of asking for it interactively.") do |dir|
     options[:prefix] = dir
   end
-  opts.on("--auto-download", "Download and install Nginx automatically,\n" <<
-          "#{indent}instead of asking interactively whether to\n" <<
-          "#{indent}download+install or to use an existing\n" <<
-          "#{indent}Nginx source directory.") do
+  opts.on("--auto-download", ["Download and install Nginx automatically,",
+          "#{indent}instead of asking interactively whether to",
+          "#{indent}download+install or to use an existing",
+          "#{indent}Nginx source directory."].join("\n")) do
     options[:auto_download] = true
   end
-  opts.on("--nginx-source-dir=DIR", String, "Compile and install Nginx using the given\n" <<
-          "#{indent}Nginx source directory, instead of\n" <<
-          "#{indent}interactively asking to download+install\n" <<
-          "#{indent}or to use an existing Nginx source\n" <<
-          "#{indent}directory. Conflicts with --auto-download.") do |dir|
+  opts.on("--nginx-source-dir=DIR", String, ["Compile and install Nginx using the given",
+          "#{indent}Nginx source directory, instead of",
+          "#{indent}interactively asking to download+install",
+          "#{indent}or to use an existing Nginx source",
+          "#{indent}directory. Conflicts with --auto-download."].join("\n")) do |dir|
     options[:nginx_source_dir] = dir
   end
-  opts.on("--extra-configure-flags=STRING", String, "Pass these extra flags to Nginx's\n" <<
-          "#{indent}'configure' script, instead of asking for\n" <<
-          "#{indent}it interactively. Specify 'none' if you\n" <<
-          "#{indent}do not want to pass additional flags but do\n" <<
-          "#{indent}not want this installer to ask\n" <<
-          "#{indent}interactively either.") do |flags|
+  opts.on("--extra-configure-flags=STRING", String, ["Pass these extra flags to Nginx's",
+          "#{indent}'configure' script, instead of asking for",
+          "#{indent}it interactively. Specify 'none' if you",
+          "#{indent}do not want to pass additional flags but do",
+          "#{indent}not want this installer to ask",
+          "#{indent}interactively either."].join("\n")) do |flags|
     options[:extra_configure_flags] = flags
   end
   opts.on("--rake-command COMMAND", String, "Customize Rake command to use") do |value|
@@ -660,9 +658,9 @@ parser = OptionParser.new do |opts|
   opts.on("--make-concurrency N", Integer, "Use N parallel jobs when running 'make'.") do |n|
     options[:make_concurrency] = n
   end
-  opts.on("--languages NAMES", "Comma-separated list of interested\n" <<
-      "#{indent}languages (e.g.\n" <<
-      "#{indent}'ruby,python,nodejs,meteor')") do |value|
+  opts.on("--languages NAMES", ["Comma-separated list of interested",
+      "#{indent}languages (e.g.",
+      "#{indent}'ruby,python,nodejs,meteor')"].join("\n")) do |value|
     options[:languages] = value.split(",")
   end
   opts.on("--force-colors", "Display colors even if stdout is not a TTY") do

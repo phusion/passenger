@@ -101,8 +101,7 @@ module PhusionPassenger
       def main_loop(finish_callback)
         socket_wrapper = Utils::UnseekableSocket.new
         channel        = MessageChannel.new
-        buffer         = ''
-        buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
+        buffer         = String.new(encoding: Encoding::BINARY)
 
         begin
           finish_callback.call
@@ -235,7 +234,7 @@ module PhusionPassenger
       def parse_http_request(connection, channel, buffer)
         headers = {}
 
-        data = ""
+        data = String.new
         while data !~ /\r\n\r\n/ && data.size < MAX_HEADER_SIZE
           data << connection.readpartial(16 * 1024)
         end

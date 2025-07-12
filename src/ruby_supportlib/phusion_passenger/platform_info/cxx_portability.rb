@@ -101,40 +101,40 @@ module PhusionPassenger
     private_class_method :check_hash_map
 
     def self.default_extra_c_or_cxxflags(cc_or_cxx)
-      flags = ["-D_REENTRANT", "-I/usr/local/include"]
+      flags = %w[-D_REENTRANT -I/usr/local/include]
 
       if !send("#{cc_or_cxx}_is_sun_studio?")
-        flags << "-Wall -Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
+        flags.concat %w[-Wall -Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long]
         if send("#{cc_or_cxx}_supports_wno_missing_field_initializers_flag?")
-          flags << "-Wno-missing-field-initializers"
+          flags << '-Wno-missing-field-initializers'
         end
         if send("#{cc_or_cxx}_supports_wno_unknown_pragmas_flag?")
-          flags << "-Wno-unknown-pragmas"
+          flags << '-Wno-unknown-pragmas'
         end
         if requires_no_tls_direct_seg_refs? && send("#{cc_or_cxx}_supports_no_tls_direct_seg_refs_option?")
-          flags << "-mno-tls-direct-seg-refs"
+          flags << '-mno-tls-direct-seg-refs'
         end
         # Work around Clang warnings in ev++.h.
         if send("#{cc_or_cxx}_is_clang?") && compiler_supports_wno_ambiguous_member_template?
-          flags << "-Wno-ambiguous-member-template"
+          flags << '-Wno-ambiguous-member-template'
         end
       end
 
       if !send("#{cc_or_cxx}_is_sun_studio?")
         if send("#{cc_or_cxx}_supports_feliminate_unused_debug?")
-          flags << "-feliminate-unused-debug-symbols -feliminate-unused-debug-types"
+          flags.concat %w[-feliminate-unused-debug-symbols -feliminate-unused-debug-types]
         end
         if send("#{cc_or_cxx}_supports_visibility_flag?")
-          flags << "-fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED"
+          flags.concat %w[-fvisibility=hidden -DVISIBILITY_ATTRIBUTE_SUPPORTED]
           if send("#{cc_or_cxx}_visibility_flag_generates_warnings?") &&
              send("#{cc_or_cxx}_supports_wno_attributes_flag?")
-            flags << "-Wno-attributes"
+            flags << '-Wno-attributes'
           end
         end
       end
 
       flags << '-DHAVE_ACCEPT4' if has_accept4?
-      flags << "-DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
+      flags.concat %w[-DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS]
 
       if cc_or_cxx == :cxx
         flags << debugging_cxxflags
@@ -142,17 +142,17 @@ module PhusionPassenger
 
         if cxx_supports_wno_unused_local_typedefs_flag?
           # Avoids some compilaton warnings with Boost on Ubuntu 14.04.
-          flags << "-Wno-unused-local-typedefs"
+          flags << '-Wno-unused-local-typedefs'
         end
 
         if cxx_supports_wno_vla_cxx_extension_flag?
-          flags << "-Wno-vla-cxx-extension"
+          flags << '-Wno-vla-cxx-extension'
         end
       else
         flags << debugging_cflags
       end
 
-      if os_name_simple == "solaris"
+      if os_name_simple == 'solaris'
         if send("#{cc_or_cxx}_is_sun_studio?")
           flags << '-mt'
         else
@@ -160,10 +160,10 @@ module PhusionPassenger
         end
         if os_name_full =~ /solaris2\.11/
           # skip the _XOPEN_SOURCE and _XPG4_2 definitions in later versions of Solaris / OpenIndiana
-          flags << '-D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
+          flags.concat %w[-D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64]
         else
-          flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
-          flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if os_name_full =~ /solaris2\.9/
+          flags.concat %w[-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64]
+          flags.concat %w[-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED] if os_name_full =~ /solaris2\.9/
         end
         flags << '-DBOOST_HAS_STDINT_H' unless os_name_full =~ /solaris2\.(9|10|11)/
         if send("#{cc_or_cxx}_is_sun_studio?")
@@ -171,9 +171,9 @@ module PhusionPassenger
         else
           flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
         end
-      elsif os_name_simple == "openbsd"
-        flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
-      elsif os_name_simple == "aix"
+      elsif os_name_simple == 'openbsd'
+        flags.concat %w[-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS]
+      elsif os_name_simple == 'aix'
         flags << '-pthread'
         flags << '-DOXT_DISABLE_BACKTRACES'
       elsif RUBY_PLATFORM =~ /(sparc-linux|arm-linux|^arm.*-linux|sh4-linux)/
@@ -181,28 +181,27 @@ module PhusionPassenger
         # http://groups.google.com/group/phusion-passenger/t/6b904a962ee28e5c
         # http://groups.google.com/group/phusion-passenger/browse_thread/thread/aad4bd9d8d200561
         flags << '-DBOOST_SP_USE_PTHREADS'
-      elsif linux_distro == :centos && os_version >= "8"
+      elsif linux_distro == :centos && os_version >= '8'
         # _FORTIFY_SOURCE requires compiling with optimization (-O)
         flags << '-O'
       end
 
-      return flags.compact.map{ |str| str.strip }.join(" ").strip
+      return flags.join(' ')
     end
     private_class_method :default_extra_c_or_cxxflags
 
     def self.portability_c_or_cxx_ldflags(cc_or_cxx)
-      result = ''
+      result = []
       result << cxx_14_flag if cc_or_cxx == :cxx && cxx_14_flag
-      if os_name_simple == "solaris"
-        result << ' -lxnet -lsocket -lnsl -lpthread'
+      if os_name_simple == 'solaris'
+        result.concat %w[-lxnet -lsocket -lnsl -lpthread]
       else
-        result << ' -lpthread'
+        result << '-lpthread'
       end
-      result << ' -lrt' if has_rt_library?
-      result << ' -lmath' if has_math_library?
-      result << ' -ldl' if has_dl_library?
-      result.strip!
-      return result
+      result << '-lrt' if has_rt_library?
+      result << '-lmath' if has_math_library?
+      result << '-ldl' if has_dl_library?
+      return result.join(' ')
     end
     private_class_method :portability_c_or_cxx_ldflags
   end

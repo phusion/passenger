@@ -187,7 +187,7 @@ module PhusionPassenger
   end
 
   # Generate getters for the directory types in locations.ini.
-  getters_code = ""
+  getters_code = String.new
   (REQUIRED_LOCATIONS_INI_FIELDS + OPTIONAL_LOCATIONS_INI_FIELDS).each do |field|
     getters_code << %Q{
       def self.#{field}

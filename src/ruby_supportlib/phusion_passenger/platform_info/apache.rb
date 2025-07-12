@@ -729,7 +729,7 @@ module PhusionPassenger
     # Linker flags that are necessary for linking an Apache module.
     # Already includes APR and APU linker flags.
     def self.apache2_module_cxx_ldflags
-      flags = ""
+      flags = String.new
       if !apxs2.nil?
         flags << `#{apxs2} -q LDFLAGS`.strip
       end
@@ -1010,7 +1010,7 @@ module PhusionPassenger
 
     def self.unescape_c_string(s)
       state = 0
-      res = ''
+      res = String.new
       backslash = "\\"
       s.each_char do |c|
         case state

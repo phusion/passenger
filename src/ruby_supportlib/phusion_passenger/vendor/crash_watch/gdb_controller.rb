@@ -63,7 +63,7 @@ module CrashWatch
       @in.puts(command_string)
       @in.puts("echo \\n#{END_OF_RESPONSE_MARKER}\\n")
       done = false
-      result = ""
+      result = String.new
       while !done
         begin
           if select([@out], nil, nil, timeout)

@@ -112,7 +112,7 @@ class JSON
 
   def string
     if scan(STR)
-      str, esc = '', false
+      str, esc = String.new, false
       while c = s.getch
         if esc
           str << (c == UNI ? (s.scan(CODE) || error).to_i(16).chr : SPEC[c] || c)

@@ -126,7 +126,7 @@ module PhusionPassenger
 
       def run_rake_task!(target)
         total_lines = `#{rake} #{target} --dry-run STDERR_TO_STDOUT=1 2>&1`.split("\n").size - 1
-        partial_backlog = ""
+        partial_backlog = String.new
         logfile = PhusionPassenger::Utils::TmpIO.new("passenger-install-log",
           :mode => File::WRONLY, :unlink_immediately => false)
 

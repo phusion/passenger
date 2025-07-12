@@ -470,7 +470,7 @@ module PhusionPassenger
     def format_exception(e)
       result = "#{e} (#{e.class})"
       if !e.backtrace.empty?
-        result << "\n  " << e.backtrace.join("\n  ")
+        result += "\n  " << e.backtrace.join("\n  ")
       end
       result
     end
@@ -579,7 +579,9 @@ module PhusionPassenger
         end
 
 
-        problem_description = %Q{
+        problem_description = String.new
+
+        problem_description << %Q{
           <h2>Bundler was unable to find one of the gems defined in the Gemfile</h2>
           <table class="table table-bordered table-hover problem-causes">
             <thead>
@@ -903,7 +905,7 @@ module PhusionPassenger
     end
 
     def check_execution_environment_solution_description(passenger_user, passenger_user_doc, bundle_path)
-      result = ''
+      result = String.new
       result << %Q{
         <h3>Check the application process's execution environment</h3>
         <p>

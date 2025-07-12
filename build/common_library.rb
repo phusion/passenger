@@ -40,7 +40,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
   if OPTIMIZE
     optimize = "-O2"
     if LTO
-      optimize << " -flto"
+      optimize += " -flto"
     end
   end
 
@@ -109,8 +109,8 @@ if USE_VENDORED_LIBEV
   let(:libev_cflags) do
     result = '-Isrc/cxx_supportlib/vendor-modified/libev'
     # Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
-    result << ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
-    result << ' -DUSE_VENDORED_LIBEV'
+    result += ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
+    result += ' -DUSE_VENDORED_LIBEV'
     result
   end
 
@@ -167,7 +167,7 @@ else
   let(:libev_cflags) do
     result = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
     # Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
-    result << ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
+    result += ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
     result
   end
 

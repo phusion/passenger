@@ -149,7 +149,7 @@ module PhusionPassenger
       end
 
       def render_to_string
-        str = ""
+        str = String.new
         @choices.each_with_index do |choice, i|
           pointer = render_pointer(i)
           checkbox = render_checkbox(choice.checked)

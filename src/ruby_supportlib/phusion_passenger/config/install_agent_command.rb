@@ -137,11 +137,9 @@ module PhusionPassenger
           else
             color = nil
           end
-          result = ""
-          msg.split("\n", -1).map do |line|
-            result << "#{color}#{@options[:log_prefix]}#{line}#{@colors.reset}\n"
-          end
-          result
+          msg.lines(chomp: true).map do |line|
+            "#{color}#{@options[:log_prefix]}#{line}#{@colors.reset}\n"
+          end.join
         end
       end
 

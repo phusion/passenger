@@ -135,7 +135,7 @@ private
   def handle_next_client(forward_connection)
     client = @server.accept
     begin
-      buffer = "".force_encoding("binary")
+      buffer = String.new(encoding: Encoding::BINARY)
       while true
         begin
           read_header(client, buffer)

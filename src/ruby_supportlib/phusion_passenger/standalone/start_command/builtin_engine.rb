@@ -88,7 +88,7 @@ module PhusionPassenger
               File.stat(report_file_path).size > 0
           end
 
-          command = ""
+          command = String.new
 
           if !@options[:envvars].empty?
             command = "env "
