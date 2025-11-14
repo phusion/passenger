@@ -41,10 +41,10 @@ namespace detail {
 
 struct core_arch_operations_gcc_ppc_base
 {
-    static BOOST_CONSTEXPR_OR_CONST bool full_cas_based = false;
-    static BOOST_CONSTEXPR_OR_CONST bool is_always_lock_free = true;
+    static constexpr bool full_cas_based = false;
+    static constexpr bool is_always_lock_free = true;
 
-    static BOOST_FORCEINLINE void fence_before(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void fence_before(memory_order order) noexcept
     {
 #if defined(__powerpc64__) || defined(__PPC64__)
         if (order == memory_order_seq_cst)
@@ -57,7 +57,7 @@ struct core_arch_operations_gcc_ppc_base
 #endif
     }
 
-    static BOOST_FORCEINLINE void fence_after(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void fence_after(memory_order order) noexcept
     {
         if ((static_cast< unsigned int >(order) & (static_cast< unsigned int >(memory_order_consume) | static_cast< unsigned int >(memory_order_acquire))) != 0u)
             __asm__ __volatile__ ("isync" ::: "memory");

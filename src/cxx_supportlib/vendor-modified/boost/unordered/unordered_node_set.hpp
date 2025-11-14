@@ -1,5 +1,5 @@
 // Copyright (C) 2022-2023 Christian Mazakas
-// Copyright (C) 2024 Joaquin M Lopez Munoz
+// Copyright (C) 2024-2025 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -377,6 +377,11 @@ namespace boost {
       erase(K const& key)
       {
         return table_.erase(key);
+      }
+
+      BOOST_FORCEINLINE init_type pull(const_iterator pos)
+      {
+        return table_.pull(pos);
       }
 
       void swap(unordered_node_set& rhs) noexcept(

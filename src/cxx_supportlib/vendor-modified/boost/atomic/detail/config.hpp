@@ -4,7 +4,7 @@
  * http://www.boost.org/LICENSE_1_0.txt)
  *
  * Copyright (c) 2012 Hartmut Kaiser
- * Copyright (c) 2014-2018, 2020-2021 Andrey Semashev
+ * Copyright (c) 2014-2018, 2020-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/config.hpp
@@ -20,6 +20,29 @@
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
 #endif
+
+#if defined(__SANITIZE_THREAD__)
+#define BOOST_ATOMIC_DETAIL_TSAN
+#elif defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define BOOST_ATOMIC_DETAIL_TSAN
+#endif
+#endif
+
+// Instrumentation macros to make TSan aware of the memory order semantics of asm blocks
+#if defined(BOOST_ATOMIC_DETAIL_TSAN)
+extern "C" {
+void __tsan_acquire(void*);
+void __tsan_release(void*);
+} // extern "C"
+#define BOOST_ATOMIC_DETAIL_TSAN_ACQUIRE(ptr, mo) \
+    { if ((static_cast< unsigned int >(mo) & static_cast< unsigned int >(memory_order_acquire)) != 0u) __tsan_acquire((void*)(ptr)); }
+#define BOOST_ATOMIC_DETAIL_TSAN_RELEASE(ptr, mo) \
+    { if ((static_cast< unsigned int >(mo) & static_cast< unsigned int >(memory_order_release)) != 0u) __tsan_release((void*)(ptr)); }
+#else // defined(BOOST_ATOMIC_DETAIL_TSAN)
+#define BOOST_ATOMIC_DETAIL_TSAN_ACQUIRE(ptr, mo)
+#define BOOST_ATOMIC_DETAIL_TSAN_RELEASE(ptr, mo)
+#endif // defined(BOOST_ATOMIC_DETAIL_TSAN)
 
 #if defined(__CUDACC__)
 // nvcc does not support alternatives ("q,m") in asm statement constraints
@@ -47,13 +70,6 @@
 #define BOOST_ATOMIC_DETAIL_X86_ASM_PRESERVE_EBX
 #endif
 
-#if defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)
-#if !(defined(BOOST_LIBSTDCXX11) && BOOST_LIBSTDCXX_VERSION >= 40700) /* libstdc++ from gcc >= 4.7 in C++11 mode */
-// This macro indicates that there is not even a basic <type_traits> standard header that is sufficient for most Boost.Atomic needs.
-#define BOOST_ATOMIC_DETAIL_NO_CXX11_BASIC_HDR_TYPE_TRAITS
-#endif
-#endif // defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)
-
 #if defined(BOOST_NO_CXX11_ALIGNAS) ||\
     (defined(BOOST_GCC) && BOOST_GCC < 40900) ||\
     (defined(BOOST_MSVC) && BOOST_MSVC < 1910 && defined(_M_IX86))
@@ -61,18 +77,6 @@
 // MSVC 14.0 does support alignas, but in 32-bit mode emits "error C2719: formal parameter with requested alignment of N won't be aligned" for N > 4,
 // when aligned types are used in function arguments, even though the std::max_align_t type has alignment of 8.
 #define BOOST_ATOMIC_DETAIL_NO_CXX11_ALIGNAS
-#endif
-
-#if defined(BOOST_NO_CXX11_CONSTEXPR) || (defined(BOOST_GCC) && BOOST_GCC < 40800)
-// This macro indicates that the compiler doesn't support constexpr constructors that initialize one member
-// of an anonymous union member of the class.
-#define BOOST_ATOMIC_DETAIL_NO_CXX11_CONSTEXPR_UNION_INIT
-#endif
-
-#if !defined(BOOST_ATOMIC_DETAIL_NO_CXX11_CONSTEXPR_UNION_INIT)
-#define BOOST_ATOMIC_DETAIL_CONSTEXPR_UNION_INIT BOOST_CONSTEXPR
-#else
-#define BOOST_ATOMIC_DETAIL_CONSTEXPR_UNION_INIT
 #endif
 
 // Enable pointer/reference casts between storage and value when possible.
@@ -89,19 +93,6 @@
 // The compiler supports output values in flag registers.
 // See: https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html, Section 6.44.3.
 #define BOOST_ATOMIC_DETAIL_ASM_HAS_FLAG_OUTPUTS
-#endif
-
-#if defined(BOOST_INTEL) || (defined(BOOST_GCC) && BOOST_GCC < 40700) ||\
-    (defined(BOOST_CLANG) && !defined(__apple_build_version__) && (__clang_major__ * 100 + __clang_minor__) < 302) ||\
-    (defined(__clang__) && defined(__apple_build_version__) && (__clang_major__ * 100 + __clang_minor__) < 402)
-// Intel compiler (at least 18.0 update 1) breaks if noexcept specification is used in defaulted function declarations:
-// error: the default constructor of "boost::atomics::atomic<T>" cannot be referenced -- it is a deleted function
-// GCC 4.6 doesn't seem to support that either. Clang 3.1 deduces wrong noexcept for the defaulted function and fails as well.
-#define BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_DECL
-#define BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_IMPL BOOST_NOEXCEPT
-#else
-#define BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_DECL BOOST_NOEXCEPT
-#define BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_IMPL
 #endif
 
 #if defined(__has_builtin)
@@ -135,7 +126,7 @@
 #endif
 
 #if (defined(__BYTE_ORDER__) && defined(__FLOAT_WORD_ORDER__) && __BYTE_ORDER__ == __FLOAT_WORD_ORDER__) ||\
-    defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+    defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_AMD64) || defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
 // This macro indicates that integer and floating point endianness is the same
 #define BOOST_ATOMIC_DETAIL_INT_FP_ENDIAN_MATCH
 #endif

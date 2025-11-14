@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2014 Andrey Semashev
+ * Copyright (c) 2014-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/cas_based_exchange.hpp
@@ -30,9 +30,9 @@ template< typename Base >
 struct cas_based_exchange :
     public Base
 {
-    typedef typename Base::storage_type storage_type;
+    using storage_type = typename Base::storage_type;
 
-    static BOOST_FORCEINLINE storage_type exchange(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type exchange(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         storage_type old_val;
         atomics::detail::non_atomic_load(storage, old_val);

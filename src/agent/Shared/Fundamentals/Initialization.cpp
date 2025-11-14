@@ -465,6 +465,7 @@ maybeInitializeAbortHandler() {
 	config->origArgv = context->origArgv;
 	config->randomSeed = context->randomSeed;
 	config->dumpWithCrashWatch = getEnvBool("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
+	config->dumpCrashWatchToStderr = getEnvBool("PASSENGER_DUMP_CRASH_WATCH_TO_STDERR", false);
 	config->beep = getEnvBool("PASSENGER_BEEP_ON_ABORT");
 	config->stopProcess = getEnvBool("PASSENGER_STOP_ON_ABORT");
 	config->forceTerminateProcess = getEnvBool("PASSENGER_FORCE_TERMINATE_ON_ABORT");

@@ -88,6 +88,7 @@
 #include <boost/type_traits/is_abstract.hpp>
 #include <boost/type_traits/is_base_and_derived.hpp>
 #include <boost/type_traits/is_rvalue_reference.hpp>
+#include <boost/type_traits/is_convertible.hpp>
 #include <boost/iterator/iterator_traits.hpp>
 #include <boost/utility/addressof.hpp>
 #include <boost/foreach_fwd.hpp>

@@ -14,5 +14,5 @@ group :development do
   gem 'rspec', '~> 3.12.0'
   gem 'rspec-collection_matchers'
   gem 'webrick', '~> 1.8.1'
-  gem 'gpgme' if ENV['USER'] == 'camdennarzt'
+  gem 'gpgme', install_if: ENV['USER'] == 'camdennarzt'
 end

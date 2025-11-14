@@ -28,9 +28,6 @@
 #include <initializer_list>
 #endif
 
-#include <boost/range/begin.hpp>
-#include <boost/range/end.hpp>
-
 namespace boost {
 namespace random {
 
@@ -134,8 +131,8 @@ public:
         template<class IntervalRange, class WeightRange>
         param_type(const IntervalRange& intervals_arg,
                    const WeightRange& weights_arg)
-          : _intervals(boost::begin(intervals_arg), boost::end(intervals_arg)),
-            _weights(boost::begin(weights_arg), boost::end(weights_arg))
+          : _intervals(std::begin(intervals_arg), std::end(intervals_arg)),
+            _weights(std::begin(weights_arg), std::end(weights_arg))
         {
             if(_intervals.size() < 2) {
                 _weights.clear();
@@ -200,7 +197,7 @@ public:
             detail::print_vector(os, parm._weights);
             return os;
         }
-        
+
         /** Reads the parameters from a @c std::istream. */
         BOOST_RANDOM_DETAIL_ISTREAM_OPERATOR(is, param_type, parm)
         {
@@ -321,8 +318,8 @@ public:
     template<class IntervalsRange, class WeightsRange>
     piecewise_linear_distribution(const IntervalsRange& intervals_arg,
                                   const WeightsRange& weights_arg)
-      : _intervals(boost::begin(intervals_arg), boost::end(intervals_arg)),
-        _weights(boost::begin(weights_arg), boost::end(weights_arg))
+      : _intervals(std::begin(intervals_arg), std::end(intervals_arg)),
+        _weights(std::begin(weights_arg), std::end(weights_arg))
     {
         if(_intervals.size() < 2) {
             default_init();
@@ -383,7 +380,7 @@ public:
             return (std::min)(dist(urng), dist(urng));
         }
     }
-    
+
     /**
      * Returns a value distributed according to the parameters
      * specified by param.
@@ -393,7 +390,7 @@ public:
     {
         return piecewise_linear_distribution(parm)(urng);
     }
-    
+
     /** Returns the smallest value that the distribution can produce. */
     result_type min BOOST_PREVENT_MACRO_SUBSTITUTION () const
     { return _intervals.front(); }
@@ -439,7 +436,7 @@ public:
         _intervals.swap(new_intervals);
         _weights.swap(new_weights);
     }
-    
+
     /**
      * Effects: Subsequent uses of the distribution do not depend
      * on values produced by any engine prior to invoking reset.

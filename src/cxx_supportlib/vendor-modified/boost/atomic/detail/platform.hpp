@@ -82,13 +82,13 @@
 
 #define BOOST_ATOMIC_DETAIL_CORE_ARCH_BACKEND gcc_alpha
 
-#elif defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
-
-#define BOOST_ATOMIC_DETAIL_CORE_ARCH_BACKEND msvc_x86
-
-#elif defined(_MSC_VER) && _MSC_VER >= 1700 && (defined(_M_ARM) || defined(_M_ARM64))
+#elif defined(_MSC_VER) && _MSC_VER >= 1700 && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC))
 
 #define BOOST_ATOMIC_DETAIL_CORE_ARCH_BACKEND msvc_arm
+
+#elif defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_AMD64))
+
+#define BOOST_ATOMIC_DETAIL_CORE_ARCH_BACKEND msvc_x86
 
 #endif
 
@@ -133,7 +133,7 @@
 
 #define BOOST_ATOMIC_DETAIL_CORE_BACKEND linux_arm
 
-#elif defined(BOOST_WINDOWS) || defined(_WIN32_CE)
+#elif defined(BOOST_WINDOWS) || defined(_WIN32_WCE)
 
 #define BOOST_ATOMIC_DETAIL_CORE_BACKEND windows
 

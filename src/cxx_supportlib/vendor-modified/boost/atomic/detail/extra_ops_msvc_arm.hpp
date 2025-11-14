@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2017 Andrey Semashev
+ * Copyright (c) 2017-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/extra_ops_msvc_arm.hpp
@@ -37,10 +37,10 @@ template< typename Base, std::size_t Size, bool Signed >
 struct extra_operations< Base, 4u, Signed, true > :
     public extra_operations_generic< Base, 4u, Signed >
 {
-    typedef extra_operations_generic< Base, 4u, Signed > base_type;
-    typedef typename base_type::storage_type storage_type;
+    using base_type = extra_operations_generic< Base, 4u, Signed >;
+    using storage_type = typename base_type::storage_type;
 
-    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
 #if defined(BOOST_ATOMIC_INTERLOCKED_BTS_RELAXED) && defined(BOOST_ATOMIC_INTERLOCKED_BTS_ACQUIRE) && defined(BOOST_ATOMIC_INTERLOCKED_BTS_RELEASE)
         bool result;
@@ -68,7 +68,7 @@ struct extra_operations< Base, 4u, Signed, true > :
 #endif
     }
 
-    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
 #if defined(BOOST_ATOMIC_INTERLOCKED_BTR_RELAXED) && defined(BOOST_ATOMIC_INTERLOCKED_BTR_ACQUIRE) && defined(BOOST_ATOMIC_INTERLOCKED_BTR_RELEASE)
         bool result;

@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2020 Andrey Semashev
+ * Copyright (c) 2020-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/type_traits/alignment_of.hpp
@@ -16,8 +16,7 @@
 
 #include <boost/atomic/detail/config.hpp>
 
-#if defined(BOOST_ATOMIC_DETAIL_NO_CXX11_BASIC_HDR_TYPE_TRAITS) ||\
-    (defined(BOOST_GCC) && BOOST_GCC < 80100) ||\
+#if (defined(BOOST_GCC) && BOOST_GCC < 80100) ||\
     (defined(BOOST_CLANG) && !defined(__apple_build_version__) && __clang_major__ < 9) ||\
     (defined(BOOST_CLANG) && defined(__apple_build_version__) && __clang_major__ < 10)
 // For some compilers std::alignment_of gives the wrong result for 64-bit types on 32-bit targets

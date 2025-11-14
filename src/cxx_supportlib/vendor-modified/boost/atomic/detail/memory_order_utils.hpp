@@ -26,12 +26,12 @@ namespace boost {
 namespace atomics {
 namespace detail {
 
-BOOST_FORCEINLINE BOOST_CONSTEXPR memory_order deduce_failure_order(memory_order order) BOOST_NOEXCEPT
+BOOST_FORCEINLINE constexpr memory_order deduce_failure_order(memory_order order) noexcept
 {
     return order == memory_order_acq_rel ? memory_order_acquire : (order == memory_order_release ? memory_order_relaxed : order);
 }
 
-BOOST_FORCEINLINE BOOST_CONSTEXPR bool cas_failure_order_must_not_be_stronger_than_success_order(memory_order success_order, memory_order failure_order) BOOST_NOEXCEPT
+BOOST_FORCEINLINE constexpr bool cas_failure_order_must_not_be_stronger_than_success_order(memory_order success_order, memory_order failure_order) noexcept
 {
     // 15 == (memory_order_seq_cst | memory_order_consume), see memory_order.hpp
     // Given the enum values we can test the strength of memory order requirements with this single condition.

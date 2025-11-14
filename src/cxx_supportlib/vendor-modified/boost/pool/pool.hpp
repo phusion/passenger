@@ -39,7 +39,7 @@
 
 #ifdef BOOST_POOL_INSTRUMENT
 #include <iostream>
-#include<iomanip>
+#include <iomanip>
 #endif
 #ifdef BOOST_POOL_VALGRIND
 #include <set>

@@ -28,7 +28,7 @@
 # pragma intrinsic(_BitScanForward)
 # pragma intrinsic(_BitScanReverse)
 
-# if defined(_M_X64)
+# if defined(_M_X64) || defined(_M_ARM64)
 #  pragma intrinsic(_BitScanForward64)
 #  pragma intrinsic(_BitScanReverse64)
 # endif
@@ -230,7 +230,7 @@ inline int countl_impl( boost::uint16_t x ) BOOST_NOEXCEPT
 
 #endif
 
-#if defined(_MSC_VER) && defined(_M_X64) && defined(BOOST_CORE_HAS_BUILTIN_ISCONSTEVAL)
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64)) && defined(BOOST_CORE_HAS_BUILTIN_ISCONSTEVAL)
 
 BOOST_CXX14_CONSTEXPR inline int countl_impl( boost::uint64_t x ) BOOST_NOEXCEPT
 {
@@ -255,7 +255,7 @@ BOOST_CXX14_CONSTEXPR inline int countl_impl( boost::uint64_t x ) BOOST_NOEXCEPT
     }
 }
 
-#elif defined(_MSC_VER) && defined(_M_X64)
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
 
 inline int countl_impl( boost::uint64_t x ) BOOST_NOEXCEPT
 {
@@ -455,7 +455,7 @@ inline int countr_impl( boost::uint16_t x ) BOOST_NOEXCEPT
 
 #endif
 
-#if defined(_MSC_VER) && defined(_M_X64) && defined(BOOST_CORE_HAS_BUILTIN_ISCONSTEVAL)
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64)) && defined(BOOST_CORE_HAS_BUILTIN_ISCONSTEVAL)
 
 BOOST_CXX14_CONSTEXPR inline int countr_impl( boost::uint64_t x ) BOOST_NOEXCEPT
 {
@@ -480,7 +480,7 @@ BOOST_CXX14_CONSTEXPR inline int countr_impl( boost::uint64_t x ) BOOST_NOEXCEPT
     }
 }
 
-#elif defined(_MSC_VER) && defined(_M_X64)
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
 
 inline int countr_impl( boost::uint64_t x ) BOOST_NOEXCEPT
 {
@@ -703,7 +703,7 @@ BOOST_CXX14_CONSTEXPR inline boost::uint32_t bit_ceil_impl( boost::uint32_t x ) 
 {
     if( x == 0 )
     {
-        return 0;
+        return 1;
     }
 
     --x;
@@ -723,7 +723,7 @@ BOOST_CXX14_CONSTEXPR inline boost::uint64_t bit_ceil_impl( boost::uint64_t x ) 
 {
     if( x == 0 )
     {
-        return 0;
+        return 1;
     }
 
     --x;

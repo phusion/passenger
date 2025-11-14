@@ -16,3 +16,7 @@
     && !defined(BOOST_MSVC)
     #define BOOST_RANDOM_NO_STREAM_OPERATORS
 #endif
+
+#if ((defined(__cplusplus) && __cplusplus >= 201703L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)) && (defined(__cpp_hex_float) && __cpp_hex_float >= 201603L)
+#  define BOOST_RANDOM_HAS_HEX_FLOAT
+#endif

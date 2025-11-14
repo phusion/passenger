@@ -34,15 +34,15 @@
 #if !defined(BOOST_NO_CXX20_HDR_CONCEPTS) // std::common_reference_with
 # include <type_traits>
 #endif
+#if !defined(BOOST_NO_CXX20_HDR_FORMAT)
+# include <format> // std::formatter
+#endif
 
 namespace boost
 {
 
 // forward declaration of boost::basic_string_view from Utility
 template<class Ch, class Tr> class basic_string_view;
-
-// forward declaration of boost::hash_range from ContainerHash
-template<class It> std::size_t hash_range( It, It );
 
 namespace core
 {
@@ -381,7 +381,7 @@ public:
     }
 
     template<class End> BOOST_CXX14_CONSTEXPR basic_string_view( Ch const* first, End last,
-        typename boost::enable_if<boost::core::detail::is_same<End, Ch const*> >::type* = 0 ) BOOST_NOEXCEPT: p_( first ), n_( static_cast<size_type>( last - first ) )
+        typename boost::enable_if<boost::core::detail::is_same<End, Ch const*>, int >::type = 0 ) BOOST_NOEXCEPT: p_( first ), n_( static_cast<size_type>( last - first ) )
     {
         BOOST_ASSERT( last - first >= 0 );
     }
@@ -399,7 +399,7 @@ public:
 #endif
 
     template<class Ch2> basic_string_view( boost::basic_string_view<Ch2, std::char_traits<Ch2> > const& str,
-        typename boost::enable_if<boost::core::detail::is_same<Ch, Ch2> >::type* = 0 ) BOOST_NOEXCEPT: p_( str.data() ), n_( str.size() )
+        typename boost::enable_if<boost::core::detail::is_same<Ch, Ch2>, int >::type = 0 ) BOOST_NOEXCEPT: p_( str.data() ), n_( str.size() )
     {
     }
 
@@ -1181,11 +1181,6 @@ public:
     }
 
 #endif
-
-    inline friend std::size_t hash_value( basic_string_view const& sv )
-    {
-        return boost::hash_range( sv.begin(), sv.end() );
-    }
 };
 
 // stream inserter
@@ -1265,6 +1260,17 @@ struct std::basic_common_reference<
     Q1, Q2>
 {
     using type = boost::core::basic_string_view<Ch>;
+};
+
+#endif
+
+// std::format support
+
+#if !defined(BOOST_NO_CXX20_HDR_FORMAT)
+
+template<class Ch, class Ch2>
+struct std::formatter<boost::core::basic_string_view<Ch>, Ch2>: std::formatter<std::basic_string_view<Ch>, Ch2>
+{
 };
 
 #endif

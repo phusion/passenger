@@ -89,10 +89,10 @@ private:
 	Connection connect() const {
 		Connection connection;
 		P_TRACE(3, "Connecting to " << address);
-		NConnect_State state(address, __FILE__, __LINE__);
-		connection.ready = state.connectToServer();
+		auto result = createNonBlockingSocketConnection(address, __FILE__, __LINE__);
+		connection.ready = result.second;
 		connection.fail = true;
-		connection.fd = state.getFd().detach();
+		connection.fd = result.first;
 		connection.wantKeepAlive = false;
 		P_LOG_FILE_DESCRIPTOR_PURPOSE(connection.fd, "App " << pid << " connection");
 		return connection;

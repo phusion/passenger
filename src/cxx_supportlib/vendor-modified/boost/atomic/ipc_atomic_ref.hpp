@@ -14,6 +14,7 @@
 #ifndef BOOST_ATOMIC_IPC_ATOMIC_REF_HPP_INCLUDED_
 #define BOOST_ATOMIC_IPC_ATOMIC_REF_HPP_INCLUDED_
 
+#include <type_traits>
 #include <boost/assert.hpp>
 #include <boost/memory_order.hpp>
 #include <boost/atomic/capabilities.hpp>
@@ -37,40 +38,39 @@ class ipc_atomic_ref :
     public atomics::detail::base_atomic_ref< T, typename atomics::detail::classify< T >::type, true >
 {
 private:
-    typedef atomics::detail::base_atomic_ref< T, typename atomics::detail::classify< T >::type, true > base_type;
-    typedef typename base_type::value_arg_type value_arg_type;
+    using base_type = atomics::detail::base_atomic_ref< T, typename atomics::detail::classify< T >::type, true >;
+    using value_arg_type = typename base_type::value_arg_type;
 
 public:
-    typedef typename base_type::value_type value_type;
+    using value_type = typename base_type::value_type;
 
     static_assert(sizeof(value_type) > 0u, "boost::ipc_atomic_ref<T> requires T to be a complete type");
-#if !defined(BOOST_ATOMIC_DETAIL_NO_CXX11_IS_TRIVIALLY_COPYABLE)
     static_assert(atomics::detail::is_trivially_copyable< value_type >::value, "boost::ipc_atomic_ref<T> requires T to be a trivially copyable type");
-#endif
 
 private:
-    typedef typename base_type::storage_type storage_type;
+    using storage_type = typename base_type::storage_type;
 
 public:
-    BOOST_DEFAULTED_FUNCTION(ipc_atomic_ref(ipc_atomic_ref const& that) BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_DECL, BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_IMPL : base_type(static_cast< base_type const& >(that)) {})
-    BOOST_FORCEINLINE explicit ipc_atomic_ref(value_type& v) BOOST_NOEXCEPT : base_type(v)
+    ipc_atomic_ref(ipc_atomic_ref const&) = default;
+
+    BOOST_FORCEINLINE explicit ipc_atomic_ref(value_type& v) noexcept : base_type(v)
     {
         // Check that referenced object alignment satisfies required alignment
         BOOST_ASSERT((((atomics::detail::uintptr_t)this->m_value) & (base_type::required_alignment - 1u)) == 0u);
     }
 
-    BOOST_FORCEINLINE value_type operator= (value_arg_type v) const BOOST_NOEXCEPT
+    ipc_atomic_ref& operator= (ipc_atomic_ref const&) = delete;
+
+    BOOST_FORCEINLINE value_type operator= (value_arg_type v) const noexcept
     {
         this->store(v);
         return v;
     }
 
-    BOOST_FORCEINLINE operator value_type() const BOOST_NOEXCEPT
+    BOOST_FORCEINLINE operator value_type() const noexcept
     {
         return this->load();
     }
-
-    BOOST_DELETED_FUNCTION(ipc_atomic_ref& operator= (ipc_atomic_ref const&))
 };
 
 #if !defined(BOOST_NO_CXX17_DEDUCTION_GUIDES)
@@ -80,7 +80,7 @@ ipc_atomic_ref(T&) -> ipc_atomic_ref< T >;
 
 //! IPC atomic reference factory function
 template< typename T >
-BOOST_FORCEINLINE ipc_atomic_ref< T > make_ipc_atomic_ref(T& value) BOOST_NOEXCEPT
+BOOST_FORCEINLINE ipc_atomic_ref< T > make_ipc_atomic_ref(T& value) noexcept
 {
     return ipc_atomic_ref< T >(value);
 }

@@ -14,10 +14,8 @@
 #ifndef BOOST_ATOMIC_DETAIL_TYPE_TRAITS_HAS_UNIQUE_OBJECT_REPRESENTATIONS_HPP_INCLUDED_
 #define BOOST_ATOMIC_DETAIL_TYPE_TRAITS_HAS_UNIQUE_OBJECT_REPRESENTATIONS_HPP_INCLUDED_
 
-#include <boost/atomic/detail/config.hpp>
-#if !defined(BOOST_ATOMIC_DETAIL_NO_CXX11_BASIC_HDR_TYPE_TRAITS)
 #include <type_traits>
-#endif
+#include <boost/atomic/detail/config.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
@@ -50,7 +48,6 @@ using std::has_unique_object_representations;
 #if defined(BOOST_ATOMIC_DETAIL_HAS_UNIQUE_OBJECT_REPRESENTATIONS)
 
 #include <cstddef>
-#include <boost/atomic/detail/type_traits/integral_constant.hpp>
 
 namespace boost {
 namespace atomics {
@@ -58,7 +55,7 @@ namespace detail {
 
 template< typename T >
 struct has_unique_object_representations :
-    public atomics::detail::integral_constant< bool, BOOST_ATOMIC_DETAIL_HAS_UNIQUE_OBJECT_REPRESENTATIONS(T) >
+    public std::integral_constant< bool, BOOST_ATOMIC_DETAIL_HAS_UNIQUE_OBJECT_REPRESENTATIONS(T) >
 {
 };
 

@@ -38,14 +38,21 @@ echo "$EXISTS"
 if [[ "$EXISTS" = True ]]; then
 	echo "--> Downloading and extracting blob"
 	mkdir -p "$CACHE_PATH"
-	az storage blob download \
+	if az storage blob download \
 		--container-name "$CONTAINER_NAME" \
 		--name "$BLOB_NAME" \
 		--no-progress \
-		| "${SUDO_COMMAND[@]}" env ZSTD_NBTHREADS=0 tar -C "$CACHE_PATH" -x --zstd -f -
-	echo "Extracted"
+		| "${SUDO_COMMAND[@]}" env ZSTD_NBTHREADS=0 tar -C "$CACHE_PATH" -x --zstd -f -; then
+	    echo "Extracted"
 
-	echo "cache-hit=true" >> "$GITHUB_OUTPUT"
+	    echo "cache-hit=true" >> "$GITHUB_OUTPUT"
+        else
+            echo "azure blob is probably corrupted, deleting it..."
+            az storage blob delete \
+		--container-name "$CONTAINER_NAME" \
+		--name "$BLOB_NAME"
+            echo "cache-hit=false" >> "$GITHUB_OUTPUT"
+        fi
 else
 	echo "cache-hit=false" >> "$GITHUB_OUTPUT"
 fi

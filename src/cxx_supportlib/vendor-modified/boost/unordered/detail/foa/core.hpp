@@ -1,6 +1,6 @@
 /* Common base for Boost.Unordered open-addressing tables.
  *
- * Copyright 2022-2024 Joaquin M Lopez Munoz.
+ * Copyright 2022-2025 Joaquin M Lopez Munoz.
  * Copyright 2023 Christian Mazakas.
  * Copyright 2024 Braden Ganetsky.
  * Distributed under the Boost Software License, Version 1.0.
@@ -16,6 +16,7 @@
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
+#include <boost/container_hash/hash_is_avalanching.hpp>
 #include <boost/core/allocator_traits.hpp>
 #include <boost/core/bit.hpp>
 #include <boost/core/empty_value.hpp>
@@ -28,7 +29,6 @@
 #include <boost/unordered/detail/mulx.hpp>
 #include <boost/unordered/detail/static_assert.hpp>
 #include <boost/unordered/detail/type_traits.hpp>
-#include <boost/unordered/hash_traits.hpp>
 #include <boost/unordered/unordered_printers.hpp>
 #include <climits>
 #include <cmath>
@@ -1426,7 +1426,7 @@ public:
   using size_policy=pow2_size_policy;
   using prober=pow2_quadratic_prober;
   using mix_policy=typename std::conditional<
-    hash_is_avalanching<Hash>::value,
+    boost::hash_is_avalanching<Hash>::value,
     no_mix,
     mulx_mix
   >::type;

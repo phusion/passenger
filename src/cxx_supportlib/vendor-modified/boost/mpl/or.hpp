@@ -29,24 +29,20 @@
 // 'or' and 'and' macros, see http://tinyurl.com/3et69; 'defined(or)'
 // has to be checked in a separate condition, otherwise GCC complains 
 // about 'or' being an alternative token
-#if defined(_MSC_VER)
-#ifndef __GCCXML__
+#if defined(_MSC_EXTENSIONS)
 #if defined(or)
 #   pragma push_macro("or")
 #   undef or
 #   define or(x)
 #endif
 #endif
-#endif
 
 #   define BOOST_MPL_PREPROCESSED_HEADER or.hpp
 #   include <boost/mpl/aux_/include_preprocessed.hpp>
 
-#if defined(_MSC_VER) && !defined(__clang__)
-#ifndef __GCCXML__
+#if defined(_MSC_EXTENSIONS)
 #if defined(or)
 #   pragma pop_macro("or")
-#endif
 #endif
 #endif
 

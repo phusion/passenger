@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2020 Andrey Semashev
+ * Copyright (c) 2020-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/fence_ops_gcc_sync.hpp
@@ -29,20 +29,20 @@ namespace detail {
 //! Fence operations based on gcc __sync* intrinsics
 struct fence_operations_gcc_sync
 {
-    static BOOST_FORCEINLINE void thread_fence(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void thread_fence(memory_order order) noexcept
     {
         if (order != memory_order_relaxed)
             __sync_synchronize();
     }
 
-    static BOOST_FORCEINLINE void signal_fence(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void signal_fence(memory_order order) noexcept
     {
         if (order != memory_order_relaxed)
             __asm__ __volatile__ ("" ::: "memory");
     }
 };
 
-typedef fence_operations_gcc_sync fence_operations;
+using fence_operations = fence_operations_gcc_sync;
 
 } // namespace detail
 } // namespace atomics

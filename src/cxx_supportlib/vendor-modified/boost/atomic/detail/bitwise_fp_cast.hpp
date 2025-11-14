@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2018, 2021 Andrey Semashev
+ * Copyright (c) 2018-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/bitwise_fp_cast.hpp
@@ -19,7 +19,7 @@
 #include <boost/atomic/detail/float_sizes.hpp>
 #include <boost/atomic/detail/bitwise_cast.hpp>
 #if defined(BOOST_ATOMIC_DETAIL_BIT_CAST)
-#include <boost/atomic/detail/type_traits/integral_constant.hpp>
+#include <type_traits>
 #endif
 #include <boost/atomic/detail/header.hpp>
 
@@ -40,14 +40,14 @@ namespace detail {
 template< typename T >
 struct value_size_of
 {
-    static BOOST_CONSTEXPR_OR_CONST std::size_t value = sizeof(T);
+    static constexpr std::size_t value = sizeof(T);
 };
 
 #if defined(BOOST_ATOMIC_DETAIL_SIZEOF_FLOAT_VALUE)
 template< >
 struct value_size_of< float >
 {
-    static BOOST_CONSTEXPR_OR_CONST std::size_t value = BOOST_ATOMIC_DETAIL_SIZEOF_FLOAT_VALUE;
+    static constexpr std::size_t value = BOOST_ATOMIC_DETAIL_SIZEOF_FLOAT_VALUE;
 };
 #endif
 
@@ -55,7 +55,7 @@ struct value_size_of< float >
 template< >
 struct value_size_of< double >
 {
-    static BOOST_CONSTEXPR_OR_CONST std::size_t value = BOOST_ATOMIC_DETAIL_SIZEOF_DOUBLE_VALUE;
+    static constexpr std::size_t value = BOOST_ATOMIC_DETAIL_SIZEOF_DOUBLE_VALUE;
 };
 #endif
 
@@ -63,7 +63,7 @@ struct value_size_of< double >
 template< >
 struct value_size_of< long double >
 {
-    static BOOST_CONSTEXPR_OR_CONST std::size_t value = BOOST_ATOMIC_DETAIL_SIZEOF_LONG_DOUBLE_VALUE;
+    static constexpr std::size_t value = BOOST_ATOMIC_DETAIL_SIZEOF_LONG_DOUBLE_VALUE;
 };
 #endif
 
@@ -89,12 +89,12 @@ struct value_size_of< const volatile T > : value_size_of< T > {};
 
 //! Similar to bitwise_cast, but either \c From or \c To is expected to be a floating point type. Attempts to detect the actual value size in the source object and considers the rest of the object as padding.
 template< typename To, typename From >
-BOOST_FORCEINLINE BOOST_ATOMIC_DETAIL_CONSTEXPR_BITWISE_CAST To bitwise_fp_cast(From const& from) BOOST_NOEXCEPT
+BOOST_FORCEINLINE BOOST_ATOMIC_DETAIL_CONSTEXPR_BITWISE_CAST To bitwise_fp_cast(From const& from) noexcept
 {
     // For floating point types, has_unique_object_representations is typically false even if the type contains no padding bits.
     // Here, we rely on our detection of the actual value size to select constexpr bit_cast implementation when possible. We assume
     // here that floating point value bits are contiguous.
-    return atomics::detail::bitwise_cast_impl< To, BOOST_ATOMIC_DETAIL_BITWISE_FP_CAST_VALUE_SIZE_OF(From) >(from, atomics::detail::integral_constant< bool,
+    return atomics::detail::bitwise_cast_impl< To, BOOST_ATOMIC_DETAIL_BITWISE_FP_CAST_VALUE_SIZE_OF(From) >(from, std::integral_constant< bool,
         atomics::detail::value_size_of< From >::value == sizeof(From) && atomics::detail::value_size_of< From >::value == sizeof(To) >());
 }
 
@@ -102,7 +102,7 @@ BOOST_FORCEINLINE BOOST_ATOMIC_DETAIL_CONSTEXPR_BITWISE_CAST To bitwise_fp_cast(
 
 //! Similar to bitwise_cast, but either \c From or \c To is expected to be a floating point type. Attempts to detect the actual value size in the source object and considers the rest of the object as padding.
 template< typename To, typename From >
-BOOST_FORCEINLINE BOOST_ATOMIC_DETAIL_CONSTEXPR_BITWISE_CAST To bitwise_fp_cast(From const& from) BOOST_NOEXCEPT
+BOOST_FORCEINLINE BOOST_ATOMIC_DETAIL_CONSTEXPR_BITWISE_CAST To bitwise_fp_cast(From const& from) noexcept
 {
     return atomics::detail::bitwise_cast< To, BOOST_ATOMIC_DETAIL_BITWISE_FP_CAST_VALUE_SIZE_OF(From) >(from);
 }

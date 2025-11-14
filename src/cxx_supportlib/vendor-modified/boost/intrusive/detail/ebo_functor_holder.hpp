@@ -88,7 +88,7 @@ struct is_unary_or_binary_function_impl<R (*)(T0)>
 {  static const bool value = true;  };
 
 template <typename R, class T0>
-struct is_unary_or_binary_function_impl<R (*)(T0...)>
+struct is_unary_or_binary_function_impl<R (*)(T0, ...)>
 {  static const bool value = true;  };
 
 #else // BOOST_INTRUSIVE_TT_TEST_MSC_FUNC_SIGS
@@ -110,7 +110,7 @@ struct is_unary_or_binary_function_impl<R (__cdecl*)(T0)>
 {  static const bool value = true;  };
 
 template <typename R, class T0>
-struct is_unary_or_binary_function_impl<R (__cdecl*)(T0...)>
+struct is_unary_or_binary_function_impl<R (__cdecl*)(T0, ...)>
 {  static const bool value = true;  };
 
 #endif
@@ -124,7 +124,7 @@ struct is_unary_or_binary_function_impl<R (*)(T0, T1)>
 {  static const bool value = true;  };
 
 template <typename R, class T0, class T1>
-struct is_unary_or_binary_function_impl<R (*)(T0, T1...)>
+struct is_unary_or_binary_function_impl<R (*)(T0, T1, ...)>
 {  static const bool value = true;  };
 
 #else // BOOST_INTRUSIVE_TT_TEST_MSC_FUNC_SIGS
@@ -146,7 +146,7 @@ struct is_unary_or_binary_function_impl<R (__cdecl*)(T0, T1)>
 {  static const bool value = true;  };
 
 template <typename R, class T0, class T1>
-struct is_unary_or_binary_function_impl<R (__cdecl*)(T0, T1...)>
+struct is_unary_or_binary_function_impl<R (__cdecl*)(T0, T1, ...)>
 {  static const bool value = true;  };
 #endif
 

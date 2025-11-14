@@ -29,9 +29,6 @@
 #include <initializer_list>
 #endif
 
-#include <boost/range/begin.hpp>
-#include <boost/range/end.hpp>
-
 #include <boost/random/detail/disable_warnings.hpp>
 
 namespace boost {
@@ -268,7 +265,7 @@ public:
          */
         template<class Range>
         explicit param_type(const Range& range)
-          : _probabilities(boost::begin(range), boost::end(range))
+          : _probabilities(std::begin(range), std::end(range))
         {
             normalize();
         }
@@ -308,7 +305,7 @@ public:
             detail::print_vector(os, parm._probabilities);
             return os;
         }
-        
+
         /** Reads the parameters from a @c std::istream. */
         BOOST_RANDOM_DETAIL_ISTREAM_OPERATOR(is, param_type, parm)
         {
@@ -389,7 +386,7 @@ public:
     template<class Range>
     explicit discrete_distribution(const Range& range)
     {
-        init(boost::begin(range), boost::end(range));
+        init(std::begin(range), std::end(range));
     }
     /**
      * Constructs a discrete_distribution that approximates a function.
@@ -440,7 +437,7 @@ public:
             return(_impl._alias_table[static_cast<std::size_t>(result)].second);
         }
     }
-    
+
     /**
      * Returns a value distributed according to the parameters
      * specified by param.
@@ -472,7 +469,7 @@ public:
             return discrete_distribution(parm)(urng);
         }
     }
-    
+
     /** Returns the smallest value that the distribution can produce. */
     result_type min BOOST_PREVENT_MACRO_SUBSTITUTION () const { return 0; }
     /** Returns the largest value that the distribution can produce. */
@@ -520,7 +517,7 @@ public:
     {
         init(parm._probabilities.begin(), parm._probabilities.end());
     }
-    
+
     /**
      * Effects: Subsequent uses of the distribution do not depend
      * on values produced by any engine prior to invoking reset.
@@ -576,7 +573,7 @@ private:
         std::vector<std::pair<WeightType, IntType> > above_average;
         below_average.reserve(input_size);
         above_average.reserve(input_size);
-        
+
         WeightType weight_average = _impl.init_average(first, last);
         WeightType normalized_average = _impl.get_weight(0);
         std::size_t i = 0;

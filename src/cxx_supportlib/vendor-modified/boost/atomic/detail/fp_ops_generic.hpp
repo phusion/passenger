@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2018 Andrey Semashev
+ * Copyright (c) 2018-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/fp_ops_generic.hpp
@@ -35,11 +35,11 @@ template< typename Base, typename Value, std::size_t Size >
 struct fp_operations_generic :
     public Base
 {
-    typedef Base base_type;
-    typedef typename base_type::storage_type storage_type;
-    typedef Value value_type;
+    using base_type = Base;
+    using storage_type = typename base_type::storage_type;
+    using value_type = Value;
 
-    static BOOST_FORCEINLINE value_type fetch_add(storage_type volatile& storage, value_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE value_type fetch_add(storage_type volatile& storage, value_type v, memory_order order) noexcept
     {
         storage_type old_storage, new_storage;
         value_type old_val, new_val;
@@ -54,7 +54,7 @@ struct fp_operations_generic :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE value_type fetch_sub(storage_type volatile& storage, value_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE value_type fetch_sub(storage_type volatile& storage, value_type v, memory_order order) noexcept
     {
         storage_type old_storage, new_storage;
         value_type old_val, new_val;

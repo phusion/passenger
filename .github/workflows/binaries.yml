@@ -21,8 +21,10 @@ jobs:
             arch: aarch64
             docker_arch: arm64
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 1
         with:
           submodules: true
 
@@ -31,6 +33,7 @@ jobs:
 
       - name: Fetch cache
         run: ./dev/ci/fetch-cache-az-blob-storage
+        timeout-minutes: 3
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
           CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
@@ -46,18 +49,21 @@ jobs:
           -A "$DOCKER_ARCH"
           -j 2
           passenger nginx
+        timeout-minutes: 5
         env:
           WORKSPACE: ${{ github.workspace }}
           DOCKER_ARCH: ${{ matrix.docker_arch }}
         working-directory: packaging/binaries/linux
 
       - uses: actions/upload-artifact@v4
+        timeout-minutes: 1
         with:
           name: binaries-linux-${{ matrix.arch }}
           path: packaging/binaries/linux/output/**/*
 
       - name: Update cache
         run: ./dev/ci/update-cache-az-blob-storage
+        timeout-minutes: 2
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
           CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
@@ -67,6 +73,7 @@ jobs:
 
       - name: Package
         run: ./package -i output -o output -a "$ARCHITECTURE"
+        timeout-minutes: 1
         env:
           ARCHITECTURE: ${{ matrix.arch }}
         working-directory: packaging/binaries/linux
@@ -78,6 +85,7 @@ jobs:
           -i output
           -I output
           -A "$DOCKER_ARCH"
+        timeout-minutes: 1
         env:
           WORKSPACE: ${{ github.workspace }}
           DOCKER_ARCH: ${{ matrix.docker_arch }}
@@ -90,25 +98,30 @@ jobs:
       matrix:
         include:
           - runner: macos-13
+            os: macos-13
             arch: x86_64
             sccache_arch_and_os: x86_64-apple-darwin
             sccache_azure_key_prefix: sccache/cxx-macos-13-x86_64
           - runner: macos-14
+            os: macos-14
             arch: arm64
             sccache_arch_and_os: aarch64-apple-darwin
             sccache_azure_key_prefix: sccache/cxx-macos-14-arm
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
     env:
       CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 1
         with:
           submodules: true
 
       - name: Install dependencies
         run: brew install zlib automake libtool coreutils
+        timeout-minutes: 1
 
       - run: mkdir work runtime-output output
         working-directory: packaging/binaries/macos
@@ -124,27 +137,32 @@ jobs:
       - name: Fetch RVM cache
         run: CACHE_PATH="$HOME/.rvm" ./dev/ci/fetch-cache-az-blob-storage
         id: fetch_rvm_cache
+        timeout-minutes: 2
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
-          BLOB_NAME: "binaries/rvm-${{ hashFiles('packaging/binaries/shared/definitions/ruby_versions') }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd"
+          BLOB_NAME: "binaries/rvm-${{ hashFiles('packaging/binaries/shared/definitions/ruby_versions') }}-${{ matrix.os }}-${{ matrix.arch }}.tar.zstd"
 
       - name: Install RVM
         run: set -o pipefail && curl -fsSL https://get.rvm.io/stable | bash
+        timeout-minutes: 1
 
       - name: Install Rubies
         run: xargs -I{} "$HOME/.rvm/bin/rvm" install ruby-{} < packaging/binaries/shared/definitions/ruby_versions
         if: steps.fetch_rvm_cache.outputs.cache-hit != 'true'
+        timeout-minutes: 30
 
       - name: Cleanup RVM
         run: ~/.rvm/bin/rvm cleanup all
         if: steps.fetch_rvm_cache.outputs.cache-hit != 'true'
+        timeout-minutes: 1
 
       - name: Update RVM cache
         run: CACHE_PATH="$HOME/.rvm" ./dev/ci/update-cache-az-blob-storage
         if: steps.fetch_rvm_cache.outputs.cache-hit != 'true'
+        timeout-minutes: 2
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
-          BLOB_NAME: "binaries/rvm-${{ hashFiles('packaging/binaries/shared/definitions/ruby_versions') }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd"
+          BLOB_NAME: "binaries/rvm-${{ hashFiles('packaging/binaries/shared/definitions/ruby_versions') }}-${{ matrix.os }}-${{ matrix.arch }}.tar.zstd"
 
 
       - name: Setup sccache
@@ -158,32 +176,37 @@ jobs:
       - name: Fetch runtime cache
         run: ./dev/ci/fetch-cache-az-blob-storage
         id: fetch_runtime_cache
+        timeout-minutes: 2
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
-          BLOB_NAME: binaries/macos-runtime-${{ steps.determine_runtime_version.outputs.version }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd
+          BLOB_NAME: binaries/macos-runtime-${{ steps.determine_runtime_version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}.tar.zstd
           CACHE_PATH: packaging/binaries/macos/runtime-output
 
       - name: Compile runtime
         run: ./setup-runtime -w work -o runtime-output -j 4
         if: steps.fetch_runtime_cache.outputs.cache-hit != 'true'
+        timeout-minutes: 30
         working-directory: packaging/binaries/macos
 
       - name: Update runtime cache
         run: ./dev/ci/update-cache-az-blob-storage
         if: steps.fetch_runtime_cache.outputs.cache-hit != 'true'
+        timeout-minutes: 2
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
-          BLOB_NAME: binaries/macos-runtime-${{ steps.determine_runtime_version.outputs.version }}-${{ matrix.runner }}-${{ matrix.arch }}.tar.zstd
+          BLOB_NAME: binaries/macos-runtime-${{ steps.determine_runtime_version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}.tar.zstd
           CACHE_PATH: packaging/binaries/macos/runtime-output
 
 
       - name: Build binaries
         run: ./build -p "$WORKSPACE" -r runtime-output -w work -o output -j 4 passenger nginx
+        timeout-minutes: 12
         env:
           WORKSPACE: ${{ github.workspace }}
         working-directory: packaging/binaries/macos
 
       - uses: actions/upload-artifact@v4
+        timeout-minutes: 1
         with:
           name: binaries-macos-${{ matrix.arch }}
           path: packaging/binaries/macos/output/**/*
@@ -191,16 +214,19 @@ jobs:
 
       - name: Package binaries
         run: ./package -i output -o output
+        timeout-minutes: 1
         working-directory: packaging/binaries/macos
 
       - name: Cache test suite gem bundle
         uses: actions/cache@v4
+        timeout-minutes: 1
         with:
           path: packaging/binaries/macos/runtime-output/gems
           key: test-gems-${{ hashFiles('packaging/binaries/shared/Gemfile.lock', 'packaging/binaries/shared/definitions/ruby_versions') }}-${{ matrix.runner }}-${{ matrix.arch }}
 
       - name: Test
         run: ./test -p "$WORKSPACE" -r runtime-output -i output -I output
+        timeout-minutes: 1
         env:
           WORKSPACE: ${{ github.workspace }}
         working-directory: packaging/binaries/macos

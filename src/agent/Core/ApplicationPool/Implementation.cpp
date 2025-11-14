@@ -193,7 +193,7 @@ void processAndLogNewSpawnException(SpawningKit::SpawnException &e, const Option
 				getSystemTempDir());
 			fd = mkstemp(filename);
 		#endif
-		FdGuard guard(fd, NULL, 0, true);
+		FdGuard guard(fd, nullptr, 0);
 		if (fd == -1) {
 			int e = errno;
 			throw SystemException("Cannot generate a temporary filename",

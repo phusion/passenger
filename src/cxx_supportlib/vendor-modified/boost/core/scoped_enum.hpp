@@ -37,7 +37,7 @@ namespace boost
   /**
    * Casts a scoped enum to its underlying type.
    *
-   * This function is useful when working with scoped enum classes, which doens't implicitly convert to the underlying type.
+   * This function is useful when working with scoped enum classes, which doesn't implicitly convert to the underlying type.
    * @param v A scoped enum.
    * @returns The underlying type.
    * @throws No-throws.

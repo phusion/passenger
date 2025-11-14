@@ -16,8 +16,6 @@
 
 #include <boost/config.hpp>
 #include <boost/cstdint.hpp>
-#include <boost/range/begin.hpp>
-#include <boost/range/end.hpp>
 #include <cstddef>
 #include <vector>
 #include <algorithm>
@@ -53,7 +51,7 @@ public:
     /** Initializes the sequence from Boost.Range range. */
     template<class Range>
     explicit seed_seq(const Range& range)
-      : v(boost::begin(range), boost::end(range)) {}
+      : v(std::begin(range), std::end(range)) {}
 
     /**
      * Fills a range with 32-bit values based on the stored sequence.

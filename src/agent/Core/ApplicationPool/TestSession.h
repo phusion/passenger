@@ -207,10 +207,9 @@ public:
 								__FILE__, __LINE__);
 
 		// Create client socket (non-blocking)
-		NUnix_State clientState;
-		setupNonBlockingUnixSocket(clientState, socketPath, __FILE__, __LINE__);
-		bool immediatelyConnected = connectToUnixServer(clientState);
-		connection.first = std::move(clientState.fd);
+		auto nbcResult = createNonBlockingUnixSocketConnection( socketPath, __FILE__, __LINE__);
+		bool immediatelyConnected = nbcResult.second;
+		connection.first = FileDescriptor(nbcResult.first, nullptr, 0);
 
 		// Accept connection (blocking)
 		FileDescriptor serverSideFd(oxt::syscalls::accept(serverFd, NULL, NULL),

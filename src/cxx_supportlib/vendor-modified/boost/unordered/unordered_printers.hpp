@@ -13,7 +13,7 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Woverlength-strings"
 #endif
-__asm__(".pushsection \".debug_gdb_scripts\", \"MS\",@progbits,1\n"
+__asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
         ".ascii \"\\4gdb.inlined-script.BOOST_UNORDERED_UNORDERED_PRINTERS_HPP\\n\"\n"
         ".ascii \"import gdb.printing\\n\"\n"
         ".ascii \"import gdb.xmethod\\n\"\n"

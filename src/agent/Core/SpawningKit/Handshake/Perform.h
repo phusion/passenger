@@ -34,7 +34,7 @@
 #include <oxt/backtrace.hpp>
 #include <string>
 #include <vector>
-#include <stdexcept>
+#include <exception>
 #include <cstddef>
 #include <cstdlib>
 #include <cerrno>
@@ -50,6 +50,7 @@
 #include <FileDescriptor.h>
 #include <FileTools/FileManip.h>
 #include <FileTools/PathManip.h>
+#include <IOTools/IOUtils.h>
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <SystemTools/SystemTime.h>
@@ -196,8 +197,18 @@ private:
 
 		while (true) {
 			unsigned long long timeout = 100000;
+			bool pingable;
 
-			if (pingTcpServer("127.0.0.1", session.expectedStartPort, &timeout)) {
+			try {
+				pingable = pingTcpServer("127.0.0.1", session.expectedStartPort, &timeout);
+			} catch (const std::exception &e) {
+				P_WARN("Error checking whether 127.0.0.1:" << session.expectedStartPort
+					<< " is connectable: " << e.what());
+				syscalls::usleep(50000);
+				continue;
+			}
+
+			if (pingable) {
 				boost::lock_guard<boost::mutex> l(syncher);
 				socketIsNowPingable = true;
 				finishState = FINISH_SUCCESS;

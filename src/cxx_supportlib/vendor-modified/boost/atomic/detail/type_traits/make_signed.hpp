@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2017 Andrey Semashev
+ * Copyright (c) 2017-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/type_traits/make_signed.hpp
@@ -16,7 +16,7 @@
 
 #include <boost/atomic/detail/config.hpp>
 // Some versions of libstdc++ don't consider __int128 an integral type. Use Boost.TypeTraits because of that.
-#if !defined(BOOST_ATOMIC_DETAIL_NO_CXX11_BASIC_HDR_TYPE_TRAITS) && !defined(BOOST_HAS_INT128)
+#if !defined(BOOST_HAS_INT128)
 #include <type_traits>
 #else
 #include <boost/type_traits/make_signed.hpp>
@@ -30,7 +30,7 @@ namespace boost {
 namespace atomics {
 namespace detail {
 
-#if !defined(BOOST_ATOMIC_DETAIL_NO_CXX11_BASIC_HDR_TYPE_TRAITS) && !defined(BOOST_HAS_INT128)
+#if !defined(BOOST_HAS_INT128)
 using std::make_signed;
 #else
 using boost::make_signed;

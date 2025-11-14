@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2010 Helge Bahmann
  * Copyright (c) 2013 Tim Blechmann
- * Copyright (c) 2014 Andrey Semashev
+ * Copyright (c) 2014-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/core_arch_ops_gcc_sparc.hpp
@@ -36,10 +36,10 @@ namespace detail {
 
 struct gcc_sparc_cas_base
 {
-    static BOOST_CONSTEXPR_OR_CONST bool full_cas_based = true;
-    static BOOST_CONSTEXPR_OR_CONST bool is_always_lock_free = true;
+    static constexpr bool full_cas_based = true;
+    static constexpr bool is_always_lock_free = true;
 
-    static BOOST_FORCEINLINE void fence_before(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void fence_before(memory_order order) noexcept
     {
         if (order == memory_order_seq_cst)
             __asm__ __volatile__ ("membar #Sync" ::: "memory");
@@ -47,7 +47,7 @@ struct gcc_sparc_cas_base
             __asm__ __volatile__ ("membar #StoreStore | #LoadStore" ::: "memory");
     }
 
-    static BOOST_FORCEINLINE void fence_after(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void fence_after(memory_order order) noexcept
     {
         if (order == memory_order_seq_cst)
             __asm__ __volatile__ ("membar #Sync" ::: "memory");
@@ -55,7 +55,7 @@ struct gcc_sparc_cas_base
             __asm__ __volatile__ ("membar #StoreStore | #LoadStore" ::: "memory");
     }
 
-    static BOOST_FORCEINLINE void fence_after_store(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void fence_after_store(memory_order order) noexcept
     {
         if (order == memory_order_seq_cst)
             __asm__ __volatile__ ("membar #Sync" ::: "memory");
@@ -66,21 +66,21 @@ template< bool Signed, bool Interprocess >
 struct gcc_sparc_cas32 :
     public gcc_sparc_cas_base
 {
-    typedef typename storage_traits< 4u >::type storage_type;
+    using storage_type = typename storage_traits< 4u >::type;
 
-    static BOOST_CONSTEXPR_OR_CONST std::size_t storage_size = 4u;
-    static BOOST_CONSTEXPR_OR_CONST std::size_t storage_alignment = 4u;
-    static BOOST_CONSTEXPR_OR_CONST bool is_signed = Signed;
-    static BOOST_CONSTEXPR_OR_CONST bool is_interprocess = Interprocess;
+    static constexpr std::size_t storage_size = 4u;
+    static constexpr std::size_t storage_alignment = 4u;
+    static constexpr bool is_signed = Signed;
+    static constexpr bool is_interprocess = Interprocess;
 
-    static BOOST_FORCEINLINE void store(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void store(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         fence_before(order);
         storage = v;
         fence_after_store(order);
     }
 
-    static BOOST_FORCEINLINE storage_type load(storage_type const volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type load(storage_type const volatile& storage, memory_order order) noexcept
     {
         storage_type v = storage;
         fence_after(order);
@@ -88,7 +88,7 @@ struct gcc_sparc_cas32 :
     }
 
     static BOOST_FORCEINLINE bool compare_exchange_strong(
-        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) BOOST_NOEXCEPT
+        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) noexcept
     {
         fence_before(success_order);
         storage_type previous = expected;
@@ -109,12 +109,12 @@ struct gcc_sparc_cas32 :
     }
 
     static BOOST_FORCEINLINE bool compare_exchange_weak(
-        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) BOOST_NOEXCEPT
+        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) noexcept
     {
         return compare_exchange_strong(storage, expected, desired, success_order, failure_order);
     }
 
-    static BOOST_FORCEINLINE storage_type exchange(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type exchange(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         fence_before(order);
         __asm__ __volatile__
@@ -151,21 +151,21 @@ template< bool Signed, bool Interprocess >
 struct gcc_sparc_cas64 :
     public gcc_sparc_cas_base
 {
-    typedef typename storage_traits< 8u >::type storage_type;
+    using storage_type = typename storage_traits< 8u >::type;
 
-    static BOOST_CONSTEXPR_OR_CONST std::size_t storage_size = 8u;
-    static BOOST_CONSTEXPR_OR_CONST std::size_t storage_alignment = 8u;
-    static BOOST_CONSTEXPR_OR_CONST bool is_signed = Signed;
-    static BOOST_CONSTEXPR_OR_CONST bool is_interprocess = Interprocess;
+    static constexpr std::size_t storage_size = 8u;
+    static constexpr std::size_t storage_alignment = 8u;
+    static constexpr bool is_signed = Signed;
+    static constexpr bool is_interprocess = Interprocess;
 
-    static BOOST_FORCEINLINE void store(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void store(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         fence_before(order);
         storage = v;
         fence_after_store(order);
     }
 
-    static BOOST_FORCEINLINE storage_type load(storage_type const volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type load(storage_type const volatile& storage, memory_order order) noexcept
     {
         storage_type v = storage;
         fence_after(order);
@@ -173,7 +173,7 @@ struct gcc_sparc_cas64 :
     }
 
     static BOOST_FORCEINLINE bool compare_exchange_strong(
-        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) BOOST_NOEXCEPT
+        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) noexcept
     {
         fence_before(success_order);
         storage_type previous = expected;
@@ -194,7 +194,7 @@ struct gcc_sparc_cas64 :
     }
 
     static BOOST_FORCEINLINE bool compare_exchange_weak(
-        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) BOOST_NOEXCEPT
+        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) noexcept
     {
         return compare_exchange_strong(storage, expected, desired, success_order, failure_order);
     }

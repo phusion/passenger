@@ -40,7 +40,6 @@
 #include <ConfigKit/TableTranslator.h>
 #include <ConfigKit/PrefixTranslator.h>
 #include <ServerKit/Context.h>
-#include <ServerKit/llversion.h>
 #include <ServerKit/HttpServer.h>
 #include <WrapperRegistry/Registry.h>
 #include <Core/Controller/Config.h>
@@ -150,7 +149,7 @@ using namespace std;
  *   security_update_checker_interval                                unsigned integer   -          default(86400)
  *   security_update_checker_proxy_url                               string             -          -
  *   security_update_checker_url                                     string             -          default("https://securitycheck.phusionpassenger.com/v1/check.json")
- *   server_software                                                 string             -          default("Phusion_Passenger/6.1.0")
+ *   server_software                                                 string             -          default("Phusion_Passenger/6.1.1")
  *   show_version_in_header                                          boolean            -          default(true)
  *   single_app_mode_app_root                                        string             -          default,read_only
  *   single_app_mode_app_start_command                               string             -          read_only
@@ -353,10 +352,6 @@ private:
 
 		Json::Value updates;
 		updates["server_software"] = serverSoftware;
-		if (effectiveValues["integration_mode"].asString() == "standalone" &&
-			effectiveValues["standalone_engine"].asString()=="builtin") {
-			updates["web_server_version"] = llhttp_version();
-		}
 		return updates;
 	}
 

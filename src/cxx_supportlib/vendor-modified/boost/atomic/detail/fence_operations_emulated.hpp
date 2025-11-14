@@ -30,12 +30,12 @@ namespace detail {
 //! Fence operations based on lock pool
 struct fence_operations_emulated
 {
-    static BOOST_FORCEINLINE void thread_fence(memory_order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void thread_fence(memory_order) noexcept
     {
         atomics::detail::lock_pool::thread_fence();
     }
 
-    static BOOST_FORCEINLINE void signal_fence(memory_order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void signal_fence(memory_order) noexcept
     {
         atomics::detail::lock_pool::signal_fence();
     }

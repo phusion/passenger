@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2014 Andrey Semashev
+ * Copyright (c) 2014-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/core_ops_cas_based.hpp
@@ -30,11 +30,11 @@ template< typename Base >
 struct core_operations_cas_based :
     public Base
 {
-    typedef typename Base::storage_type storage_type;
+    using storage_type = typename Base::storage_type;
 
-    static BOOST_CONSTEXPR_OR_CONST bool full_cas_based = true;
+    static constexpr bool full_cas_based = true;
 
-    static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         storage_type old_val;
         atomics::detail::non_atomic_load(storage, old_val);
@@ -42,7 +42,7 @@ struct core_operations_cas_based :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         storage_type old_val;
         atomics::detail::non_atomic_load(storage, old_val);
@@ -50,7 +50,7 @@ struct core_operations_cas_based :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type fetch_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_and(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         storage_type old_val;
         atomics::detail::non_atomic_load(storage, old_val);
@@ -58,7 +58,7 @@ struct core_operations_cas_based :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type fetch_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_or(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         storage_type old_val;
         atomics::detail::non_atomic_load(storage, old_val);
@@ -66,7 +66,7 @@ struct core_operations_cas_based :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type fetch_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_xor(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         storage_type old_val;
         atomics::detail::non_atomic_load(storage, old_val);
@@ -74,12 +74,12 @@ struct core_operations_cas_based :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE bool test_and_set(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool test_and_set(storage_type volatile& storage, memory_order order) noexcept
     {
         return !!Base::exchange(storage, (storage_type)1, order);
     }
 
-    static BOOST_FORCEINLINE void clear(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void clear(storage_type volatile& storage, memory_order order) noexcept
     {
         Base::store(storage, (storage_type)0, order);
     }

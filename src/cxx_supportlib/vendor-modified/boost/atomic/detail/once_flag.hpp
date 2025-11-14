@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2020 Andrey Semashev
+ * Copyright (c) 2020-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/once_flag.hpp
@@ -27,7 +27,7 @@ namespace boost {
 namespace atomics {
 namespace detail {
 
-typedef atomics::detail::core_operations< 1u, false, false > once_flag_operations;
+using once_flag_operations = atomics::detail::core_operations< 1u, false, false >;
 
 struct once_flag
 {

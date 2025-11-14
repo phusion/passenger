@@ -7,7 +7,7 @@
  * Copyright (c) 2009 Phil Endecott
  * Copyright (c) 2013 Tim Blechmann
  * Linux-specific code by Phil Endecott
- * Copyright (c) 2014 Andrey Semashev
+ * Copyright (c) 2014-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/fence_ops_linux_arm.hpp
@@ -33,27 +33,27 @@ namespace detail {
 //! Fence operations based on Linux-specific system routines
 struct fence_operations_linux_arm
 {
-    static BOOST_FORCEINLINE void thread_fence(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void thread_fence(memory_order order) noexcept
     {
         if (order != memory_order_relaxed)
             hardware_full_fence();
     }
 
-    static BOOST_FORCEINLINE void signal_fence(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void signal_fence(memory_order order) noexcept
     {
         if (order != memory_order_relaxed)
             __asm__ __volatile__ ("" ::: "memory");
     }
 
-    static BOOST_FORCEINLINE void hardware_full_fence() BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void hardware_full_fence() noexcept
     {
         // See the comment in core_ops_linux_arm.hpp regarding the function pointer below
-        typedef void (*kernel_dmb_t)(void);
-        ((kernel_dmb_t)0xffff0fa0)();
+        using kernel_dmb_t = void (void);
+        ((kernel_dmb_t*)0xffff0fa0)();
     }
 };
 
-typedef fence_operations_linux_arm fence_operations;
+using fence_operations = fence_operations_linux_arm;
 
 } // namespace detail
 } // namespace atomics

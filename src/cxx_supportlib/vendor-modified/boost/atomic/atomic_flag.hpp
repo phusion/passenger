@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2011 Helge Bahmann
  * Copyright (c) 2013 Tim Blechmann
- * Copyright (c) 2014, 2020 Andrey Semashev
+ * Copyright (c) 2014, 2020-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/atomic_flag.hpp
@@ -29,7 +29,7 @@ namespace boost {
 namespace atomics {
 
 //! Atomic flag
-typedef atomics::detail::atomic_flag_impl< false > atomic_flag;
+using atomic_flag = atomics::detail::atomic_flag_impl< false >;
 
 } // namespace atomics
 

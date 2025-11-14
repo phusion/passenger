@@ -50,7 +50,7 @@ namespace detail {
  *       propagate constants even when functions are marked with BOOST_FORCEINLINE. In this case
  *       all atomic operaions will be executed with seq_cst semantics.
  */
-BOOST_FORCEINLINE BOOST_CONSTEXPR int convert_memory_order_to_gcc(memory_order order) BOOST_NOEXCEPT
+BOOST_FORCEINLINE constexpr int convert_memory_order_to_gcc(memory_order order) noexcept
 {
     return (order == memory_order_relaxed ? __ATOMIC_RELAXED : (order == memory_order_consume ? __ATOMIC_CONSUME :
         (order == memory_order_acquire ? __ATOMIC_ACQUIRE : (order == memory_order_release ? __ATOMIC_RELEASE :

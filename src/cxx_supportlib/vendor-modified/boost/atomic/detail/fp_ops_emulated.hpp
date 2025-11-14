@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2018 Andrey Semashev
+ * Copyright (c) 2018-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/fp_ops_emulated.hpp
@@ -34,12 +34,12 @@ template< typename Base, typename Value, std::size_t Size >
 struct fp_operations_emulated :
     public Base
 {
-    typedef Base base_type;
-    typedef typename base_type::storage_type storage_type;
-    typedef Value value_type;
-    typedef typename base_type::scoped_lock scoped_lock;
+    using base_type = Base;
+    using storage_type = typename base_type::storage_type;
+    using value_type = Value;
+    using scoped_lock = typename base_type::scoped_lock;
 
-    static value_type fetch_add(storage_type volatile& storage, value_type v, memory_order) BOOST_NOEXCEPT
+    static value_type fetch_add(storage_type volatile& storage, value_type v, memory_order) noexcept
     {
         static_assert(!base_type::is_interprocess, "Boost.Atomic: operation invoked on a non-lock-free inter-process atomic object");
         storage_type& s = const_cast< storage_type& >(storage);
@@ -50,7 +50,7 @@ struct fp_operations_emulated :
         return old_val;
     }
 
-    static value_type fetch_sub(storage_type volatile& storage, value_type v, memory_order) BOOST_NOEXCEPT
+    static value_type fetch_sub(storage_type volatile& storage, value_type v, memory_order) noexcept
     {
         static_assert(!base_type::is_interprocess, "Boost.Atomic: operation invoked on a non-lock-free inter-process atomic object");
         storage_type& s = const_cast< storage_type& >(storage);

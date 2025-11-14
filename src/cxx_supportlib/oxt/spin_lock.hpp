@@ -25,28 +25,99 @@
 #ifndef _OXT_SPIN_LOCK_HPP_
 #define _OXT_SPIN_LOCK_HPP_
 
-#include "macros.hpp"
+#include <thread>
+#include <atomic>
 
-// These operating systems don't support pthread spin locks:
-// - OpenBSD 4.3 (last checked: July 22, 2008)
-// - Solaris 9 (last checked: July 22, 2008)
-// - MacOS X (last checked: July 22, 2012)
-#if defined(__OpenBSD__) || defined(__SOLARIS9__) || defined(__APPLE__)
-	#define OXT_NO_PTHREAD_SPINLOCKS
-#endif
+namespace oxt {
 
-#if defined(__APPLE__)
-	#include "detail/spin_lock_darwin.hpp"
-#elif (OXT_GCC_VERSION > 40100 && (defined(__i386__) || defined(__x86_64__))) || defined(IN_DOXYGEN)
-	// GCC 4.0 doesn't support __sync instructions while GCC 4.2
-	// does. I'm not sure whether support for it started in 4.1 or
-	// 4.2, so the above version check may have to be changed later.
-	#include "detail/spin_lock_gcc_x86.hpp"
-#elif !defined(WIN32) && !defined(OXT_NO_PTHREAD_SPINLOCKS)
-	#include "detail/spin_lock_pthreads.hpp"
-#else
-	#include "detail/spin_lock_portable.hpp"
-#endif
+/**
+ * A spin lock that's specifically designed to yield the CPU once in a while to
+ * avoid starving other threads.
+ *
+ * We use spin locks because on many platforms, mutexes are slower when there's little
+ * or no contention. OS-native mutexes work better in highly contended scenarios due
+ * to better scheduler integration. However, in Passenger we have a couple of scenarios
+ * where we know there's going to be little or no contention. In oxt::system_calls,
+ * contention is rare and mostly limited to thread interruption during aborts or process
+ * shutdown. As a result, we use spin locks to prioritize performance in the uncontended
+ * case.
+ *
+ * We avoid OS-native spinlocks for two reasons:
+ * - There's no widely-available standard spinlock. We want to keep the code simple,
+ *   avoiding OS-specific implementations.
+ * - OS-native spinlocks such as pthread_spin_lock_t don't guarantee scheduler integration,
+ *   but we need it in order to avoid starvation that would interfere with thread
+ *   interruption.
+ */
+class spin_lock {
+private:
+	// Our main use case is to allow threads to only be interruptable when
+	// blocked on certain system calls (oxt::thread_local_context::syscall_interruption_lock).
+	// That is locked most of the time, only unlocked during a syscall.
+	// An oxt::thread::interrupt() call may need to wait for a long time before it's unlocked.
+	// So keep the spin count low so we yield the CPU often.
+	static constexpr unsigned int MAX_SPINS = 100;
+
+	std::atomic_flag flag = ATOMIC_FLAG_INIT;
+
+public:
+	/**
+	* Instantiate this class to lock a spin lock within a scope.
+	*/
+	class scoped_lock {
+	private:
+		spin_lock &l;
+
+	public:
+		scoped_lock(const scoped_lock &other) = delete;
+		scoped_lock &operator=(const scoped_lock &other) = delete;
+
+		scoped_lock(spin_lock &lock) noexcept: l(lock) {
+			l.lock();
+		}
+
+		~scoped_lock() noexcept {
+			l.unlock();
+		}
+	};
+
+	/**
+	* Lock this spin lock.
+	*/
+	void lock() noexcept {
+		while (true) {
+			for (unsigned int i = 0; i < MAX_SPINS; i++) {
+				if (flag.test_and_set(std::memory_order_acquire)) {
+					#if defined(__cpp_lib_atomic_wait) && __cpp_lib_atomic_wait >= 201907L
+						flag.wait(true, std::memory_order_relaxed);
+					#endif
+				} else {
+					return; // lock acquired
+				}
+			}
+
+			// Yield the CPU every once in a while to allow other threads to
+			// run. On systems with bad schedulers (including Valgrind),
+			// not yielding can lead to starvation, which looks like a deadlock.
+			std::this_thread::yield();
+		}
+	}
+
+	/**
+	* Unlock this spin lock.
+	*/
+	void unlock() noexcept {
+		flag.clear(std::memory_order_release);
+		#if defined(__cpp_lib_atomic_wait) && __cpp_lib_atomic_wait >= 201907L
+			flag.notify_one();
+		#endif
+	}
+
+	bool try_lock() noexcept {
+		return !flag.test_and_set(std::memory_order_acquire);
+	}
+};
+
+} // namespace oxt
 
 #endif /* _OXT_SPIN_LOCK_HPP_ */
-

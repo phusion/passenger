@@ -272,14 +272,14 @@ tracable_exception &
 tracable_exception::operator=(const tracable_exception &other) {
 	if (this != &other) {
 		// Clean up existing backtrace points
-		for (auto p: backtrace_copy) {
+		for (trace_point * p: backtrace_copy) {
 			delete p;
 		}
 		backtrace_copy.clear();
 
 		// Copy backtrace points from other
 		backtrace_copy.reserve(other.backtrace_copy.size());
-		for (const auto p2: other.backtrace_copy) {
+		for (const trace_point *const p2: other.backtrace_copy) {
 			trace_point *p;
 			if (p2->m_hasDataFunc) {
 				p = new trace_point(

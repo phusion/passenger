@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2020 Andrey Semashev
+ * Copyright (c) 2020-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/fence_ops_gcc_atomic.hpp
@@ -40,9 +40,9 @@ namespace detail {
 //! Fence operations based on gcc __atomic* intrinsics
 struct fence_operations_gcc_atomic
 {
-    static BOOST_FORCEINLINE void thread_fence(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void thread_fence(memory_order order) noexcept
     {
-#if defined(__x86_64__) || defined(__i386__)
+#if !defined(BOOST_ATOMIC_DETAIL_TSAN) && (defined(__x86_64__) || defined(__i386__))
         if (order != memory_order_seq_cst)
         {
             __atomic_thread_fence(atomics::detail::convert_memory_order_to_gcc(order));
@@ -58,13 +58,13 @@ struct fence_operations_gcc_atomic
 #endif
     }
 
-    static BOOST_FORCEINLINE void signal_fence(memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void signal_fence(memory_order order) noexcept
     {
         __atomic_signal_fence(atomics::detail::convert_memory_order_to_gcc(order));
     }
 };
 
-typedef fence_operations_gcc_atomic fence_operations;
+using fence_operations = fence_operations_gcc_atomic;
 
 } // namespace detail
 } // namespace atomics

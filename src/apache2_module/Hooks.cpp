@@ -416,12 +416,6 @@ private:
 		return s1.st_dev == s2.st_dev && s1.st_ino == s2.st_ino && s1.st_rdev == s2.st_rdev;
 	}
 
-	int reportBusyException(request_rec *r) {
-		ap_custom_response(r, HTTP_SERVICE_UNAVAILABLE,
-			"This website is too busy right now.  Please try again later.");
-		return HTTP_SERVICE_UNAVAILABLE;
-	}
-
 	/**
 	 * Gather some information about the request and do some preparations.
 	 *

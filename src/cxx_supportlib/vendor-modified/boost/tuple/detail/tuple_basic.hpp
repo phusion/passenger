@@ -37,6 +37,7 @@
 #include <cstddef> // for std::size_t
 
 #include <boost/core/invoke_swap.hpp>
+#include <boost/core/ref.hpp>
 #include <boost/type_traits/cv_traits.hpp>
 #include <boost/type_traits/function_traits.hpp>
 #include <boost/type_traits/integral_constant.hpp>

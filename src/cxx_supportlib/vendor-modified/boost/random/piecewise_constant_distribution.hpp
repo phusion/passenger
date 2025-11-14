@@ -26,9 +26,6 @@
 #include <initializer_list>
 #endif
 
-#include <boost/range/begin.hpp>
-#include <boost/range/end.hpp>
-
 namespace boost {
 namespace random {
 
@@ -127,8 +124,8 @@ public:
         template<class IntervalRange, class WeightRange>
         param_type(const IntervalRange& intervals_arg,
                    const WeightRange& weights_arg)
-          : _intervals(boost::begin(intervals_arg), boost::end(intervals_arg)),
-            _weights(boost::begin(weights_arg), boost::end(weights_arg))
+          : _intervals(std::begin(intervals_arg), std::end(intervals_arg)),
+            _weights(std::begin(weights_arg), std::end(weights_arg))
         {
             if(_intervals.size() < 2) {
                 _intervals.clear();
@@ -185,7 +182,7 @@ public:
             detail::print_vector(os, parm._weights);
             return os;
         }
-        
+
         /** Reads the parameters from a @c std::istream. */
         BOOST_RANDOM_DETAIL_ISTREAM_OPERATOR(is, param_type, parm)
         {
@@ -318,7 +315,7 @@ public:
     piecewise_constant_distribution(const IntervalsRange& intervals_arg,
                                     const WeightsRange& weights_arg)
       : _bins(weights_arg),
-        _intervals(boost::begin(intervals_arg), boost::end(intervals_arg))
+        _intervals(std::begin(intervals_arg), std::end(intervals_arg))
     {
         if(_intervals.size() < 2) {
             _intervals.clear();
@@ -367,7 +364,7 @@ public:
         std::size_t i = _bins(urng);
         return uniform_real<RealType>(_intervals[i], _intervals[i+1])(urng);
     }
-    
+
     /**
      * Returns a value distributed according to the parameters
      * specified by param.
@@ -377,7 +374,7 @@ public:
     {
         return piecewise_constant_distribution(parm)(urng);
     }
-    
+
     /** Returns the smallest value that the distribution can produce. */
     result_type min BOOST_PREVENT_MACRO_SUBSTITUTION () const
     { return _intervals.front(); }
@@ -414,7 +411,7 @@ public:
         _bins.param(bins_param);
         _intervals.swap(new_intervals);
     }
-    
+
     /**
      * Effects: Subsequent uses of the distribution do not depend
      * on values produced by any engine prior to invoking reset.

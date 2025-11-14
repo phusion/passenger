@@ -775,7 +775,7 @@ template<class T> inline typename shared_ptr<T>::element_type * get_pointer(shar
 
 // operator<<
 
-template<class Y> std::ostream & operator<< (std::ostream & os, shared_ptr<Y> const & p)
+template<class E, class T, class Y> std::basic_ostream<E, T> & operator<< (std::basic_ostream<E, T> & os, shared_ptr<Y> const & p)
 {
     os << p.get();
     return os;

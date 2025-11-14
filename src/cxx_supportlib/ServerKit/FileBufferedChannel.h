@@ -933,7 +933,7 @@ private:
 			if (req->result >= 0) {
 				FBC_DEBUG_FROM_CALLBACK(fcContext,
 					"Writer: creation of file " << fcContext->path <<
-					"canceled. Deleting file in the background");
+					" canceled. Deleting file in the background");
 				closeBufferFileInBackground(fcContext);
 				// Will take care of deleting fcContext
 				unlinkBufferFileInBackground(fcContext);

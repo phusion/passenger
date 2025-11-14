@@ -26,6 +26,11 @@
 namespace boost {
 namespace intrusive {
 
+#if defined(BOOST_CLANG) || (defined(BOOST_GCC) && (BOOST_GCC >= 40600))
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 ///////////////////////////
 //struct pointer_rebind_mode
 ///////////////////////////
@@ -181,6 +186,10 @@ struct pointer_rebind
 template <typename T, typename U>
 struct pointer_rebind<T*, U>
 {  typedef U* type; };
+
+#if defined(BOOST_CLANG) || (defined(BOOST_GCC) && (BOOST_GCC >= 40600))
+#  pragma GCC diagnostic pop
+#endif
 
 }  //namespace container {
 }  //namespace boost {

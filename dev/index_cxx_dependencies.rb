@@ -43,6 +43,10 @@ EXCLUDE_NAMES = %w{
   deque
   queue
   limits
+  thread
+  atomic
+  mutex
+  condition_variable
   hash_map
   ext/hash_map
   cctype

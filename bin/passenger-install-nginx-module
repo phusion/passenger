@@ -156,7 +156,6 @@ class Installer < PhusionPassenger::AbstractInstaller
 
   def before_install
     super
-    myself = `whoami`.strip
     @working_dir = PhusionPassenger::Utils.mktmpdir("passenger.", PlatformInfo.tmpexedir)
   end
 
@@ -230,7 +229,7 @@ private
     new_screen
     puts "<banner>Compiling Passenger support files...</banner>"
     Dir.chdir(PhusionPassenger.build_system_dir) do
-      return sh("env NOEXEC_DISABLE=1 #{PlatformInfo.rake_command} nginx:clean nginx RELEASE=yes")
+      return sh("env NOEXEC_DISABLE=1 #{@rake_command || PlatformInfo.rake_command} nginx:clean nginx RELEASE=yes")
     end
   end
 
@@ -479,7 +478,7 @@ private
       new_screen
       puts "<banner>Compiling and installing Nginx...</banner>"
       if !sh(build_nginx_configure_command(prefix, extra_configure_flags)) ||
-         !sh("make") ||
+         !sh("make -j#{@make_concurrency || 1}") ||
          !sh("make install")
         return false
       end
@@ -654,6 +653,12 @@ parser = OptionParser.new do |opts|
           "#{indent}not want this installer to ask\n" <<
           "#{indent}interactively either.") do |flags|
     options[:extra_configure_flags] = flags
+  end
+  opts.on("--rake-command COMMAND", String, "Customize Rake command to use") do |value|
+    options[:rake_command] = value
+  end
+  opts.on("--make-concurrency N", Integer, "Use N parallel jobs when running 'make'.") do |n|
+    options[:make_concurrency] = n
   end
   opts.on("--languages NAMES", "Comma-separated list of interested\n" <<
       "#{indent}languages (e.g.\n" <<

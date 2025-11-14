@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2020 Andrey Semashev
+ * Copyright (c) 2020-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/ipc_atomic_flag.hpp
@@ -27,7 +27,7 @@ namespace boost {
 namespace atomics {
 
 //! Atomic flag for inter-process communication
-typedef atomics::detail::atomic_flag_impl< true > ipc_atomic_flag;
+using ipc_atomic_flag = atomics::detail::atomic_flag_impl< true >;
 
 } // namespace atomics
 

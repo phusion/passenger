@@ -225,136 +225,84 @@ int connectToTcpServer(const StaticString &hostname, unsigned int port,
 
 /****** Socket connection establishment (non-blocking) ******/
 
-/** State structure for non-blocking connectToUnixServer(). */
-struct NUnix_State {
-	FileDescriptor fd;
-	string filename;
-};
-
-/** State structure for non-blocking connectToTcpServer(). */
-struct NTCP_State {
-	FileDescriptor fd;
-	struct addrinfo hints, *res;
-	string hostname;
-	int port;
-
-	NTCP_State() {
-		memset(&hints, 0, sizeof(hints));
-		res = NULL;
-		port = 0;
-	}
-
-	~NTCP_State() {
-		if (res != NULL) {
-			freeaddrinfo(res);
-		}
-	}
-};
+/**
+ * Establish a socket connection in non-blocking mode.
+ *
+ * @param address An address as accepted by getSocketAddressType().
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
+ * @return The file descriptor of the connected client socket, plus whether
+ *   it was immediately connected (true) or pending (false). If pending,
+ *   the caller should poll() on the socket until it's writable.
+ * @throws ArgumentException Something went wrong.
+ * @throws IOException Something went wrong.
+ * @throws SystemException Something went wrong.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ */
+std::pair<int, bool> createNonBlockingSocketConnection(const StaticString &address, const char *file, unsigned int line);
 
 /**
- * Setup a Unix domain socket for non-blocking connecting. When done,
- * the file descriptor can be accessed through <tt>state.fd</tt>.
+ * Establish a Unix domain socket connection in non-blocking mode.
  *
- * @param state A state structure.
  * @param filename The filename of the socket to connect to.
  * @param file The name of the source file that called this function,
  *             for file descriptor logging purposes.
  * @param line The line in the source file that called this function.
- * @throws SystemException Something went wrong.
- * @throws boost::thread_interrupted A system call has been interrupted.
- * @ingroup Support
- */
-void setupNonBlockingUnixSocket(NUnix_State & restrict_ref state,
-	const StaticString & restrict_ref filename, const char *file,
-	unsigned int line);
-
-/**
- * Connect a Unix domain socket in non-blocking mode.
- *
- * @param state A state structure.
- * @return True if the socket was successfully connected, false if the socket isn't
- *         ready yet, in which case the caller should select() on the socket until it's writable.
- * @throws RuntimeException Something went wrong.
+ * @return The file descriptor of the connected client socket, plus whether
+ *   it was immediately connected (true) or pending (false). If pending,
+ *   the caller should poll() on the socket until it's writable.
+ * @throws ArgumentException Something went wrong.
  * @throws SystemException Something went wrong while connecting to the Unix server.
  * @throws boost::thread_interrupted A system call has been interrupted.
- * @ingroup Support
  */
-bool connectToUnixServer(NUnix_State &state);
+std::pair<int, bool> createNonBlockingUnixSocketConnection(const StaticString &filename, const char *file, unsigned int line);
 
 /**
- * Setup a TCP socket for non-blocking connecting. When done,
- * the file descriptor can be accessed through <tt>state.fd</tt>.
+ * Establish a TCP socket connection in non-blocking mode.
  *
- * @param state A state structure.
  * @param hostname The host name of the TCP server.
  * @param port The port number of the TCP server.
  * @param file The name of the source file that called this function,
  *             for file descriptor logging purposes.
  * @param line The line in the source file that called this function.
+ * @return The file descriptor of the connected client socket, plus whether
+ *   it was immediately connected (true) or pending (false). If pending,
+ *   the caller should poll() on the socket until it's writable.
  * @throws IOException Something went wrong.
  * @throws SystemException Something went wrong.
  * @throws boost::thread_interrupted A system call has been interrupted.
- * @ingroup Support
  */
-void setupNonBlockingTcpSocket(NTCP_State & restrict_ref state,
-	const StaticString & restrict_ref hostname,
-	int port, const char *file, unsigned int line);
+std::pair<int, bool> createNonBlockingTcpSocketConnection(const StaticString &hostname, unsigned int port, const char *file, unsigned int line);
 
-/**
- * Connect a TCP socket in non-blocking mode.
- *
- * @param state A state structure.
- * @return True if the socket was successfully connected, false if the socket isn't
- *         ready yet, in which case the caller should select() on the socket until it's writable.
- * @throws SystemException Something went wrong while connecting to the server.
- * @throws boost::thread_interrupted A system call has been interrupted.
- * @ingroup Support
- */
-bool connectToTcpServer(NTCP_State &state);
 
-struct NConnect_State {
+/****** Scope guards ******/
+
+/** RAII construct for ensuring that a file descriptor gets closed at scope exit. */
+class FdGuard {
 private:
-	NUnix_State s_unix;
-	NTCP_State s_tcp;
+	int mFd = -1;
 
 public:
-	ServerAddressType type;
+	FdGuard() { }
+	FdGuard(const FdGuard &other) = delete;
+	FdGuard(FdGuard &&other);
+	FdGuard(int fd, const char *sourceFile, unsigned int sourceLine);
+	/** @throws SystemException File descriptor close error. If exception is already being thrown, then only warns. */
+	~FdGuard() noexcept(false);
+
+	FdGuard &operator=(const FdGuard &other) = delete;
+	FdGuard &operator=(FdGuard &&other);
+
+	/** Don't close file descriptor at object destruction. */
+	void clear() noexcept;
 
 	/**
-	 * Setup a socket for non-blocking connecting to the given address.
+	 * Close file descriptor now. Idempotent.
 	 *
-	 * @param address An address as accepted by getSocketAddressType().
-	 * @param file The name of the source file that called this function,
-	 *             for file descriptor logging purposes.
-	 * @param line The line in the source file that called this function.
-	 * @throws ArgumentException Unknown address type.
-	 * @throws RuntimeException Something went wrong.
-	 * @throws SystemException Something went wrong.
-	 * @throws IOException Something went wrong.
-	 * @throws boost::thread_interrupted A system call has been interrupted.
+	 * @throws SystemException
 	 */
-	NConnect_State(const StaticString & restrict_ref address, const char *file, unsigned int line);
-
-	NUnix_State &asNUnix_State();
-	NTCP_State &asNTCP_State();
-
-	/**
-	 * Connect a socket in non-blocking mode.
-	 *
-	 * @return True if the socket was successfully connected, false if the socket isn't
-	 *         ready yet, in which case the caller should select() on the socket until it's writable.
-	 * @throws RuntimeException Something went wrong.
-	 * @throws SystemException Something went wrong.
-	 * @throws boost::thread_interrupted A system call has been interrupted.
-	 */
-	bool connectToServer();
-
-	/**
-	 * Gets the connection file descriptor.
-	 *
-	 * @pre \c connectToServer() was called
-	 */
-	FileDescriptor &getFd();
+	void runNow() noexcept(false);
 };
 
 
@@ -396,6 +344,7 @@ int callAccept4(int sock,
  * deducted from the `*timeout` value. A timeout of 100000 microseconds is
  * recommended for most use cases.
  *
+ * @throws ArgumentException Something went wrong.
  * @throws IOException Something went wrong.
  * @throws SystemException Something went wrong.
  * @throws boost::thread_interrupted A system call has been interrupted.

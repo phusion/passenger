@@ -10,10 +10,12 @@ on:
 jobs:
   define-matrix:
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     outputs:
       distros: ${{ steps.distros.outputs.distros }}
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 1
         with:
           submodules: true
       - name: Define Distros
@@ -33,6 +35,7 @@ jobs:
           - name: arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.arch.runner }}
+    timeout-minutes: 20
     env:
       WORKSPACE: ${{ github.workspace }}
       ARCHITECTURE: ${{ matrix.arch.name }}
@@ -43,10 +46,18 @@ jobs:
         with:
           submodules: true
 
+      # backport trixie data to ubuntu noble runner
+      - run: |
+          echo -e 'Package: distro-info-data\nPin: release n=questing\nPin-Priority: 990\n\nPackage: *\nPin: release n=noble\nPin-Priority: 900\n\nPackage: *\nPin: release o=Ubuntu\nPin-Priority: -10\n' | sudo tee -a /etc/apt/preferences
+          sed -e 's/noble/questing/g' /etc/apt/sources.list.d/ubuntu.sources | sudo tee -a /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt update
+          sudo apt upgrade -y distro-info-data
+
       - run: mkdir work cache output
 
       - name: Fetch cache
         run: ./dev/ci/fetch-cache-az-blob-storage
+        timeout-minutes: 5
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
           CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
@@ -56,6 +67,7 @@ jobs:
 
       - name: Build
         run: ./build -w work -c cache -o output -p "$WORKSPACE" -d "$DISTRIBUTION" -a "$ARCHITECTURE" -R pkg:all
+        timeout-minutes: 15
         env:
           WORKSPACE: ${{ github.workspace }}
           DISTRIBUTION: ${{ matrix.distro }}
@@ -71,6 +83,7 @@ jobs:
           -x "$DISTRIBUTION"
           -a "$ARCHITECTURE"
           -j
+        timeout-minutes: 5
         env:
           WORKSPACE: ${{ github.workspace }}
           DISTRIBUTION: ${{ matrix.distro }}
@@ -79,6 +92,7 @@ jobs:
 
       - name: Update cache
         run: ./dev/ci/update-cache-az-blob-storage
+        timeout-minutes: 3
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
           CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
@@ -87,6 +101,7 @@ jobs:
           SUDO: true
 
       - uses: actions/upload-artifact@v4
+        timeout-minutes: 1
         with:
           name: debian-${{ matrix.distro }}-${{ matrix.arch.name }}
           path: packaging/debian/output/${{ matrix.distro }}/*

@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2011 Helge Bahmann
  * Copyright (c) 2013 Tim Blechmann
- * Copyright (c) 2014 Andrey Semashev
+ * Copyright (c) 2014, 2025 Andrey Semashev
  */
 /*!
  * \file   atomic/fences.hpp
@@ -18,6 +18,7 @@
 
 #include <boost/memory_order.hpp>
 #include <boost/atomic/capabilities.hpp>
+#include <boost/atomic/detail/config.hpp>
 #include <boost/atomic/detail/fence_operations.hpp>
 #include <boost/atomic/detail/header.hpp>
 
@@ -34,12 +35,12 @@ namespace boost {
 
 namespace atomics {
 
-BOOST_FORCEINLINE void atomic_thread_fence(memory_order order) BOOST_NOEXCEPT
+BOOST_FORCEINLINE void atomic_thread_fence(memory_order order) noexcept
 {
     atomics::detail::fence_operations::thread_fence(order);
 }
 
-BOOST_FORCEINLINE void atomic_signal_fence(memory_order order) BOOST_NOEXCEPT
+BOOST_FORCEINLINE void atomic_signal_fence(memory_order order) noexcept
 {
     atomics::detail::fence_operations::signal_fence(order);
 }

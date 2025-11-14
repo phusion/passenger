@@ -30,7 +30,6 @@
 #include <boost/container/detail/type_traits.hpp>
 #include <boost/container/detail/mpl.hpp>
 #include <boost/container/detail/algorithm.hpp> //equal()
-#include <boost/container/detail/container_or_allocator_rebind.hpp>
 #include <boost/container/detail/pair.hpp>
 // move
 #include <boost/move/utility_core.hpp>
@@ -52,6 +51,10 @@
 
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 #define BOOST_CONTAINER_STD_PAIR_IS_MOVABLE
+#endif
+
+#ifndef BOOST_CONTAINER_STD_PAIR_IS_MOVABLE
+#include <boost/container/detail/container_or_allocator_rebind.hpp>
 #endif
 
 //for C++03 compilers, were type-puning is the only option for std::pair
@@ -1788,7 +1791,11 @@ template <class Key, class T, class Compare, class AllocatorOrContainer>
 struct has_trivial_destructor_after_move<boost::container::flat_map<Key, T, Compare, AllocatorOrContainer> >
 {
    typedef typename boost::container::flat_map<Key, T, Compare, AllocatorOrContainer>::value_type value_t;
+   #ifdef BOOST_CONTAINER_STD_PAIR_IS_MOVABLE
+   typedef AllocatorOrContainer alloc_or_cont_t;
+   #else
    typedef typename ::boost::container::dtl::container_or_allocator_rebind<AllocatorOrContainer, value_t>::type alloc_or_cont_t;
+   #endif
    typedef ::boost::container::dtl::flat_tree<value_t,::boost::container::dtl::select1st<Key>, Compare, alloc_or_cont_t> tree;
    BOOST_STATIC_CONSTEXPR bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
 };
@@ -3143,7 +3150,11 @@ template <class Key, class T, class Compare, class AllocatorOrContainer>
 struct has_trivial_destructor_after_move< boost::container::flat_multimap<Key, T, Compare, AllocatorOrContainer> >
 {
    typedef typename boost::container::flat_multimap<Key, T, Compare, AllocatorOrContainer>::value_type value_t;
+   #ifdef BOOST_CONTAINER_STD_PAIR_IS_MOVABLE
+   typedef AllocatorOrContainer alloc_or_cont_t;
+   #else
    typedef typename ::boost::container::dtl::container_or_allocator_rebind<AllocatorOrContainer, value_t>::type alloc_or_cont_t;
+   #endif
    typedef ::boost::container::dtl::flat_tree<value_t,::boost::container::dtl::select1st<Key>, Compare, alloc_or_cont_t> tree;
    BOOST_STATIC_CONSTEXPR bool value = ::boost::has_trivial_destructor_after_move<tree>::value;
 };

@@ -220,22 +220,15 @@ def copy_dependencies(cflags)
   else
     openssl_path = '/usr/include/openssl'
   end
-  done = false
-  while !done
+
+  loop do
     compiler_output = `c++ test.cpp -c -I#{openssl_path}/include -I. -I.. #{cflags.join(" ")} 2>&1`
     File.unlink('test.o') if File.exist?('test.o')
-    missing_headers = compiler_output.
-                        split("\n").
-                        grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
-                        reject{|s| s =~ /\/usr\/include\// }.
-                        map do |line|
-      if line =~ /error: (.*): No such file/
-        file = $1
-      elsif line =~ /fatal error: '(.*)' file not found/
-        file = $1
-      else
-        abort "Bug"
-      end
+    missing_headers = compiler_output.lines.
+      grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
+      reject{|s| s =~ /\/usr\/include\// }.
+      map do |line|
+      file = $1
       if file =~ /^boost\//
         file
       else
@@ -247,7 +240,7 @@ def copy_dependencies(cflags)
     missing_headers.each do |header|
       install("#{BOOST_DIR}/#{header}", header)
     end
-    done = missing_headers.empty?
+    break if missing_headers.empty?
   end
 end
 
@@ -265,27 +258,41 @@ def start
     prepare
     copy_essential_files
     [
-      "-std=c++98",
-      "-std=c++03",
-      "-std=gnu++98",
-      "-std=gnu++03",
-      "-std=c++11",
-      "-std=gnu++11",
-      "-std=c++14",
-      "-std=gnu++14",
-      "-std=c++17",
-      "-std=gnu++17",
-      "-std=c++20",
-      "-std=gnu++20",
-      "-std=c++0x",
-      "-std=gnu++0x",
-      ""
-    ].product(["-m32","-m64",""]).each do |flags|
-      copy_dependencies(flags)
-    end
+      14,
+      17,
+      20,
+      23,
+      26,
+    ].product(['c++', 'gnu++'])
+      .map{|v,l| "-std=#{l}#{v}" }
+      .push("")
+      .product(["-m64",""])
+      .each do |flags|
+    copy_dependencies(flags)
+  end
   ensure
     cleanup
   end
 end
 
 start
+
+#### Magic bash editing buffer #################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################
+################################################

@@ -49,6 +49,7 @@
 #include <boost/random/taus88.hpp>
 #include <boost/random/xor_combine.hpp>
 #include <boost/random/splitmix64.hpp>
+#include <boost/random/xoshiro.hpp>
 
 // misc
 #include <boost/random/generate_canonical.hpp>
@@ -87,6 +88,8 @@
 #include <boost/random/uniform_real_distribution.hpp>
 #include <boost/random/uniform_smallint.hpp>
 #include <boost/random/weibull_distribution.hpp>
+#include <boost/random/inverse_gaussian_distribution.hpp>
+#include <boost/random/generalized_inverse_gaussian_distribution.hpp>
 
 #include <boost/random/generate_canonical.hpp>
 

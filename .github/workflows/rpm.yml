@@ -10,10 +10,12 @@ on:
 jobs:
   define-matrix:
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     outputs:
       distros: ${{ steps.distros.outputs.distros }}
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 1
         with:
           submodules: true
       - name: Define Distros
@@ -35,8 +37,10 @@ jobs:
             docker_arch: arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.arch.runner }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 1
         with:
           submodules: true
 
@@ -54,6 +58,7 @@ jobs:
 
       - name: Fetch cache
         run: ./dev/ci/fetch-cache-az-blob-storage
+        timeout-minutes: 5
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
           CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
@@ -63,6 +68,7 @@ jobs:
 
       - name: Build
         run: ./build -w work -c cache -o output -p "$WORKSPACE" -d "$DISTRIBUTION" -a "$RPM_ARCH" -A "$DOCKER_ARCH" -R rpm:all
+        timeout-minutes: 15
         env:
           WORKSPACE: ${{ github.workspace }}
           DISTRIBUTION: ${{ matrix.distro }}
@@ -80,6 +86,7 @@ jobs:
           -a "$RPM_ARCH"
           -A "$DOCKER_ARCH"
           -j
+        timeout-minutes: 10
         env:
           WORKSPACE: ${{ github.workspace }}
           DISTRIBUTION: ${{ matrix.distro }}
@@ -90,6 +97,7 @@ jobs:
 
       - name: Update cache
         run: ./dev/ci/update-cache-az-blob-storage
+        timeout-minutes: 3
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
           CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
@@ -98,6 +106,7 @@ jobs:
           SUDO: true
 
       - uses: actions/upload-artifact@v4
+        timeout-minutes: 1
         with:
           name: rpm-${{ matrix.distro }}-${{ matrix.arch.rpm_arch }}
           path: 'packaging/rpm/output/${{ matrix.distro }}/*'

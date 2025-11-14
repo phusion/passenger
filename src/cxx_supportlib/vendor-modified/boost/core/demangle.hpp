@@ -30,7 +30,7 @@
 
 #if defined( BOOST_CORE_HAS_CXXABI_H )
 # include <cxxabi.h>
-// For some archtectures (mips, mips64, x86, x86_64) cxxabi.h in Android NDK is implemented by gabi++ library
+// For some architectures (mips, mips64, x86, x86_64) cxxabi.h in Android NDK is implemented by gabi++ library
 // (https://android.googlesource.com/platform/ndk/+/master/sources/cxx-stl/gabi++/), which does not implement
 // abi::__cxa_demangle(). We detect this implementation by checking the include guard here.
 # if defined( __GABIXX_CXXABI_H__ )

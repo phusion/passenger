@@ -1742,7 +1742,7 @@ class slist_impl
       }
    }
 
-   //! <b>Requires</b>: value must be a reference to a value inserted in a list.
+   //! <b>Requires</b>: `value` must be a reference to a value inserted in an instance of this container type.
    //!
    //! <b>Effects</b>: This function returns a const_iterator pointing to the element
    //!
@@ -1777,7 +1777,7 @@ class slist_impl
       return const_iterator(value_traits::to_node_ptr(r), const_value_traits_ptr());
    }
 
-   //! <b>Requires</b>: value must be a reference to a value inserted in a list.
+   //! <b>Requires</b>: `value` must be a reference to a value inserted in an instance of this container type.
    //!
    //! <b>Effects</b>: This function returns a const_iterator pointing to the element
    //!

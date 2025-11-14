@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2017 Andrey Semashev
+ * Copyright (c) 2017-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/extra_ops_msvc_x86.hpp
@@ -37,10 +37,10 @@ template< typename Base, bool Signed >
 struct extra_operations< Base, 1u, Signed, true > :
     public extra_operations_generic< Base, 1u, Signed >
 {
-    typedef extra_operations_generic< Base, 1u, Signed > base_type;
-    typedef typename base_type::storage_type storage_type;
+    using base_type = extra_operations_generic< Base, 1u, Signed >;
+    using storage_type = typename base_type::storage_type;
 
-    static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type old_val;
@@ -60,7 +60,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type new_val;
@@ -80,7 +80,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return new_val;
     }
 
-    static BOOST_FORCEINLINE bool negate_and_test(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool negate_and_test(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -101,7 +101,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -118,7 +118,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_and(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -139,7 +139,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return v;
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_or(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -160,7 +160,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return v;
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_xor(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -181,7 +181,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return v;
     }
 
-    static BOOST_FORCEINLINE storage_type fetch_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type old_val;
@@ -201,7 +201,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type new_val;
@@ -221,7 +221,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return new_val;
     }
 
-    static BOOST_FORCEINLINE bool complement_and_test(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool complement_and_test(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -242,7 +242,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -259,7 +259,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_add(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -271,7 +271,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_sub(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -283,7 +283,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -294,7 +294,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_and(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -306,7 +306,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_or(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -318,7 +318,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_xor(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -330,7 +330,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -341,7 +341,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE bool add_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool add_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -356,7 +356,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool sub_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool sub_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -371,7 +371,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool and_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool and_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -386,7 +386,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool or_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool or_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -401,7 +401,7 @@ struct extra_operations< Base, 1u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool xor_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool xor_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -421,10 +421,10 @@ template< typename Base, bool Signed >
 struct extra_operations< Base, 2u, Signed, true > :
     public extra_operations_generic< Base, 2u, Signed >
 {
-    typedef extra_operations_generic< Base, 2u, Signed > base_type;
-    typedef typename base_type::storage_type storage_type;
+    using base_type = extra_operations_generic< Base, 2u, Signed >;
+    using storage_type = typename base_type::storage_type;
 
-    static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type old_val;
@@ -444,7 +444,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type new_val;
@@ -464,7 +464,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return new_val;
     }
 
-    static BOOST_FORCEINLINE bool negate_and_test(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool negate_and_test(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -485,7 +485,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -502,7 +502,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_and(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -523,7 +523,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return v;
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_or(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -544,7 +544,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return v;
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_xor(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -565,7 +565,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return v;
     }
 
-    static BOOST_FORCEINLINE storage_type fetch_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type old_val;
@@ -585,7 +585,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type new_val;
@@ -605,7 +605,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return new_val;
     }
 
-    static BOOST_FORCEINLINE bool complement_and_test(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool complement_and_test(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -626,7 +626,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -643,7 +643,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_add(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -655,7 +655,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_sub(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -667,7 +667,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -678,7 +678,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_and(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -690,7 +690,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_or(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -702,7 +702,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_xor(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -714,7 +714,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -725,7 +725,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE bool add_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool add_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -740,7 +740,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool sub_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool sub_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -755,7 +755,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool and_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool and_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -770,7 +770,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool or_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool or_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -785,7 +785,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool xor_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool xor_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -800,7 +800,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -815,7 +815,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -830,7 +830,7 @@ struct extra_operations< Base, 2u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool bit_test_and_complement(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_complement(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -854,11 +854,11 @@ template< typename Base, bool Signed >
 struct extra_operations< Base, 4u, Signed, true > :
     public extra_operations_generic< Base, 4u, Signed >
 {
-    typedef extra_operations_generic< Base, 4u, Signed > base_type;
-    typedef typename base_type::storage_type storage_type;
+    using base_type = extra_operations_generic< Base, 4u, Signed >;
+    using storage_type = typename base_type::storage_type;
 
 #if defined(_M_IX86)
-    static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type old_val;
@@ -878,7 +878,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type new_val;
@@ -898,7 +898,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return new_val;
     }
 
-    static BOOST_FORCEINLINE bool negate_and_test(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool negate_and_test(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -919,7 +919,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -936,7 +936,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_and(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -957,7 +957,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return v;
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_or(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -978,7 +978,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return v;
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_xor(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -999,7 +999,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return v;
     }
 
-    static BOOST_FORCEINLINE storage_type fetch_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type old_val;
@@ -1019,7 +1019,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type bitwise_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type bitwise_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         storage_type new_val;
@@ -1039,7 +1039,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return new_val;
     }
 
-    static BOOST_FORCEINLINE bool complement_and_test(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool complement_and_test(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -1060,7 +1060,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -1077,7 +1077,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_add(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -1089,7 +1089,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_sub(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -1101,7 +1101,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_negate(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -1112,7 +1112,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_and(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -1124,7 +1124,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_or(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -1136,7 +1136,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_xor(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -1148,7 +1148,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE void opaque_complement(storage_type volatile& storage, memory_order order) noexcept
     {
         base_type::fence_before(order);
         __asm
@@ -1159,7 +1159,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
     }
 
-    static BOOST_FORCEINLINE bool add_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool add_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -1174,7 +1174,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool sub_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool sub_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -1189,7 +1189,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool and_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool and_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -1204,7 +1204,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool or_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool or_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -1219,7 +1219,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool xor_and_test(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool xor_and_test(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -1234,7 +1234,7 @@ struct extra_operations< Base, 4u, Signed, true > :
         return result;
     }
 
-    static BOOST_FORCEINLINE bool bit_test_and_complement(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_complement(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -1251,12 +1251,12 @@ struct extra_operations< Base, 4u, Signed, true > :
 #endif // defined(_M_IX86)
 
 #if defined(BOOST_ATOMIC_INTERLOCKED_BTS)
-    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order) noexcept
     {
         return !!BOOST_ATOMIC_INTERLOCKED_BTS(&storage, bit_number);
     }
 #elif defined(_M_IX86)
-    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -1273,12 +1273,12 @@ struct extra_operations< Base, 4u, Signed, true > :
 #endif
 
 #if defined(BOOST_ATOMIC_INTERLOCKED_BTR)
-    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order) noexcept
     {
         return !!BOOST_ATOMIC_INTERLOCKED_BTR(&storage, bit_number);
     }
 #elif defined(_M_IX86)
-    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
         base_type::fence_before(order);
         bool result;
@@ -1303,15 +1303,15 @@ template< typename Base, bool Signed >
 struct extra_operations< Base, 8u, Signed, true > :
     public extra_operations_generic< Base, 8u, Signed >
 {
-    typedef extra_operations_generic< Base, 8u, Signed > base_type;
-    typedef typename base_type::storage_type storage_type;
+    using base_type = extra_operations_generic< Base, 8u, Signed >;
+    using storage_type = typename base_type::storage_type;
 
-    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
         return !!BOOST_ATOMIC_INTERLOCKED_BTS64(&storage, bit_number);
     }
 
-    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) noexcept
     {
         return !!BOOST_ATOMIC_INTERLOCKED_BTR64(&storage, bit_number);
     }

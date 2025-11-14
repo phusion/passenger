@@ -412,11 +412,11 @@ private
     if @compile
       puts "cd #{PhusionPassenger.build_system_dir}"
       if ENV['TRACE']
-        rake = "#{PlatformInfo.rake_command} --trace RELEASE=yes"
+        rake_args = "--trace RELEASE=yes"
       else
-        rake = "#{PlatformInfo.rake_command} RELEASE=yes"
+        rake_args = "RELEASE=yes"
       end
-      command = "env NOEXEC_DISABLE=1 #{rake} apache2:clean apache2"
+      command = "env NOEXEC_DISABLE=1 #{@rake_command || PlatformInfo.rake_command} #{rake_args} apache2:clean apache2"
       if PhusionPassenger.packaging_method == "homebrew"
         # Running apache2:clean deletes some object files needed
         # by passenger-install-nginx-module, so we ensure those
@@ -943,6 +943,9 @@ parser = OptionParser.new do |opts|
   #   "#{indent}create backups of the existing files.") do
   # options[:backup_config] = false
   #end
+  opts.on("--rake-command COMMAND", String, "Customize Rake command to use") do |value|
+    options[:rake_command] = value
+  end
   opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
     options[:colorize] = true
   end

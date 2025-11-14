@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2020 Andrey Semashev
+ * Copyright (c) 2020-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/fence_operations.hpp
@@ -26,7 +26,7 @@ namespace boost {
 namespace atomics {
 namespace detail {
 
-typedef fence_arch_operations fence_operations;
+using fence_operations = fence_arch_operations;
 
 } // namespace detail
 } // namespace atomics

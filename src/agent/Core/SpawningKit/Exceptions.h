@@ -28,7 +28,6 @@
 
 #include <oxt/tracable_exception.hpp>
 #include <string>
-#include <stdexcept>
 #include <limits>
 
 #include <Constants.h>

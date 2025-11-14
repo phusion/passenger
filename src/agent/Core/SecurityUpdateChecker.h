@@ -33,6 +33,7 @@
 #include <oxt/backtrace.hpp>
 
 #include <SecurityKit/Crypto.h>
+#include <ServerKit/llversion.h>
 #include <ResourceLocator.h>
 #include <Exceptions.h>
 #include <StaticString.h>
@@ -568,7 +569,15 @@ public:
 		bodyJson["passenger_version"] = PASSENGER_VERSION;
 
 		bodyJson["server_integration"] = sessionState.config["server_identifier"];
-		bodyJson["server_version"] = sessionState.config["web_server_version"];
+
+		if (bodyJson["server_integration"].asString() == "standalone" &&
+			sessionState.config["web_server_version"].isNull()) {
+			P_INFO("Config web server version was Null while using standalone integration, assuming builtin engine.");
+			bodyJson["server_version"] = llhttp_version();
+		}else {
+			bodyJson["server_version"] = sessionState.config["web_server_version"];
+		}
+
 		bodyJson["curl_static"] = isCurlStaticallyLinked();
 
 		string nonce;

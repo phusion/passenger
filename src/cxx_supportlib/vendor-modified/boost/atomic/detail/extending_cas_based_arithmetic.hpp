@@ -3,7 +3,7 @@
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * Copyright (c) 2014 Andrey Semashev
+ * Copyright (c) 2014-2025 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/extending_cas_based_arithmetic.hpp
@@ -33,10 +33,10 @@ template< typename Base, std::size_t Size, bool Signed >
 struct extending_cas_based_arithmetic :
     public Base
 {
-    typedef typename Base::storage_type storage_type;
-    typedef typename storage_traits< Size >::type emulated_storage_type;
+    using storage_type = typename Base::storage_type;
+    using emulated_storage_type = typename storage_traits< Size >::type;
 
-    static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         storage_type old_val;
         atomics::detail::non_atomic_load(storage, old_val);
@@ -49,7 +49,7 @@ struct extending_cas_based_arithmetic :
         return old_val;
     }
 
-    static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) noexcept
     {
         storage_type old_val;
         atomics::detail::non_atomic_load(storage, old_val);

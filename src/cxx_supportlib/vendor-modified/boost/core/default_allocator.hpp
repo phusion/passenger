@@ -10,6 +10,7 @@ Distributed under the Boost Software License, Version 1.0.
 
 #include <boost/config.hpp>
 #include <new>
+#include <cstddef>
 
 namespace boost {
 
