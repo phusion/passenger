@@ -459,7 +459,7 @@ class DaemonController
     begin
       timeoutable(@start_abort_timeout) do
         allow_timeout do
-          wait_for_aborted_process(pid:, is_direct_child:)
+          wait_for_aborted_process(pid: pid, is_direct_child: is_direct_child)
         end
       end
     rescue Timeout::Error
@@ -469,7 +469,7 @@ class DaemonController
       end
 
       allow_timeout do
-        wait_for_aborted_process(pid:, is_direct_child:)
+        wait_for_aborted_process(pid: pid, is_direct_child: is_direct_child)
       end
     end
   end
