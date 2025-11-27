@@ -5,24 +5,24 @@ Release 6.1.1 (Not yet released)
  * [Nginx] Upgrades preferred Nginx to 1.28.0 from 1.26.3.
  * [Nginx] The preferred PCRE2 version is now 10.46 (previously 10.45).
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
-   - ccache: 4.11.2 -> 4.12
-   - cmake: 4.0.0 -> 4.1.1
-   - curl: 8.12.1 -> 8.16.0
-   - git: 2.49.0 -> 2.51.0
+   - ccache: 4.11.2 -> 4.12.1
+   - cmake: 4.0.0 -> 4.2.0
+   - curl: 8.12.1 -> 8.17.0
+   - git: 2.49.0 -> 2.52.0
    - gnupg:2.4.7 -> 2.4.8
    - libffi:3.4.7 -> 3.5.2
    - libgcrypt:1.11.0 -> 1.11.2
-   - libgpg_error:1.51 -> 1.55
+   - libgpg_error:1.51 -> 1.56
    - libreadline:8.2 -> 8.3
-   - openssl:3.4.1 -> 3.5.3
-   - pcre2:10.45 -> 10.46
+   - openssl:3.4.1 -> 3.6.0
+   - pcre2:10.45 -> 10.47
    - pinentry:1.3.1 -> 1.3.2
    - rubygems: 3.6.6 -> 3.7.2
    - rubys:
      - dropped 3.1.7
      - 3.2.8 -> 3.2.9
-     - 3.3.7 -> 3.3.9
-     - 3.4.2 -> 3.4.6
+     - 3.3.7 -> 3.3.10
+     - 3.4.2 -> 3.4.7
 
 
 Release 6.1.0

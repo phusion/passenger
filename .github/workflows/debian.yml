@@ -51,7 +51,7 @@ jobs:
           echo -e 'Package: distro-info-data\nPin: release n=questing\nPin-Priority: 990\n\nPackage: *\nPin: release n=noble\nPin-Priority: 900\n\nPackage: *\nPin: release o=Ubuntu\nPin-Priority: -10\n' | sudo tee -a /etc/apt/preferences
           sed -e 's/noble/questing/g' /etc/apt/sources.list.d/ubuntu.sources | sudo tee -a /etc/apt/sources.list.d/ubuntu.sources
           sudo apt update
-          sudo apt upgrade -y distro-info-data
+          sudo apt install -y distro-info-data
 
       - run: mkdir work cache output
 

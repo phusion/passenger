@@ -97,16 +97,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-13
-            os: macos-13
+          - runner: macos-15-intel
+            os: macos-15
             arch: x86_64
             sccache_arch_and_os: x86_64-apple-darwin
-            sccache_azure_key_prefix: sccache/cxx-macos-13-x86_64
-          - runner: macos-14
-            os: macos-14
+            sccache_azure_key_prefix: sccache/cxx-macos-15-x86_64
+          - runner: macos-15
+            os: macos-15
             arch: arm64
             sccache_arch_and_os: aarch64-apple-darwin
-            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+            sccache_azure_key_prefix: sccache/cxx-macos-15-arm
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     env:
