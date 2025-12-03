@@ -152,9 +152,9 @@ Group::findBestProcessPreferringStickySessionId(unsigned int id) const {
 		} else if (!process->isTotallyBusy()
 			&& (
 				bestProcess == nullptr
-				|| process->generation > bestProcess->generation
-				|| (process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime)
-				|| (process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
+				|| (process->busyness()  < bestProcess->busyness())
+				|| (process->busyness() == bestProcess->busyness() && process->generation  > bestProcess->generation)
+				|| (process->busyness() == bestProcess->busyness() && process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime)
 			)
 		) {
 			bestProcess = process;
@@ -189,9 +189,9 @@ Group::findBestProcess(const ProcessList &processes) const {
 		if (!process->isTotallyBusy()
 			&& (
 				bestProcess == nullptr
-				|| process->generation > bestProcess->generation
-				|| (process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime)
-				|| (process->generation == bestProcess->generation && process->spawnStartTime == bestProcess->spawnStartTime && process->busyness() < bestProcess->busyness())
+				|| (process->busyness()  < bestProcess->busyness())
+				|| (process->busyness() == bestProcess->busyness() && process->generation  > bestProcess->generation)
+				|| (process->busyness() == bestProcess->busyness() && process->generation == bestProcess->generation && process->spawnStartTime < bestProcess->spawnStartTime)
 			)
 		) {
 			bestProcess = process;
