@@ -512,7 +512,7 @@ namespace tut {
 		set_test_name("If multiple matching processes exist,"
 			" with generation 3 processes at full utilization,"
 			" generation 2 and generation 1 processes not at full utilization,"
-			" then asyncGet() routes to generation 2");
+			" then asyncGet() routes to generation 1 because it is least busy");
 
 		skDebugSupport.dummyConcurrency = 2;
 
@@ -560,16 +560,16 @@ namespace tut {
 
 		// Check various sessions belong to the expected processes.
 		ensure_equals("(4)", sessions[0]->getProcess()->getPid(), process3->getPid());
-		ensure_equals("(5)", sessions[1]->getProcess()->getPid(), process3->getPid());
-		ensure_equals("(6)", sessions[2]->getProcess()->getPid(), process2->getPid());
-		ensure_equals("(7)", sessions[3]->getProcess()->getPid(), process2->getPid());
-		ensure_equals("(8)", sessions[4]->getProcess()->getPid(), process1->getPid());
+		ensure_equals("(5)", sessions[1]->getProcess()->getPid(), process2->getPid());
+		ensure_equals("(6)", sessions[2]->getProcess()->getPid(), process1->getPid());
+		ensure_equals("(7)", sessions[3]->getProcess()->getPid(), process3->getPid());
+		ensure_equals("(8)", sessions[4]->getProcess()->getPid(), process2->getPid());
 		ensure_equals("(9)", sessions[5]->getProcess()->getPid(), process1->getPid());
 
 		// Close a bunch of sessions and we should arrive at the desired situation.
-		sessions[3].reset();
-		sessions[4].reset();
+		sessions[2].reset();
 		sessions[5].reset();
+		sessions[1].reset();
 		{
 			LockGuard l(pool->syncher);
 			ensure_equals("(10)", process1->sessions, 0);
@@ -577,14 +577,14 @@ namespace tut {
 			ensure_equals("(12)", process3->sessions, 2);
 		}
 
-		// asyncGet() should select process2 even though process1 has fewer sessions open and is older.
+		// asyncGet() should select process1 because process1 has fewer sessions open.
 		pool->asyncGet(options, callback);
 		prevNumber = number;
 		EVENTUALLY(5,
 			result = number + 1;
 		);
 		ProcessPtr process4 = currentSession->getProcess()->shared_from_this();
-		ensure_equals("(13)", process4->getPid(), process2->getPid());
+		ensure_equals("(13)", process4->getPid(), process1->getPid());
 		currentSession.reset();
 	}
 
@@ -592,7 +592,7 @@ namespace tut {
 		set_test_name("If multiple matching processes exist, all of them of the same generation,"
 			" with the lowest-start-time processes being at full utilization"
 			" and higher-start-time processes not at full utilization,"
-			" then asyncGet() routes to a lowest-start-time process that's not at full utilization");
+			" then asyncGet() routes to the process that's at lowest utilization");
 
 		skDebugSupport.dummyConcurrency = 2;
 
@@ -629,16 +629,16 @@ namespace tut {
 
 		// Check various sessions belong to the expected processes.
 		ensure_equals("(4)", sessions[0]->getProcess()->getPid(), process1->getPid());
-		ensure_equals("(5)", sessions[1]->getProcess()->getPid(), process1->getPid());
-		ensure_equals("(6)", sessions[2]->getProcess()->getPid(), process2->getPid());
-		ensure_equals("(7)", sessions[3]->getProcess()->getPid(), process2->getPid());
-		ensure_equals("(8)", sessions[4]->getProcess()->getPid(), process3->getPid());
+		ensure_equals("(5)", sessions[1]->getProcess()->getPid(), process2->getPid());
+		ensure_equals("(6)", sessions[2]->getProcess()->getPid(), process3->getPid());
+		ensure_equals("(7)", sessions[3]->getProcess()->getPid(), process1->getPid());
+		ensure_equals("(8)", sessions[4]->getProcess()->getPid(), process2->getPid());
 		ensure_equals("(9)", sessions[5]->getProcess()->getPid(), process3->getPid());
 
 		// Close a bunch of sessions and we should arrive at the desired situation.
-		sessions[3].reset();
-		sessions[4].reset();
+		sessions[2].reset();
 		sessions[5].reset();
+		sessions[1].reset();
 		{
 			LockGuard l(pool->syncher);
 			ensure_equals("(10)", process1->sessions, 2);
@@ -653,7 +653,7 @@ namespace tut {
 			result = number + 1;
 		);
 		ProcessPtr process4 = currentSession->getProcess()->shared_from_this();
-		ensure_equals("(13)", process4->getPid(), process2->getPid());
+		ensure_equals("(13)", process4->getPid(), process3->getPid());
 		currentSession.reset();
 	}
 
