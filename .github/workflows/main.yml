@@ -840,7 +840,7 @@ jobs:
           -p .
           -f pkg/passenger.rb
           -t pkg/*.tar.gz
-        timeout-minutes: 6
+        timeout-minutes: 7
 
   source_packaging:
     name: Source packaging tests
