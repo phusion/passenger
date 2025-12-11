@@ -821,8 +821,8 @@ jobs:
       - name: Check whether formula is up-to-date
         run: >
           ./packaging/homebrew/verify-oss-formula-uptodate
-          -c homebrew-core.git
-          -r upstream
+          -c /opt/homebrew/Library/Taps/homebrew/homebrew-core
+          -r origin
         timeout-minutes: 5
 
       - name: Modify formula
