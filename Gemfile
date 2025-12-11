@@ -8,6 +8,8 @@ ruby '>= 2.5'
 gemspec
 
 group :development do
+  gem 'cgi'
+  gem 'logger'
   gem 'json'
   gem 'mime-types', '~> 3.5.1'
   gem 'drake'
