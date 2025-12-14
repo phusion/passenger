@@ -12,7 +12,6 @@ group :development do
   gem 'logger'
   gem 'json'
   gem 'mime-types', '~> 3.5.1'
-  gem 'drake'
   gem 'rspec', '~> 3.12.0'
   gem 'rspec-collection_matchers'
   gem 'webrick', '~> 1.8.1'
