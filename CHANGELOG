@@ -3,6 +3,7 @@ Release 6.1.1 (Not yet released)
  * [Ruby] Improve support for Ruby 4 and Frozen String Literals. Closes GH-2619.
  * [Ubuntu] Add packages for Ubuntu 25.10 "questing", remove packages for Ubuntu 25.04 "plucky".
  * Upgrade Boost from 1.87 -> 1.89.
+ * [Nginx] Fixes bug with unbuffered uploads. Closes GH-2575.
  * [Nginx] Upgrades preferred Nginx to 1.28.0 from 1.26.3.
  * [Nginx] The preferred PCRE2 version is now 10.46 (previously 10.45).
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):

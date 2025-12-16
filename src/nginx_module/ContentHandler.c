@@ -1058,6 +1058,7 @@ create_request(ngx_http_request_t *r)
     body = r->upstream->request_bufs;
     r->upstream->request_bufs = cl;
 
+    if (!r->request_body_no_buffering) {
     while (body) {
         if (r->headers_in.chunked && r->request_body_no_buffering) {
             /* If Transfer-Encoding is chunked, then Nginx dechunks the body.
@@ -1112,6 +1113,7 @@ create_request(ngx_http_request_t *r)
             cl = cl->next;
             cl->buf = b;
         }
+    }
     }
 
     b->flush = 1;
