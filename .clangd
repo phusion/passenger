@@ -2,5 +2,5 @@ CompileFlags:
   Add:
     - -xc++-header
     - -DINTELLISENSE
-    - -std=gnu++11
+    - -std=gnu++14
     - -ferror-limit=0
