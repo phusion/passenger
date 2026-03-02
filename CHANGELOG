@@ -1,6 +1,7 @@
 Release 6.1.3 (Not yet released)
 -------------
  * [Ubuntu] Add packages for Ubuntu 26.04 "resolute", remove packages for Ubuntu 25.10 "questing".
+ * [Ruby] add support for rack.response_finished. Closes GH-2418.
  * 
 
 
