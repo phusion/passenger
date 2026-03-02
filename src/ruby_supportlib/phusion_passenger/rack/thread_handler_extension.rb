@@ -175,10 +175,6 @@ module PhusionPassenger
 
     private
       def process_body(env, connection, socket_wrapper, status, is_head_request, headers, body)
-        if @ush_reporter
-          ush_log_id = @ush_reporter.log_writing_rack_body_begin
-        end
-
         # Fix up incompliant body objects. Ensure that the body object
         # can respond to #each.
         output_body = should_output_body?(status, is_head_request)
@@ -317,16 +313,9 @@ module PhusionPassenger
         end
 
         signal_keep_alive_allowed!
-      ensure
-        if @ush_reporter && ush_log_id
-          @ush_reporter.log_writing_rack_body_end(ush_log_id)
-        end
       end
 
       def close_body(body, env, socket_wrapper)
-        if @ush_reporter
-          ush_log_id = @ush_reporter.log_closing_rack_body_begin
-        end
         begin
           body.close if body && body.respond_to?(:close)
         rescue => e
@@ -335,10 +324,6 @@ module PhusionPassenger
           end
           if !should_swallow_app_error?(e, socket_wrapper)
             print_exception("Rack response body object's #close method", e)
-          end
-        ensure
-          if @ush_reporter && ush_log_id
-            @ush_reporter.log_closing_rack_body_end(ush_log_id)
           end
         end
       end
