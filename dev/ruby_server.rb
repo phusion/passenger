@@ -135,12 +135,7 @@ private
   def handle_next_client(forward_connection)
     client = @server.accept
     begin
-      if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('2.3.0')
-        buffer = String.new(encoding: Encoding::BINARY)
-      else
-        buffer = ""
-        buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
-      end
+      buffer = "".b
       while true
         begin
           read_header(client, buffer)

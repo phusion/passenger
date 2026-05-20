@@ -136,9 +136,8 @@ end
 describe 'A natively packaged Phusion Passenger' do
   def capture_output(command)
     output = `#{command}`.strip
-    if output.respond_to?(:force_encoding)
-      output.force_encoding('utf-8')
-    end
+    output.force_encoding(Encoding::UTF_8)
+
     if $?.exitstatus == 0
       output
     else
