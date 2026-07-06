@@ -1,6 +1,11 @@
-Release 6.1.7 (Not yet released)
+Release 6.1.8 (Not yet released)
 -------------
  * 
+
+
+Release 6.1.7
+-------------
+ * [Nginx] Build Nginx dynamic modules against nginx-mod-devel sources on Enterprise Linux 9. Closes GH-2664.
 
 
 Release 6.1.6
