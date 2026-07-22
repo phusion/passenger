@@ -1,6 +1,6 @@
 # Phusion Passenger Developer QuickStart
 
-<a href="https://vimeo.com/phusionnl/review/97427161/15cb4cc59a"><img src="http://blog.phusion.nl/wp-content/uploads/2014/06/passenger_developer_quickstart.png"></a>
+<a href="https://youtu.be/CSpk9mfKdbc"><img src="http://blog.phusion.nl/wp-content/uploads/2014/06/passenger_developer_quickstart.png"></a>
 
 _Watch the Developer QuickStart screencast_
 
