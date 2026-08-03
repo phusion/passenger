@@ -88,7 +88,7 @@ Phusion Passenger is mostly written in C++, but the build system and various sma
 <a name="dev_quickstart"></a>
 ### Developer QuickStart
 
-<a href="https://vimeo.com/phusionnl/review/97427161/15cb4cc59a"><img src="http://blog.phusion.nl/wp-content/uploads/2014/06/passenger_developer_quickstart.png"></a>
+<a href="https://youtu.be/CSpk9mfKdbc"><img src="http://blog.phusion.nl/wp-content/uploads/2014/06/passenger_developer_quickstart.png"></a>
 
 _Watch the Developer QuickStart screencast_
 
@@ -102,9 +102,9 @@ Phusion Passenger's design and architecture is documented in detail in the [Desi
 <a name="code_walkthrough"></a>
 ### Code Walkthrough
 
-<a href="http://vimeo.com/phusionnl/review/98027409/03ba678684"><img src="http://blog.phusion.nl/wp-content/uploads/2014/06/code_walkthrough.png"></a>
+<a href="https://youtu.be/exugD98pqQc"><img src="http://blog.phusion.nl/wp-content/uploads/2014/06/code_walkthrough.png"></a>
 
-We have [a video](http://vimeo.com/phusionnl/review/98027409/03ba678684) which walks you through the Phusion Passenger codebase, showing you step-by-step how things fit together. It complements the [Design & Architecture](https://www.phusionpassenger.com/documentation/Design%20and%20Architecture.html) document.
+We have [a video](https://youtu.be/exugD98pqQc) which walks you through the Phusion Passenger codebase, showing you step-by-step how things fit together. It complements the [Design & Architecture](https://www.phusionpassenger.com/documentation/Design%20and%20Architecture.html) document.
 
 <a name="build_system"></a>
 ### Compilation and build system
