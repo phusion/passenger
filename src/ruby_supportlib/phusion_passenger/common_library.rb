@@ -295,6 +295,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Utils/SystemTime.o',
     source: 'SystemTools/SystemTime.cpp',
     category: :base
+  define_component 'Utils/Socket.o',
+    source: 'Utils/Socket.cpp',
+    category: :base
   define_component 'StrIntTools/StrIntUtils.o',
     source: 'StrIntTools/StrIntUtils.cpp',
     category: :base,

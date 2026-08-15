@@ -1,5 +1,6 @@
 Release 6.1.9 (Not yet released)
 -------------
+ * Fix some compatibility issues with FreeBSD. Closes GH-2668 & GH-2669.
  * 
 
 

@@ -46,6 +46,7 @@
 #include <ServerKit/Context.h>
 #include <ServerKit/Errors.h>
 #include <Utils.h>
+#include <Utils/Socket.h>
 #include <IOTools/IOUtils.h>
 
 namespace Passenger {
@@ -287,6 +288,7 @@ public:
 		assert(nEndpoints < SERVER_KIT_MAX_SERVER_ENDPOINTS);
 		setNonBlocking(fd);
 		int flag = 1;
+		if (!fdIsUnixDomainSocket(fd)) {
 		if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int)) == -1
 		 && errno != ENOPROTOOPT
 		 && errno != ENOTSUP
@@ -295,6 +297,7 @@ public:
 			int e = errno;
 			P_WARN("Cannot disable Nagle's algorithm on a TCP socket: " <<
 				strerror(e) << " (errno=" << e << ")");
+		}
 		}
 		endpoints[nEndpoints] = fd;
 		nEndpoints++;

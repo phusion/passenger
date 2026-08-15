@@ -60,6 +60,7 @@
 #include <ConfigKit/ConfigKit.h>
 #include <Algorithms/MovingAverage.h>
 #include <Utils.h>
+#include <Utils/Socket.h>
 #include <Utils/ScopeGuard.h>
 #include <StrIntTools/StrIntUtils.h>
 #include <IOTools/IOUtils.h>
@@ -782,6 +783,7 @@ public:
 		assert(nEndpoints < SERVER_KIT_MAX_SERVER_ENDPOINTS);
 		int flag = 1;
 		setNonBlocking(fd);
+		if (!fdIsUnixDomainSocket(fd)) {
 		if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int)) == -1
 		 && errno != ENOPROTOOPT
 		 && errno != ENOTSUP
@@ -790,6 +792,7 @@ public:
 			int e = errno;
 			SKS_WARN("Cannot disable Nagle's algorithm on a TCP socket: " <<
 				strerror(e) << " (errno=" << e << ")");
+		}
 		}
 		ev_io_init(&endpoints[nEndpoints], _onAcceptable, fd, EV_READ);
 		endpoints[nEndpoints].data = this;
@@ -952,27 +955,7 @@ public:
 	}
 
 	bool clientOnUnixDomainSocket(Client *client) {
-		union {
-			struct sockaddr genericAddress;
-			struct sockaddr_un unixAddress;
-			struct sockaddr_in inetAddress;
-		} addr;
-		socklen_t len = sizeof(addr);
-		int ret;
-
-		do {
-			ret = getsockname(client->getFd(), &addr.genericAddress, &len);
-		} while (ret == -1 && errno == EINTR);
-		if (ret == -1) {
-			int e = errno;
-			throw SystemException("Unable to autodetect socket type (getsockname() failed)", e);
-		} else {
-			#ifdef AF_UNIX
-				return addr.genericAddress.sa_family == AF_UNIX;
-			#else
-				return addr.genericAddress.sa_family == AF_LOCAL;
-			#endif
-		}
+		return fdIsUnixDomainSocket(client->getFd());
 	}
 
 	/** Increase client reference count. */

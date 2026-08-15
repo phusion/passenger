@@ -177,7 +177,7 @@ static void cleanup(const WorkingObjectsPtr &wo);
 
 /***** Functions *****/
 
-#if !BOOST_OS_MACOS
+#if BOOST_OS_LINUX
 
 struct WatchdogOomAdjustResult {
 	struct Message {
@@ -860,7 +860,7 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	 * for this watchdog. Note that the OOM score is inherited by child processes
 	 * so we need to restore it after each fork().
 	 */
-#if !BOOST_OS_MACOS
+#if BOOST_OS_LINUX
 	WatchdogOomAdjustResult oomAdjustResult = setOomScoreNeverKill();
 #endif
 
@@ -877,7 +877,7 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 
 	wo = boost::make_shared<WorkingObjects>();
 	workingObjects = wo.get();
-#if !BOOST_OS_MACOS
+#if BOOST_OS_LINUX
 	printOomAdjustResultMessages(oomAdjustResult);
 	wo->extraConfigToPassToSubAgents["oom_score"] = oomAdjustResult.oldScore;
 #endif
