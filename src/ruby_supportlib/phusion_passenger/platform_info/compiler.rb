@@ -28,6 +28,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
   module PlatformInfo
+
   private
     def self.detect_language_extension(language)
       case language
@@ -657,6 +658,7 @@ module PhusionPassenger
         nil
       end
     end
+
   end
 
 end # module PhusionPassenger

@@ -28,6 +28,7 @@ module PhusionPassenger
 
   # Core of the `passenger-config` command. Dispatches a subcommand to a specific class.
   module Config
+
     KNOWN_COMMANDS = [
       [ "detach-process", "DetachProcessCommand" ],
       [ "restart-app", "RestartAppCommand" ],
@@ -179,6 +180,7 @@ module PhusionPassenger
       PhusionPassenger.require_passenger_lib("config/#{base_name}")
       PhusionPassenger::Config.const_get(class_name)
     end
+
   end
 
 end # module PhusionPassenger

@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
   module PlatformInfo
+
     # An identifier for the current Linux distribution. nil if the operating system is not Linux.
     def self.linux_distro
       tags = linux_distro_tags
@@ -84,6 +85,7 @@ module PhusionPassenger
       # TODO: Slackware
     end
     memoize :linux_distro_tags
+
   end
 
 end # PhusionPassenger

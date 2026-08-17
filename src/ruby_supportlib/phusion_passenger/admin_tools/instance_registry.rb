@@ -28,6 +28,7 @@ require 'fileutils'
 PhusionPassenger.require_passenger_lib 'admin_tools/instance'
 
 module PhusionPassenger
+
   module AdminTools
 
     class InstanceRegistry
@@ -130,4 +131,5 @@ module PhusionPassenger
     end
 
   end # module AdminTools
+
 end # module PhusionPassenger

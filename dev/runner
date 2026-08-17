@@ -29,5 +29,7 @@ while true
 end
 
 module PhusionPassenger
+
   p eval(ARGV.join(" "))
+
 end

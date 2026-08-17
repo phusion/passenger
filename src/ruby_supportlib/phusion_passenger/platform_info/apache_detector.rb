@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 require 'pathname'
 
 module PhusionPassenger
+
   module PlatformInfo
 
     # Detects all possible Apache installations on the system, and presents the
@@ -310,4 +311,5 @@ module PhusionPassenger
     end
 
   end
+
 end # module Phusion Passenger

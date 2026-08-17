@@ -35,6 +35,7 @@ PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 
 module PhusionPassenger
+
   module Config
 
     class RestartAppCommand < Command
@@ -278,4 +279,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

@@ -26,7 +26,9 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   module App
+
     def self.options
       @@options
     end
@@ -137,4 +139,5 @@ module PhusionPassenger
     LoaderSharedHelpers.after_handling_requests
 
   end # module App
+
 end # module PhusionPassenger

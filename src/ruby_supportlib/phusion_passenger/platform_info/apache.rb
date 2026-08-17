@@ -44,6 +44,7 @@ module PhusionPassenger
   # Apache.
 
   module PlatformInfo
+
     ################ Programs ################
 
     # The absolute path to the 'apxs' or 'apxs2' executable, or nil if not found.
@@ -1032,6 +1033,7 @@ module PhusionPassenger
       res
     end
     private_class_method :unescape_c_string
+
   end
 
 end

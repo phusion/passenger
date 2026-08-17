@@ -27,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'constants'
 module PhusionPassenger
 
   module DebugLogging
+
     # We don't refer to STDERR directly because STDERR's reference might
     # change during runtime.
     @@log_level = DEFAULT_LOG_LEVEL
@@ -131,6 +132,7 @@ module PhusionPassenger
       end
     end
     module_function :_output
+
   end
 
 end

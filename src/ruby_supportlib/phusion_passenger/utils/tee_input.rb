@@ -58,6 +58,7 @@ require 'stringio'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
+
 module Utils
 
 # acts like tee(1) on an input input to provide a input-like stream
@@ -257,4 +258,5 @@ private
 end
 
 end # module Utils
+
 end # module PhusionPassenger

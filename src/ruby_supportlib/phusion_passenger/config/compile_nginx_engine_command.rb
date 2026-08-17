@@ -29,6 +29,7 @@ PhusionPassenger.require_passenger_lib 'config/nginx_engine_compiler'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 module PhusionPassenger
+
   module Config
 
     class CompileNginxEngineCommand < Command
@@ -129,4 +130,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

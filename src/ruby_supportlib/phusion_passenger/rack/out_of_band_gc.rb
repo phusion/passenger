@@ -27,6 +27,7 @@
 require 'thread'
 
 module PhusionPassenger
+
   module Rack
 
     class OutOfBandGc
@@ -131,4 +132,5 @@ module PhusionPassenger
     end
 
   end # module Rack
+
 end # module PhusionPassenger

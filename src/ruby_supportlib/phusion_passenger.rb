@@ -25,6 +25,7 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   FILE_LOCATION = File.expand_path(__FILE__)
 
 
@@ -338,4 +339,5 @@ module PhusionPassenger
     end
     home
   end
+
 end if !defined?(PhusionPassenger::VERSION_STRING)

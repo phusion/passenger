@@ -25,6 +25,7 @@
 module PhusionPassenger
 
   module Packaging
+
     # Files that must be generated before packaging.
     PREGENERATED_FILES = [
       'src/cxx_supportlib/Constants.h',
@@ -123,6 +124,7 @@ module PhusionPassenger
       result.reject! { |path| path =~ %r{/\.\.?$} }
       result
     end
+
   end
 
 end # module PhusionPassenger

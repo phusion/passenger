@@ -9,6 +9,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 module PhusionPassenger
+
   module PlatformInfo
 
     # Almost all software require other software in order to run. We call those
@@ -38,6 +39,7 @@ module PhusionPassenger
     # should print as many details about the dependency as possible (location, version,
     # etc) so that the user can override any decisions if necessary.
     module Depcheck
+
       THIS_DIR   = File.expand_path(File.dirname(__FILE__))
       @@loaded   = {}
       @@database = {}
@@ -391,7 +393,9 @@ module PhusionPassenger
           puts "      #{text}"
         end
       end # class ConsoleRunner
+
     end # module Depcheck
 
   end # module PlatformInfo
+
 end # module PhusionPassenger

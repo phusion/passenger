@@ -20,10 +20,12 @@
 # THE SOFTWARE.
 
 module PhusionPassenger
+
 class DaemonController
   MAJOR = 1
   MINOR = 2
   TINY  = 1
   VERSION_STRING = "#{MAJOR}.#{MINOR}.#{TINY}"
 end # class DaemonController
+
 end # module PhusionPassenger

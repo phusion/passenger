@@ -23,6 +23,7 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   class << self
     @@event_starting_worker_process = []
     @@event_stopping_worker_process = []
@@ -77,4 +78,5 @@ module PhusionPassenger
       end
     end
   end
+
 end # module PhusionPassenger

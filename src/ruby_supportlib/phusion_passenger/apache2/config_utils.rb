@@ -23,8 +23,11 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   module Apache2
+
     module ConfigUtils
+
       class << self
         def initialize!(options)
           sort(options)
@@ -47,6 +50,9 @@ module PhusionPassenger
           end
         end
       end
+
     end
+
   end
+
 end # module PhusionPassenger

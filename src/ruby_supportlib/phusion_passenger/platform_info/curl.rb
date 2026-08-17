@@ -27,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'platform_info'
 module PhusionPassenger
 
   module PlatformInfo
+
     def self.curl_flags
       result = `(curl-config --cflags) 2>/dev/null`.strip
       if result.empty?
@@ -60,6 +61,7 @@ module PhusionPassenger
       features =~ /SSL/
     end
     memoize :curl_supports_ssl?
+
   end
 
 end # module PhusionPassenger

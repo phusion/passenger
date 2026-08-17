@@ -35,6 +35,7 @@ PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
+
   module Config
 
     class DownloadNginxEngineCommand < Command
@@ -302,4 +303,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

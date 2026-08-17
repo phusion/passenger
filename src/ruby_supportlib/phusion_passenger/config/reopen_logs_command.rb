@@ -32,6 +32,7 @@ PhusionPassenger.require_passenger_lib 'config/utils'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
+
   module Config
 
     class ReopenLogsCommand < Command
@@ -142,4 +143,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

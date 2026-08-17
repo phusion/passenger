@@ -27,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'config/command'
 
 module PhusionPassenger
+
   module Config
 
     class BuildNativeSupportCommand < Command
@@ -76,4 +77,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

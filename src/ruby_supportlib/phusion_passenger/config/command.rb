@@ -23,6 +23,7 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   module Config
 
     class Command
@@ -61,4 +62,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

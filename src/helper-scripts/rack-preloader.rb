@@ -28,7 +28,9 @@
 GC.copy_on_write_friendly = true if GC.respond_to?(:copy_on_write_friendly=)
 
 module PhusionPassenger
+
   module App
+
     def self.options
       @@options
     end
@@ -216,4 +218,5 @@ module PhusionPassenger
     end
 
   end # module App
+
 end # module PhusionPassenger

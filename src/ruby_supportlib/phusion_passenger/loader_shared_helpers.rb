@@ -28,6 +28,7 @@ module PhusionPassenger
 
   # Provides shared functions for loader and preloader apps.
   module LoaderSharedHelpers
+
     extend self
 
     # To be called by the (pre)loader as soon as possible.
@@ -991,6 +992,7 @@ module PhusionPassenger
     def home_dir
       PhusionPassenger.home_dir
     end
+
   end
 
 end # module PhusionPassenger

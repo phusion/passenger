@@ -35,6 +35,7 @@ PhusionPassenger.require_passenger_lib 'utils/progress_bar'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
+
   module Config
 
     class AgentCompiler < AbstractInstaller
@@ -169,4 +170,5 @@ module PhusionPassenger
     end
 
   end # module Standalone
+
 end # module PhusionPassenger

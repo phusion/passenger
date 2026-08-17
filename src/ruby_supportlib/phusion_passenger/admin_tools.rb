@@ -25,6 +25,7 @@
 module PhusionPassenger
 
   module AdminTools
+
     def self.tmpdir
       [ "PASSENGER_INSTANCE_REGISTRY_DIR", "TMPDIR" ].each do |name|
         if ENV.has_key?(name) && !ENV[name].empty?
@@ -44,6 +45,7 @@ module PhusionPassenger
         true
       end
     end
+
   end # module AdminTools
 
 end # module PhusionPassenger

@@ -27,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'standalone/config_utils'
 PhusionPassenger.require_passenger_lib 'utils/file_system_watcher'
 
 module PhusionPassenger
+
   module Standalone
 
     class AppFinder
@@ -187,4 +188,5 @@ module PhusionPassenger
     end
 
   end # module Standalone
+
 end # module PhusionPassenger

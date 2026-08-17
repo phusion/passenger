@@ -28,18 +28,22 @@ PhusionPassenger.require_passenger_lib 'utils/tee_input'
 
 if defined?(::Rack::BodyProxy) && !::Rack::BodyProxy.new("").respond_to?(:each)
   module ::Rack
+
     class BodyProxy
       def each
         @body.each { |body| yield body }
       end
     end
+
   end
 end
 
 module PhusionPassenger
+
   module Rack
 
     module ThreadHandlerExtension
+
       # Constants which exist to relieve Ruby's garbage collector.
       RACK_VERSION       = "rack.version"        # :nodoc:
       RACK_VERSION_VALUE = [ 1, 3 ]                # :nodoc:
@@ -402,7 +406,9 @@ module PhusionPassenger
           str.size
         end
       end
+
     end
 
   end # module Rack
+
 end # module PhusionPassenger

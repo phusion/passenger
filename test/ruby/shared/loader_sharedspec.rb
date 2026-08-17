@@ -390,6 +390,7 @@ private
 end
 
 module LoaderSpecHelper
+
   def self.included(klass)
     klass.before(:each) do
       @stubs = []
@@ -448,6 +449,7 @@ module LoaderSpecHelper
     socket.close
     [ headers, body ]
   end
+
 end
 
 RSpec.shared_examples_for 'a loader' do

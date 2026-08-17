@@ -33,9 +33,12 @@ PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
+
   module Standalone
+
     class StartCommand
       module NginxEngine
+
       private
         def start_engine_real
           write_nginx_config_file(nginx_config_path)
@@ -331,7 +334,10 @@ module PhusionPassenger
         end
 
         #####################
+
       end # module NginxEngine
     end # module StartCommand
+
   end # module Standalone
+
 end # module PhusionPassenger

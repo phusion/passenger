@@ -29,6 +29,7 @@ PhusionPassenger.require_passenger_lib 'platform_info'
 module PhusionPassenger
 
   module PlatformInfo
+
     class VersionComparer < String
       def <=>(other)
         Gem::Version.new(self) <=> Gem::Version.new(other.to_s)
@@ -228,6 +229,7 @@ module PhusionPassenger
       `#{uname} -r`.include?("Microsoft")
     end
     memoize :windows_subsystem?, true
+
   end
 
 end # module PhusionPassenger

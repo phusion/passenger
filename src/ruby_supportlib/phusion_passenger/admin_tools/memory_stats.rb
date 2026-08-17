@@ -28,6 +28,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/apache'
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 
 module PhusionPassenger
+
   module AdminTools
 
     class MemoryStats
@@ -310,4 +311,5 @@ module PhusionPassenger
     end
 
   end # module AdminTools
+
 end # module PhusionPassenger

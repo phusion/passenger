@@ -29,6 +29,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/openssl'
 module PhusionPassenger
 
   module PlatformInfo
+
     def self.crypto_libs
       prefix = ' -framework CoreFoundation -framework Security'
       suffix = ' -lcrypto'

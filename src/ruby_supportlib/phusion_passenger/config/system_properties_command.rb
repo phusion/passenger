@@ -33,6 +33,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/networking'
 PhusionPassenger.require_passenger_lib 'platform_info/linux'
 
 module PhusionPassenger
+
   module Config
 
     class SystemPropertiesCommand < Command
@@ -102,4 +103,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

@@ -33,6 +33,7 @@ module PhusionPassenger
 
   # Provides shared functions for preloader apps.
   module PreloaderSharedHelpers
+
     extend self
 
     def init(main_app)

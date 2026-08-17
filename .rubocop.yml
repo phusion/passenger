@@ -3,7 +3,7 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
 # Overwrite or add rules to create your own house style
 
-Style/EmptyLinesAroundModuleBody:
+Layout/EmptyLinesAroundModuleBody:
   EnforcedStyle: empty_lines
 
 Style/TrailingCommaInHashLiteral:
@@ -14,3 +14,8 @@ Style/TrailingCommaInArrayLiteral:
 
 Style/StringLiterals:
   EnforcedStyle: single_quotes
+
+AllCops:
+  TargetRubyVersion: 2.5
+  Exclude:
+    - 'packaging/homebrew/**/*'

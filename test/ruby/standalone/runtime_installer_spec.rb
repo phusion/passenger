@@ -8,6 +8,7 @@ require 'fileutils'
 require 'stringio'
 
 module PhusionPassenger
+
 module Standalone
 
 describe RuntimeInstaller do
@@ -393,5 +394,6 @@ describe RuntimeInstaller do
 end
 
 end # module Standalone
+
 end # module PhusionPassenger
 end

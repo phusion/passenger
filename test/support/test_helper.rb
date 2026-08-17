@@ -22,6 +22,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
 # Module containing helper methods, to be included in unit tests.
 module TestHelper
+
   ######## Stub helpers ########
 
   class Stub
@@ -360,6 +361,7 @@ module TestHelper
       str
     end
   end
+
 end
 
 File.class_eval do

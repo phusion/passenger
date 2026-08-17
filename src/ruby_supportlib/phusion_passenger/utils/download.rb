@@ -29,9 +29,11 @@ PhusionPassenger.require_passenger_lib 'utils/shellwords'
 require 'fileutils'
 
 module PhusionPassenger
+
   module Utils
 
     module Download
+
       extend self    # Make methods available as class methods.
 
       def self.included(klass)
@@ -222,7 +224,9 @@ module PhusionPassenger
 
         result
       end
+
     end
 
   end # module Utils
+
 end # module PhusionPassenger

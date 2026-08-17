@@ -1,4 +1,5 @@
 module Multipart
+
   # From: http://deftcode.com/code/flickr_upload/multipartpost.rb
   ## Helper class to prepare an HTTP POST request with a file upload
   ## Mostly taken from
@@ -58,4 +59,5 @@ module Multipart
       return query, HEADER
     end
   end
+
 end

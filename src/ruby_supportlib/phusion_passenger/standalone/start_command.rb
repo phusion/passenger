@@ -42,6 +42,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 # checking stage of the runtime installer.
 
 module PhusionPassenger
+
   module Standalone
 
     class StartCommand < Command
@@ -563,4 +564,5 @@ module PhusionPassenger
     end
 
   end # module Standalone
+
 end # module PhusionPassenger

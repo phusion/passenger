@@ -26,6 +26,7 @@ PhusionPassenger.require_passenger_lib 'standalone/command'
 PhusionPassenger.require_passenger_lib 'config/about_command'
 
 module PhusionPassenger
+
   module Standalone
 
     class VersionCommand < Command
@@ -36,4 +37,5 @@ module PhusionPassenger
     end
 
   end
+
 end

@@ -33,9 +33,12 @@ PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
+
   module Standalone
+
     class StartCommand
       module BuiltinEngine
+
       private
         def start_engine_real
           Standalone::ControlUtils.require_daemon_controller
@@ -273,7 +276,10 @@ module PhusionPassenger
         end
 
         #####################
+
       end # module BuiltinEngine
     end # module StartCommand
+
   end # module Standalone
+
 end # module PhusionPassenger

@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'utils/strscan'
 require 'forwardable'
 
 module PhusionPassenger
+
 module Utils
 
 # Usage:
@@ -143,6 +144,7 @@ class JSON
   end
 
   module Generator
+
     def generate(obj)
       raise ArgumentError unless obj.is_a? Array or obj.is_a? Hash
       generate_type(obj)
@@ -196,10 +198,12 @@ class JSON
         "#{generate_String(key.to_s)}: #{generate_type(value)}"
       }.join(', ')
     end
+
   end
 
   extend Generator
 end
 
 end # module Utils
+
 end # module PhusionPassenger

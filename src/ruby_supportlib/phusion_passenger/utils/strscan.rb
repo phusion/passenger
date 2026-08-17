@@ -25,6 +25,7 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
 module Utils
 
 # A minimal pure-Ruby StringScanner implementation so that
@@ -65,4 +66,5 @@ class StringScanner
 end
 
 end # module Utils
+
 end # module PhusionPassenger

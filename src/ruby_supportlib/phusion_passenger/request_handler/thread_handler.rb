@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'utils/native_support_utils'
 PhusionPassenger.require_passenger_lib 'utils/unseekable_socket'
 
 module PhusionPassenger
+
   class RequestHandler
     # This class encapsulates the logic of a single RequestHandler thread.
     class ThreadHandler
@@ -349,4 +350,5 @@ module PhusionPassenger
       end
     end
   end # class RequestHandler
+
 end # module PhusionPassenger

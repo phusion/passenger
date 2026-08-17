@@ -32,6 +32,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
   module PlatformInfo
+
     # Store original $GEM_HOME value so that even if the app customizes
     # $GEM_HOME we can still work with the original value.
     gem_home = ENV['GEM_HOME']
@@ -515,6 +516,7 @@ module PhusionPassenger
       end
     end
     private_class_method :transform_according_to_ruby_exec_format
+
   end
 
 end # module PhusionPassenger

@@ -28,6 +28,7 @@ PhusionPassenger.require_passenger_lib 'vendor/crash_watch/lldb_controller'
 PhusionPassenger.require_passenger_lib 'vendor/crash_watch/version'
 
 module CrashWatch
+
   class App
     def run(argv)
       options = {}
@@ -136,4 +137,5 @@ module CrashWatch
       end
     end
   end
+
 end

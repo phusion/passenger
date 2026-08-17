@@ -34,6 +34,7 @@ PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
+
   module Config
 
     class InstallStandaloneRuntimeCommand < Command
@@ -288,4 +289,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

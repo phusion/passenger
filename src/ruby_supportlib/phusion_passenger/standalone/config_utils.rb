@@ -26,9 +26,11 @@ PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'standalone/config_options_list'
 
 module PhusionPassenger
+
   module Standalone
 
     module ConfigUtils
+
       extend self    # Make methods available as class methods.
 
       def self.included(klass)
@@ -354,7 +356,9 @@ module PhusionPassenger
           Socket.getaddrinfo(hostname, nil).first[3]
         end
       end
+
     end
 
   end # module Standalone
+
 end # module PhusionPassenger

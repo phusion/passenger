@@ -31,6 +31,7 @@ PhusionPassenger.require_passenger_lib 'utils/shellwords'
 module PhusionPassenger
 
   module PlatformInfo
+
     # Returns a list of network interfaces active on the current system, or
     # nil if unable to autodetect.
     #
@@ -289,6 +290,7 @@ module PhusionPassenger
         []
       end
     end
+
   end
 
 end # module PhusionPassenger

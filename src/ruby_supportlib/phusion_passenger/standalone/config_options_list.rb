@@ -81,7 +81,9 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 #   passed argument is acceptable.
 
 module PhusionPassenger
+
   module Standalone
+
     # Server configuration options
     SERVER_CONFIG_SPEC = [
       {
@@ -723,5 +725,7 @@ module PhusionPassenger
         end
       end
     end
+
   end
+
 end

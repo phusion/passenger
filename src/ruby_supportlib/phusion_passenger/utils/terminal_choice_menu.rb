@@ -25,6 +25,7 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   module Utils
 
     class TerminalChoiceMenu
@@ -248,4 +249,5 @@ module PhusionPassenger
     end
 
   end # module Utils
+
 end # module PhusionPassenger

@@ -23,6 +23,7 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   module Standalone
 
     class Command
@@ -71,4 +72,5 @@ module PhusionPassenger
     end
 
   end # module Standalone
+
 end # module PhusionPassenger

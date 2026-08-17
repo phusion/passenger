@@ -27,6 +27,7 @@
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 
 module PhusionPassenger
+
   module Utils
 
     # A /etc/hosts parser. Also supports writing groups of data to the file.
@@ -131,4 +132,5 @@ module PhusionPassenger
     end
 
   end
+
 end

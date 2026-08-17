@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'standalone/control_utils'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 
 module PhusionPassenger
+
   module Standalone
 
     class StatusCommand < Command
@@ -120,4 +121,5 @@ module PhusionPassenger
     end
 
   end
+
 end

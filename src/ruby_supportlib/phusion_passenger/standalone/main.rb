@@ -28,6 +28,7 @@ module PhusionPassenger
 
   # Core of the `passenger` command (Passenger Standalone). Dispatches a subcommand to a specific class.
   module Standalone
+
     KNOWN_COMMANDS = [
       [ "start", "StartCommand" ],
       [ "stop", "StopCommand" ],
@@ -109,6 +110,7 @@ module PhusionPassenger
       PhusionPassenger.require_passenger_lib("standalone/#{base_name}")
       PhusionPassenger::Standalone.const_get(class_name)
     end
+
   end
 
 end # module PhusionPassenger

@@ -25,10 +25,12 @@
 PhusionPassenger.require_passenger_lib 'native_support'
 
 module PhusionPassenger
+
   module Utils
 
     # Utility functions that can potentially be accelerated by native_support functions.
     module NativeSupportUtils
+
       extend self
 
       if defined?(PhusionPassenger::NativeSupport)
@@ -60,7 +62,9 @@ module PhusionPassenger
             (times.stime * 1_000_000).to_i)
         end
       end
+
     end
 
   end # module Utils
+
 end # module PhusionPassenger

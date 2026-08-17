@@ -25,6 +25,7 @@
 PhusionPassenger.require_passenger_lib 'native_support'
 
 module PhusionPassenger
+
   module Utils
 
     # Watches changes on one or more files or directories. To use this class,
@@ -184,4 +185,5 @@ module PhusionPassenger
     end
 
   end # module Utils
+
 end # module PhusionPassenger

@@ -31,6 +31,7 @@ PhusionPassenger.require_passenger_lib 'config/compile_agent_command'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 module PhusionPassenger
+
   module Config
 
     class InstallAgentCommand < Command
@@ -186,4 +187,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

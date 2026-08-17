@@ -31,6 +31,7 @@ module PhusionPassenger
   # This module autodetects various platform-specific information, and
   # provides that information through constants.
   module PlatformInfo
+
   private
     @@cache_dir = nil
     @@verbose   = [ '1', 'true', 'on', 'yes' ].include?(ENV['VERBOSE'])
@@ -426,6 +427,7 @@ module PhusionPassenger
       end
       result
     end
+
   end
 
 end # module PhusionPassenger

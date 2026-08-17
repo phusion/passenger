@@ -37,9 +37,11 @@ PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
+
   module Config
 
     module InstallationUtils
+
       extend self    # Make methods available as class methods.
 
       def self.included(klass)
@@ -256,7 +258,9 @@ module PhusionPassenger
         end
         puts ConsoleTextTemplate.new({ file: name }, options).result
       end
+
     end
 
   end # module Config
+
 end # module PhusionPassenger

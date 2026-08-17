@@ -30,7 +30,9 @@ require 'thread'
 require 'logger'
 
 module PhusionPassenger
+
   module App
+
     def self.options
       @@options ||= {}
       @@options
@@ -254,4 +256,5 @@ module PhusionPassenger
     end
 
   end # module App
+
 end # module PhusionPassenger

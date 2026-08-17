@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
+
   module AdminTools
 
     class Instance
@@ -240,4 +241,5 @@ module PhusionPassenger
     end
 
   end # module AdminTools
+
 end # module PhusionPassenger

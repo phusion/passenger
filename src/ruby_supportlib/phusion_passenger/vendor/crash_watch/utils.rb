@@ -23,7 +23,9 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 module CrashWatch
+
   module Utils
+
     extend Utils
 
     def self.included(klass)
@@ -91,5 +93,7 @@ module CrashWatch
       end
       nil
     end
+
   end
+
 end

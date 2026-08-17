@@ -29,6 +29,7 @@ def ruby2_keywords(*)
 end if RUBY_VERSION < "2.7"
 
 module PhusionPassenger
+
   module Utils
 
     # Some frameworks (e.g. Merb) call `seek` and `rewind` on the input stream
@@ -305,4 +306,5 @@ module PhusionPassenger
     end
 
   end # module Utils
+
 end # module PhusionPassenger

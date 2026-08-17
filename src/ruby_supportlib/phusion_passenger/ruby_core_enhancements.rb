@@ -119,6 +119,7 @@ class File
 end
 
 module Signal
+
   # Like Signal.list, but only returns signals that we can actually trap.
   def self.list_trappable
     ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
@@ -155,9 +156,11 @@ module Signal
 
     result
   end
+
 end
 
 module GC
+
   if !respond_to?(:copy_on_write_friendly?)
     # Checks whether the current Ruby interpreter's garbage
     # collector is copy-on-write friendly.
@@ -165,4 +168,5 @@ module GC
       false
     end
   end
+
 end

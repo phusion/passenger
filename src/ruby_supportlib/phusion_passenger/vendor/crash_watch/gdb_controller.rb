@@ -27,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'vendor/crash_watch/base'
 PhusionPassenger.require_passenger_lib 'vendor/crash_watch/utils'
 
 module CrashWatch
+
   class GdbNotFound < Error
   end
 
@@ -279,4 +280,5 @@ module CrashWatch
       end
     end
   end
+
 end

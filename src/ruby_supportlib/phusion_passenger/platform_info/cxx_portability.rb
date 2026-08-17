@@ -29,6 +29,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
   module PlatformInfo
+
     # Extra flags that should always be passed to the C compiler
     # when linking, to be included last in the command string.
     def self.portability_c_ldflags
@@ -204,6 +205,7 @@ module PhusionPassenger
       result.join(' ')
     end
     private_class_method :portability_c_or_cxx_ldflags
+
   end
 
 end # module PhusionPassenger

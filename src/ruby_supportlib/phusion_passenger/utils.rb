@@ -28,6 +28,7 @@ module PhusionPassenger
 
   # Utility functions.
   module Utils
+
     extend self    # Make methods available as class methods.
 
     def self.included(klass)
@@ -230,6 +231,7 @@ module PhusionPassenger
     end
 
     ####################################
+
   end
 
 end # module PhusionPassenger

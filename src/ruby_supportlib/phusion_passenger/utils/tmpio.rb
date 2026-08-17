@@ -2,6 +2,7 @@ require 'tmpdir'
 require 'fileutils'
 
 module PhusionPassenger
+
 module Utils
 
 # some versions of Ruby had a broken Tempfile which didn't work
@@ -76,4 +77,5 @@ def self.mktmpdir(prefix_suffix = nil, tmpdir = nil)
 end
 
 end # module Utils
+
 end # module PhusionPassenger

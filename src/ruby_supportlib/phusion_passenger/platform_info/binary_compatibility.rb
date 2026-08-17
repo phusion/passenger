@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
   module PlatformInfo
+
     # Returns a string that describes the current Ruby
     # interpreter's extension binary compatibility. A Ruby extension
     # compiled for a certain Ruby interpreter can also be loaded on
@@ -139,6 +140,7 @@ module PhusionPassenger
       [ os_arch, os_name_simple, os_runtime ].compact.join("-")
     end
     memoize :cxx_binary_compatibility_id
+
   end
 
 end # module PhusionPassenger

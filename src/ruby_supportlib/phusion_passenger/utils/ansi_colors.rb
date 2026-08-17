@@ -23,9 +23,11 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   module Utils
 
     module AnsiColors
+
       RESET    = "\e[0m".freeze
       BOLD     = "\e[1m".freeze
       GRAY     = "\e[38;5;248m".freeze
@@ -76,6 +78,7 @@ module PhusionPassenger
         text.gsub!(%r{<banner>(.*?)</banner>}m, "\\1")
         text
       end
+
     end
 
     class AnsiColorsPrinter
@@ -158,4 +161,5 @@ module PhusionPassenger
     end
 
   end # module Utils
+
 end # module PhusionPassenger
