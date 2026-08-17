@@ -36,6 +36,7 @@
 #include <ConfigKit/ConfigKit.h>
 #include <Exceptions.h>
 #include <StaticString.h>
+#include <FileTools/FileManip.h>
 #include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <StrIntTools/StrIntUtils.h>
@@ -70,7 +71,7 @@ using namespace std;
  *           "password": "bar",
  *           "password_file": "/filename"
  *
- *           "level": "readonly" | "full"   // Optional; "full" is defeault
+ *           "level": "readonly" | "full"   // Optional; "full" is default
  *         },
  *         ...
  *       ]
@@ -108,7 +109,7 @@ inline Json::Value parseApiAccountDescription(const StaticString &description);
  *
  * A JSON array that passes this function is *valid*, although not necessarily *normalized*.
  */
-static void
+inline void
 validateAuthorizationsField(const string &key, const ConfigKit::Store &config,
 	vector<ConfigKit::Error> &outputErrors)
 {

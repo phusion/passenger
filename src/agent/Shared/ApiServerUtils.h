@@ -58,7 +58,6 @@
 #include <sys/types.h>
 #include <string>
 #include <vector>
-#include <stdexcept>
 #include <cstddef>
 #include <cstring>
 #include <jsoncpp/json.h>
