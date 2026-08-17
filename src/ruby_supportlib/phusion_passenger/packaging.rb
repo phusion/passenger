@@ -94,6 +94,7 @@ module PhusionPassenger
       '.settings/**/*',
       '.vscode/**/*',
       '.cproject',
+      '.rubocop.yml',
       'compile_commands.json',
       '.gitattributes',
       '.gitignore',
