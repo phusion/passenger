@@ -183,12 +183,13 @@ private:
 		if (req->method == HTTP_GET) {
 			if (!authorizeStateInspectionOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
-			} else {
-				HeaderTable headers;
-				Json::Value doc = LoggingKit::context->getConfig().inspect();
-				headers.insert(req->pool, "Content-Type", "application/json");
-				writeSimpleResponse(client, 200, &headers, doc.toStyledString());
+				return;
 			}
+
+			HeaderTable headers;
+			Json::Value doc = LoggingKit::context->getConfig().inspect();
+			headers.insert(req->pool, "Content-Type", "application/json");
+			writeSimpleResponse(client, 200, &headers, doc.toStyledString());
 			if (!req->ended()) {
 				endRequest(&client, &req);
 			}
