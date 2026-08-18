@@ -2,6 +2,8 @@ Release 6.2.0 (Not yet released)
 -------------
  * Fix some compatibility issues with FreeBSD. Closes GH-2668 & GH-2669.
  * [Nginx] Upgrades preferred Nginx to 1.30.4 from 1.30.3.
+ * Fix a vulnerability that left the Passenger Watchdog API unauthenticated. This is a breaking change for some installations and scripts: an "empty watchdog_api_server_authorizations" now means no-auth-is-possible instead of auth-is-skipped. This regression was introduced in 5.2.0. CVE number pending.
+ * Fix a vulnerability that allowed unauthenticated users to use a Passenger Watchdog process to elevate privileges. This regression was introduced in 5.2.0. CVE number pending.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
    - cmake: 4.3.3 -> 4.4.2
    - curl: 8.20.0 -> 8.21.0

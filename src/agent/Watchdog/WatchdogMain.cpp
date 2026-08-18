@@ -1177,9 +1177,8 @@ initializeApiServer(const WorkingObjectsPtr &wo) {
 	wo->serverKitContext->initialize();
 
 	UPDATE_TRACE_POINT();
-	Json::Value apiServerConfig = watchdogConfig->inspectEffectiveValues();
-	apiServerConfig["fd_passing_password"] = wo->fdPassingPassword;
-	apiServerConfig["authorizations"] = wo->watchdogApiServerAuthorizations;
+	Json::Value apiServerConfig = ApiServer::buildConfig(*watchdogConfig,
+		wo->watchdogApiServerAuthorizations, wo->fdPassingPassword);
 	wo->apiServer = new ApiServer::ApiServer(
 		wo->serverKitContext,
 		watchdogSchema->apiServer.schema,

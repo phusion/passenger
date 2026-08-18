@@ -75,6 +75,9 @@ TEST_CXX_OBJECTS = {
     "test/cxx/ServerKit/ServerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/HttpServerTest.o" =>
     "test/cxx/ServerKit/HttpServerTest.cpp",
+
+  "#{TEST_OUTPUT_DIR}cxx/Watchdog/ApiServerTest.o" =>
+    "test/cxx/Watchdog/ApiServerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/CookieUtilsTest.o" =>
     "test/cxx/ServerKit/CookieUtilsTest.cpp",
 

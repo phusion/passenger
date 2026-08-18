@@ -49,6 +49,4 @@
   // then specify the filename to the configuration file that
   // loads the Passenger module.
   // "nginx_passenger_dynamic_module_conf_file": "/etc/nginx/modules-enabled/50-mod-http-passenger.conf"
-
-  "__end__": null
 }
