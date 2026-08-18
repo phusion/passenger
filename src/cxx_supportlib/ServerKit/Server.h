@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2025 Asynchronous B.V.
+ *  Copyright (c) 2014-2026 Asynchronous B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Asynchronous B.V.
@@ -750,7 +750,9 @@ public:
 	}
 
 	virtual ~BaseServer() {
-		P_ASSERT_EQ(serverState, FINISHED_SHUTDOWN);
+		if (serverState != FINISHED_SHUTDOWN) {
+			P_CRITICAL("BUG: server state is not FINISHED_SHUTDOWN");
+		}
 	}
 
 
