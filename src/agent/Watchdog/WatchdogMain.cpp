@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2025 Asynchronous B.V.
+ *  Copyright (c) 2010-2026 Asynchronous B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Asynchronous B.V.
@@ -66,6 +66,7 @@
 #include <Core/OptionParser.h>
 #include <Watchdog/Config.h>
 #include <Watchdog/ApiServer.h>
+#include <Watchdog/WorkingObjects.h>
 #include <JsonTools/Autocast.h>
 #include <Constants.h>
 #include <InstanceDirectory.h>
@@ -93,6 +94,7 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 using namespace Passenger;
+using namespace Passenger::Watchdog;
 using namespace Passenger::Agent::Fundamentals;
 
 
@@ -101,78 +103,11 @@ enum OomFileType {
 	OOM_SCORE_ADJ
 };
 
-class InstanceDirToucher;
-class AgentWatcher;
-
-/***** Working objects *****/
-
-namespace Passenger {
-namespace Watchdog {
-	struct WorkingObjects {
-		RandomGenerator randomGenerator;
-		EventFd errorEvent;
-		EventFd exitEvent;
-		uid_t defaultUid;
-		gid_t defaultGid;
-		InstanceDirectoryPtr instanceDir;
-		int startupReportFile;
-		int lockFile;
-		vector<string> cleanupPidfiles;
-		bool pidsCleanedUp;
-		bool pidFileCleanedUp;
-		string corePidFile;
-		string fdPassingPassword;
-		Json::Value extraConfigToPassToSubAgents;
-		Json::Value controllerAddresses;
-		Json::Value coreApiServerAddresses;
-		Json::Value coreApiServerAuthorizations;
-		Json::Value watchdogApiServerAddresses;
-		Json::Value watchdogApiServerAuthorizations;
-
-		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
-		BackgroundEventLoop *bgloop;
-		ServerKit::Context *serverKitContext;
-		ServerKit::Schema serverKitSchema;
-		ApiServer::ApiServer *apiServer;
-
-		WorkingObjects()
-			: errorEvent(__FILE__, __LINE__, "WorkingObjects: errorEvent"),
-			  exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
-			  startupReportFile(-1),
-			  pidsCleanedUp(false),
-			  pidFileCleanedUp(false),
-			  extraConfigToPassToSubAgents(Json::objectValue),
-			  controllerAddresses(Json::arrayValue),
-			  coreApiServerAddresses(Json::arrayValue),
-			  coreApiServerAuthorizations(Json::arrayValue),
-			  watchdogApiServerAddresses(Json::arrayValue),
-			  watchdogApiServerAuthorizations(Json::arrayValue),
-			  bgloop(NULL),
-			  serverKitContext(NULL),
-			  apiServer(NULL)
-		{
-			for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
-				apiServerFds[i] = -1;
-			}
-		}
-	};
-
-	typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
-} // namespace Watchdog
-} // namespace Passenger
-
-using namespace Passenger::Watchdog;
-
-static WrapperRegistry::Registry *watchdogWrapperRegistry;
-static Schema *watchdogSchema;
-static ConfigKit::Store *watchdogConfig;
-static WorkingObjects *workingObjects;
-
 static void cleanup(const WorkingObjectsPtr &wo);
 
-#include "AgentWatcher.cpp"
-#include "InstanceDirToucher.cpp"
-#include "CoreWatcher.cpp"
+#include <Watchdog/AgentWatcher.h>
+#include <Watchdog/InstanceDirToucher.h>
+#include <Watchdog/CoreWatcher.h>
 
 
 /***** Functions *****/

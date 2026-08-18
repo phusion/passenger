@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2025 Asynchronous B.V.
+ *  Copyright (c) 2010-2026 Asynchronous B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Asynchronous B.V.
@@ -23,10 +23,23 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_WATCHDOG_INSTANCE_DIR_TOUCHER_H_
+#define _PASSENGER_WATCHDOG_INSTANCE_DIR_TOUCHER_H_
 
 #include <boost/bind/bind.hpp>
+#include <oxt/thread.hpp>
+
 #include <Shared/Fundamentals/Utils.h>
 #include <Utils/AsyncSignalSafeUtils.h>
+
+#include <Watchdog/WorkingObjects.h>
+
+namespace Passenger {
+namespace Watchdog {
+
+using namespace oxt;
+using namespace Passenger::Agent::Fundamentals;
+
 
 /**
  * Touch all files in the server instance dir every 6 hours in order to prevent /tmp
@@ -153,3 +166,9 @@ public:
 };
 
 typedef boost::shared_ptr<InstanceDirToucher> InstanceDirToucherPtr;
+
+
+} // namespace Watchdog
+} // namespace Passenger
+
+#endif /* _PASSENGER_WATCHDOG_INSTANCE_DIR_TOUCHER_H_ */

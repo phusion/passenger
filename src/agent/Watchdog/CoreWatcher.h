@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2025 Asynchronous B.V.
+ *  Copyright (c) 2010-2026 Asynchronous B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Asynchronous B.V.
@@ -23,9 +23,19 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_WATCHDOG_CORE_WATCHER_H_
+#define _PASSENGER_WATCHDOG_CORE_WATCHER_H_
 
+#include <Shared/Fundamentals/Initialization.h>
 #include <Shared/Fundamentals/Utils.h>
 #include <IOTools/MessageIO.h>
+#include <Watchdog/AgentWatcher.h>
+
+namespace Passenger {
+namespace Watchdog {
+
+using namespace Passenger::Agent::Fundamentals;
+
 
 class CoreWatcher: public AgentWatcher {
 protected:
@@ -93,3 +103,10 @@ public:
 		report["core_password"] = watchdogConfig->get("controller_secure_headers_password").asString();
 	}
 };
+
+
+} // namespace Watchdog
+} // namespace Passenger
+
+#endif /* _PASSENGER_WATCHDOG_CORE_WATCHER_H_ */
+
