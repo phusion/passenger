@@ -1,7 +1,5 @@
 .cache
 .DS_Store
-.rbx
-.vagrant
 .noexec.yaml
 autom4te.cache
 *.bundle

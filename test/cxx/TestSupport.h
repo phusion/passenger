@@ -86,15 +86,6 @@ using namespace oxt;
 		}                                                   \
 	} while (0)
 
-// Do not run some tests in the Vagrant development environment because
-// they don't work over NFS.
-#define DONT_RUN_IN_VAGRANT() \
-	do { \
-		if (getenv("PASSENGER_VAGRANT_ENVIRONMENT") != NULL) { \
-			return; \
-		} \
-	} while (false)
-
 
 extern LoggingKit::Level defaultLogLevel;
 extern ResourceLocator *resourceLocator;
