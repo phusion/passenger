@@ -1,4 +1,9 @@
-Release 6.2.0 (Not yet released)
+Release 6.2.1 (Not yet released)
+-------------
+ * 
+
+
+Release 6.2.0
 -------------
  * Fix some compatibility issues with FreeBSD. Closes GH-2668 & GH-2669.
  * [Nginx] Upgrades preferred Nginx to 1.30.4 from 1.30.3.
