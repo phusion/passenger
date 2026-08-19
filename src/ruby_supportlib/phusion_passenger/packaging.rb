@@ -101,6 +101,7 @@ module PhusionPassenger
       '.gitignore',
       '.gitmodules',
       '.project',
+      'AGENTS.md',
       'CODE_OF_CONDUCT.md',
       'Gemfile',
       'Gemfile.lock',

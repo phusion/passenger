@@ -1,4 +1,4 @@
-# C++ testing guide
+# Writing C++ tests
 
 C++ tests use a modified version of the [Tut test framework](https://mrzechonek.github.io/tut-framework/).
 
@@ -89,22 +89,3 @@ namespace tut {
 ## Mocking
 
 See [C++ mocking strategy](CxxMockingStrategy.md).
-
-## Running tests
-
-Prerequisite: ensure `test/config.json` exists. Refer to its `.example` file.
-
-```bash
-# Run all test suites
-rake test:cxx GROUPS=SomethingTest
-
-# Run specific test suites
-rake test:cxx GROUPS=SomethingTest,AnotherTest
-
-# Run specific tests by number
-rake test:cxx GROUPS=SomethingTest:1,3
-
-# Attach to GDB or LLDB
-rake test:cxx GROUPS=SomethingTest GDB=1
-rake test:cxx GROUPS=SomethingTest LLDB=1
-```

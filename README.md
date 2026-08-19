@@ -51,7 +51,7 @@ Ruby users can also build a gem from the Git repository and install the gem.
 ## Further reading
 
  * The `doc/` directory.
- * [Contributors Guide](https://github.com/phusion/passenger/blob/master/CONTRIBUTING.md)
+ * [Contributors Guide](CONTRIBUTING.md)
  * [Phusion Passenger support page](https://www.phusionpassenger.com/support)
  * [Phusion Passenger release notes](https://blog.phusion.nl/tag/passenger-releases/)
 

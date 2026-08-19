@@ -1,4 +1,4 @@
-# Handling of temp files
+# Secure handling of temp files
 
 Always use unpredictable filenames for temp files. Failing to do so makes us vulnerable to symlink attacks, TOCTOU race conditions, file squatting, or even information disclosure and privilege escalation.
 

@@ -40,6 +40,7 @@ We pick strategy 1.
 - **Code with broad version compatibility**: Since we can't rely on specific gem versions, we must use gems in a way that's compatible with a wide number of gem versions.
 - **Development code can YOLO with gem dependencies**: Development-related Passenger Ruby code can depend on any gem, since development code is not included in native packages.
   - All such dependencies must be specified in the Passenger Gemfile.
+  - Note: the build system (Rakefile) does not count as "development-related Ruby code" because it's used outside just development. For example `passenger-install-XXX-module` calls Rake to compile things.
 
 ## See also
 
