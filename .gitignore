@@ -43,3 +43,15 @@ autom4te.cache
 /compile_commands.json
 /src/cxx_supportlib/vendor-modified/test.cpp
 /src/cxx_supportlib/vendor-modified/test-*.o.tmp
+/.ruby-lsp
+/src/cxx_supportlib/vendor-copy/libuv/test
+/src/cxx_supportlib/vendor-copy/libuv/docs
+/src/cxx_supportlib/vendor-copy/libuv/tools
+/src/cxx_supportlib/vendor-copy/libuv/.github
+/src/cxx_supportlib/vendor-copy/libuv/CMakeLists.txt
+/src/cxx_supportlib/vendor-copy/libuv/cmake-toolchains
+/src/cxx_supportlib/vendor-copy/libuv/src/win
+/src/cxx_supportlib/vendor-copy/libuv/autogen.sh
+/src/cxx_supportlib/vendor-copy/libuv/.readthedocs.yaml
+/src/cxx_supportlib/vendor-copy/libuv/.mailmap
+/src/cxx_supportlib/vendor-copy/libuv/uv_win_longpath.manifest

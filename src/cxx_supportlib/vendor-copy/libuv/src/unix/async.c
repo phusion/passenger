@@ -24,33 +24,38 @@
 
 #include "uv.h"
 #include "internal.h"
-#include "atomic-ops.h"
 
 #include <errno.h>
+#include <stdatomic.h>
 #include <stdio.h>  /* snprintf() */
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sched.h>  /* sched_yield() */
 
-static void uv__async_event(uv_loop_t* loop,
-                            struct uv__async* w,
-                            unsigned int nevents);
-static int uv__async_eventfd(void);
+#ifdef __linux__
+#include <sys/eventfd.h>
+#endif
+
+static void uv__async_send(uv_loop_t* loop);
+static int uv__async_start(uv_loop_t* loop);
+static void uv__cpu_relax(void);
 
 
 int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
   int err;
 
-  err = uv__async_start(loop, &loop->async_watcher, uv__async_event);
+  err = uv__async_start(loop);
   if (err)
     return err;
 
   uv__handle_init(loop, (uv_handle_t*)handle, UV_ASYNC);
   handle->async_cb = async_cb;
   handle->pending = 0;
+  handle->u.fd = 0; /* This will be used as a busy flag. */
 
-  QUEUE_INSERT_TAIL(&loop->async_handles, &handle->queue);
+  uv__queue_insert_tail(&loop->async_handles, &handle->queue);
   uv__handle_start(handle);
 
   return 0;
@@ -58,60 +63,84 @@ int uv_async_init(uv_loop_t* loop, uv_async_t* handle, uv_async_cb async_cb) {
 
 
 int uv_async_send(uv_async_t* handle) {
+  _Atomic int* pending;
+  _Atomic int* busy;
+
+  pending = (_Atomic int*) &handle->pending;
+  busy = (_Atomic int*) &handle->u.fd;
+
   /* Do a cheap read first. */
-  if (ACCESS_ONCE(int, handle->pending) != 0)
+  if (atomic_load_explicit(pending, memory_order_relaxed) != 0)
     return 0;
 
-  if (cmpxchgi(&handle->pending, 0, 1) == 0)
-    uv__async_send(&handle->loop->async_watcher);
+  /* Set the loop to busy. */
+  atomic_fetch_add(busy, 1);
+
+  /* Wake up the other thread's event loop. */
+  if (atomic_exchange(pending, 1) == 0)
+    uv__async_send(handle->loop);
+
+  /* Set the loop to not-busy. */
+  atomic_fetch_add(busy, -1);
 
   return 0;
 }
 
 
-void uv__async_close(uv_async_t* handle) {
-  QUEUE_REMOVE(&handle->queue);
-  uv__handle_stop(handle);
-}
+/* Wait for the busy flag to clear before closing.
+ * Only call this from the event loop thread. */
+static void uv__async_spin(uv_async_t* handle) {
+  _Atomic int* pending;
+  _Atomic int* busy;
+  int i;
 
+  pending = (_Atomic int*) &handle->pending;
+  busy = (_Atomic int*) &handle->u.fd;
 
-static void uv__async_event(uv_loop_t* loop,
-                            struct uv__async* w,
-                            unsigned int nevents) {
-  QUEUE queue;
-  QUEUE* q;
-  uv_async_t* h;
+  /* Set the pending flag first, so no new events will be added by other
+   * threads after this function returns. */
+  atomic_store(pending, 1);
 
-  QUEUE_MOVE(&loop->async_handles, &queue);
-  while (!QUEUE_EMPTY(&queue)) {
-    q = QUEUE_HEAD(&queue);
-    h = QUEUE_DATA(q, uv_async_t, queue);
+  for (;;) {
+    /* 997 is not completely chosen at random. It's a prime number, acyclic by
+     * nature, and should therefore hopefully dampen sympathetic resonance.
+     */
+    for (i = 0; i < 997; i++) {
+      if (atomic_load(busy) == 0)
+        return;
 
-    QUEUE_REMOVE(q);
-    QUEUE_INSERT_TAIL(&loop->async_handles, q);
+      /* Other thread is busy with this handle, spin until it's done. */
+      uv__cpu_relax();
+    }
 
-    if (cmpxchgi(&h->pending, 1, 0) == 0)
-      continue;
-
-    if (h->async_cb == NULL)
-      continue;
-    h->async_cb(h);
+    /* Yield the CPU. We may have preempted the other thread while it's
+     * inside the critical section and if it's running on the same CPU
+     * as us, we'll just burn CPU cycles until the end of our time slice.
+     */
+    sched_yield();
   }
 }
 
 
-static void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
-  struct uv__async* wa;
-  char buf[1024];
-  unsigned n;
-  ssize_t r;
+void uv__async_close(uv_async_t* handle) {
+  uv__async_spin(handle);
+  uv__queue_remove(&handle->queue);
+  uv__handle_stop(handle);
+}
 
-  n = 0;
+
+static void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
+  char buf[1024];
+  ssize_t r;
+  struct uv__queue queue;
+  struct uv__queue* q;
+  uv_async_t* h;
+  _Atomic int *pending;
+
+  assert(w == &loop->async_io_watcher);
+
   for (;;) {
     r = read(w->fd, buf, sizeof(buf));
-
-    if (r > 0)
-      n += r;
 
     if (r == sizeof(buf))
       continue;
@@ -128,23 +157,28 @@ static void uv__async_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
     abort();
   }
 
-  wa = container_of(w, struct uv__async, io_watcher);
+  uv__queue_move(&loop->async_handles, &queue);
+  while (!uv__queue_empty(&queue)) {
+    q = uv__queue_head(&queue);
+    h = uv__queue_data(q, uv_async_t, queue);
 
-#if defined(__linux__)
-  if (wa->wfd == -1) {
-    uint64_t val;
-    assert(n == sizeof(val));
-    memcpy(&val, buf, sizeof(val));  /* Avoid alignment issues. */
-    wa->cb(loop, wa, val);
-    return;
+    uv__queue_remove(q);
+    uv__queue_insert_tail(&loop->async_handles, q);
+
+    /* Atomically fetch and clear pending flag */
+    pending = (_Atomic int*) &h->pending;
+    if (atomic_exchange(pending, 0) == 0)
+      continue;
+
+    if (h->async_cb == NULL)
+      continue;
+
+    h->async_cb(h);
   }
-#endif
-
-  wa->cb(loop, wa, n);
 }
 
 
-void uv__async_send(struct uv__async* wa) {
+static void uv__async_send(uv_loop_t* loop) {
   const void* buf;
   ssize_t len;
   int fd;
@@ -152,14 +186,14 @@ void uv__async_send(struct uv__async* wa) {
 
   buf = "";
   len = 1;
-  fd = wa->wfd;
+  fd = loop->async_wfd;
 
 #if defined(__linux__)
   if (fd == -1) {
     static const uint64_t val = 1;
     buf = &val;
     len = sizeof(val);
-    fd = wa->io_watcher.fd;  /* eventfd */
+    fd = loop->async_io_watcher.fd;  /* eventfd */
   }
 #endif
 
@@ -178,113 +212,118 @@ void uv__async_send(struct uv__async* wa) {
 }
 
 
-void uv__async_init(struct uv__async* wa) {
-  wa->io_watcher.fd = -1;
-  wa->wfd = -1;
-}
-
-
-int uv__async_start(uv_loop_t* loop, struct uv__async* wa, uv__async_cb cb) {
+static int uv__async_start(uv_loop_t* loop) {
   int pipefd[2];
   int err;
 
-  if (wa->io_watcher.fd != -1)
+  if (loop->async_io_watcher.fd != -1)
     return 0;
 
-  err = uv__async_eventfd();
-  if (err >= 0) {
-    pipefd[0] = err;
-    pipefd[1] = -1;
-  }
-  else if (err == -ENOSYS) {
-    err = uv__make_pipe(pipefd, UV__F_NONBLOCK);
-#if defined(__linux__)
-    /* Save a file descriptor by opening one of the pipe descriptors as
-     * read/write through the procfs.  That file descriptor can then
-     * function as both ends of the pipe.
-     */
-    if (err == 0) {
-      char buf[32];
-      int fd;
+#ifdef __linux__
+  err = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+  if (err < 0)
+    return UV__ERR(errno);
 
-      snprintf(buf, sizeof(buf), "/proc/self/fd/%d", pipefd[0]);
-      fd = uv__open_cloexec(buf, O_RDWR);
-      if (fd >= 0) {
-        uv__close(pipefd[0]);
-        uv__close(pipefd[1]);
-        pipefd[0] = fd;
-        pipefd[1] = fd;
-      }
-    }
-#endif
-  }
-
+  pipefd[0] = err;
+  pipefd[1] = -1;
+#else
+  err = uv__make_pipe(pipefd, UV_NONBLOCK_PIPE);
   if (err < 0)
     return err;
+#endif
 
-  uv__io_init(&wa->io_watcher, uv__async_io, pipefd[0]);
-  uv__io_start(loop, &wa->io_watcher, UV__POLLIN);
-  wa->wfd = pipefd[1];
-  wa->cb = cb;
+  uv__io_init(&loop->async_io_watcher, uv__async_io, pipefd[0]);
+  uv__io_start(loop, &loop->async_io_watcher, POLLIN);
+  loop->async_wfd = pipefd[1];
 
   return 0;
 }
 
 
-void uv__async_stop(uv_loop_t* loop, struct uv__async* wa) {
-  if (wa->io_watcher.fd == -1)
+void uv__async_stop(uv_loop_t* loop) {
+  struct uv__queue queue;
+  struct uv__queue* q;
+  uv_async_t* h;
+
+  if (loop->async_io_watcher.fd == -1)
     return;
 
-  if (wa->wfd != -1) {
-    if (wa->wfd != wa->io_watcher.fd)
-      uv__close(wa->wfd);
-    wa->wfd = -1;
+  /* Make sure no other thread is accessing the async handle fd after the loop
+   * cleanup.
+   */
+  uv__queue_move(&loop->async_handles, &queue);
+  while (!uv__queue_empty(&queue)) {
+    q = uv__queue_head(&queue);
+    h = uv__queue_data(q, uv_async_t, queue);
+
+    uv__queue_remove(q);
+    uv__queue_insert_tail(&loop->async_handles, q);
+
+    uv__async_spin(h);
   }
 
-  uv__io_stop(loop, &wa->io_watcher, UV__POLLIN);
-  uv__close(wa->io_watcher.fd);
-  wa->io_watcher.fd = -1;
+  if (loop->async_wfd != -1) {
+    if (loop->async_wfd != loop->async_io_watcher.fd)
+      uv__close(loop->async_wfd);
+    loop->async_wfd = -1;
+  }
+
+  uv__io_stop(loop, &loop->async_io_watcher, POLLIN);
+  uv__close(loop->async_io_watcher.fd);
+  loop->async_io_watcher.fd = -1;
 }
 
 
-static int uv__async_eventfd() {
-#if defined(__linux__)
-  static int no_eventfd2;
-  static int no_eventfd;
-  int fd;
+int uv__async_fork(uv_loop_t* loop) {
+  struct uv__queue queue;
+  struct uv__queue* q;
+  uv_async_t* h;
 
-  if (no_eventfd2)
-    goto skip_eventfd2;
+  if (loop->async_io_watcher.fd == -1) /* never started */
+    return 0;
 
-  fd = uv__eventfd2(0, UV__EFD_CLOEXEC | UV__EFD_NONBLOCK);
-  if (fd != -1)
-    return fd;
+  uv__queue_move(&loop->async_handles, &queue);
+  while (!uv__queue_empty(&queue)) {
+    q = uv__queue_head(&queue);
+    h = uv__queue_data(q, uv_async_t, queue);
 
-  if (errno != ENOSYS)
-    return -errno;
+    uv__queue_remove(q);
+    uv__queue_insert_tail(&loop->async_handles, q);
 
-  no_eventfd2 = 1;
-
-skip_eventfd2:
-
-  if (no_eventfd)
-    goto skip_eventfd;
-
-  fd = uv__eventfd(0);
-  if (fd != -1) {
-    uv__cloexec(fd, 1);
-    uv__nonblock(fd, 1);
-    return fd;
+    /* The state of any thread that set pending is now likely corrupt in this
+     * child because the user called fork, so just clear these flags and move
+     * on. Calling most libc functions after `fork` is declared to be undefined
+     * behavior anyways, unless async-signal-safe, for multithreaded programs
+     * like libuv, and nothing interesting in pthreads is async-signal-safe.
+     */
+    h->pending = 0;
+    /* This is the busy flag, and we just abruptly lost all other threads. */
+    h->u.fd = 0;
   }
 
-  if (errno != ENOSYS)
-    return -errno;
+  /* Recreate these, since they still exist, but belong to the wrong pid now. */
+  if (loop->async_wfd != -1) {
+    if (loop->async_wfd != loop->async_io_watcher.fd)
+      uv__close(loop->async_wfd);
+    loop->async_wfd = -1;
+  }
 
-  no_eventfd = 1;
+  uv__io_stop(loop, &loop->async_io_watcher, POLLIN);
+  uv__close(loop->async_io_watcher.fd);
+  loop->async_io_watcher.fd = -1;
 
-skip_eventfd:
+  return uv__async_start(loop);
+}
 
+
+static void uv__cpu_relax(void) {
+#if defined(__i386__) || defined(__x86_64__)
+  __asm__ __volatile__ ("rep; nop" ::: "memory");  /* a.k.a. PAUSE */
+#elif (defined(__arm__) && __ARM_ARCH >= 7) || defined(__aarch64__)
+  __asm__ __volatile__ ("yield" ::: "memory");
+#elif (defined(__ppc__) || defined(__ppc64__)) && defined(__APPLE__)
+  __asm volatile ("" : : : "memory");
+#elif !defined(__APPLE__) && (defined(__powerpc64__) || defined(__ppc64__) || defined(__PPC64__))
+  __asm__ __volatile__ ("or 1,1,1; or 2,2,2" ::: "memory");
 #endif
-
-  return -ENOSYS;
 }

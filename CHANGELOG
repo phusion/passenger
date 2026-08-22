@@ -5,6 +5,7 @@ Release 6.2.1 (Not yet released)
  * [Ruby] Improve Frozen String compatibility. GH-2659.
  * Make 503 error prettier on mobile.
  * [Standalone] Improve detecting Nginx startup error messages. Closes GH-1970.
+ * Upgrade vendored libuv from 1.8.0 to 1.49.2, to pick up a decade of BSD/kqueue and threadpool bug fixes that may address GH-2569.
  * 
 
 

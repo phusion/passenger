@@ -1079,4 +1079,180 @@ namespace tut {
 			ensure_equals(counter, 2u);
 		}
 	}
+
+	// Flattens a `log` produced by `dataCallback` into just the raw payload
+	// bytes, ignoring how many "Data:" callback invocations they were split
+	// across (the channel is free to coalesce originally-separately-fed
+	// buffers into fewer chunks once they've round-tripped through disk).
+	static string flattenDataLog(const string &log) {
+		string result;
+		size_t pos = 0;
+		while (pos < log.size()) {
+			if (log.compare(pos, 6, "Data: ") == 0) {
+				size_t nl = log.find('\n', pos);
+				result.append(log, pos + 6, nl - (pos + 6));
+				pos = nl + 1;
+			} else if (log.compare(pos, 4, "EOF\n") == 0) {
+				pos += 4;
+			} else {
+				break;
+			}
+		}
+		return result;
+	}
+
+	TEST_METHOD(47) {
+		set_test_name("If the channel is stopped for the entire duration of buffering "
+			"to disk -- including past EOF, and after the writer has finished moving "
+			"everything to disk -- then starting it afterwards still delivers all "
+			"the buffered data. This mirrors how Core::Controller buffers request "
+			"bodies: it stops bodyBuffer, feeds all the body data (which may switch "
+			"the channel to in-file mode) plus EOF, and only calls start() "
+			"afterwards once an application process has been checked out.");
+
+		Json::Value config;
+		vector<ConfigKit::Error> errors;
+		config["file_buffered_channel_threshold"] = 1;
+		ensure(context.configure(config, errors));
+
+		channel.stop();
+		startLoop();
+
+		for (int i = 0; i < 10; i++) {
+			feedChannel("buf" + toString(i));
+		}
+		feedChannel(""); // EOF
+
+		EVENTUALLY(5,
+			result = getChannelMode() == FileBufferedChannel::IN_FILE_MODE;
+		);
+		EVENTUALLY(5,
+			result = getChannelWriterState() == FileBufferedChannel::WS_TERMINATED;
+		);
+		ensure_equals(getChannelReaderState(), FileBufferedChannel::RS_WAITING_FOR_CHANNEL_IDLE);
+		{
+			LOCK();
+			ensure_equals(log, string());
+		}
+
+		startChannel();
+		EVENTUALLY(5,
+			result = getChannelReaderState() == FileBufferedChannel::RS_TERMINATED;
+		);
+		{
+			LOCK();
+			ensure_equals(flattenDataLog(log),
+				string("buf0buf1buf2buf3buf4buf5buf6buf7buf8buf9"));
+		}
+	}
+
+	TEST_METHOD(48) {
+		set_test_name("If the channel is started immediately after being fed all its "
+			"data (including EOF) while stopped -- i.e. before the writer has had a "
+			"chance to finish moving everything to disk -- it still eventually "
+			"delivers all the buffered data. This is the same as test 47, except it "
+			"races Controller::sendBodyToApp()'s call to bodyBuffer.start() against "
+			"the in-progress disk write instead of waiting for the write to finish "
+			"first.");
+
+		Json::Value config;
+		vector<ConfigKit::Error> errors;
+		config["file_buffered_channel_threshold"] = 1;
+		ensure(context.configure(config, errors));
+
+		channel.stop();
+		startLoop();
+
+		for (int i = 0; i < 10; i++) {
+			feedChannel("buf" + toString(i));
+		}
+		feedChannel(""); // EOF
+		startChannel();
+
+		EVENTUALLY(5,
+			result = getChannelReaderState() == FileBufferedChannel::RS_TERMINATED;
+		);
+		{
+			LOCK();
+			ensure_equals(flattenDataLog(log),
+				string("buf0buf1buf2buf3buf4buf5buf6buf7buf8buf9"));
+		}
+	}
+
+	TEST_METHOD(49) {
+		set_test_name("Reproduces GH-2569: buffering a request body of just over the "
+			"*default* 128 KB in-memory threshold (so it spans many mbuf-sized "
+			"chunks, like a real file upload does), while stopped the entire time, "
+			"then starting it -- exactly the sequence Core::Controller performs -- "
+			"still delivers all the data instead of hanging forever.");
+
+		// Deliberately do NOT lower file_buffered_channel_threshold: use the
+		// real default (131072 bytes) so this exercises the exact size at
+		// which GH-2569 was reported to start hanging.
+		ensure_equals((unsigned int) DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD, 131072u);
+
+		channel.stop();
+		startLoop();
+
+		const unsigned int CHUNK_SIZE = 4000;
+		const unsigned int NCHUNKS = 34; // 136000 bytes > 131072 byte threshold
+		string expected;
+		for (unsigned int i = 0; i < NCHUNKS; i++) {
+			string chunk;
+			chunk.reserve(CHUNK_SIZE);
+			for (unsigned int j = 0; j < CHUNK_SIZE; j++) {
+				chunk += (char) ('A' + ((i + j) % 26));
+			}
+			feedChannel(chunk);
+			expected += chunk;
+		}
+		feedChannel(""); // EOF
+
+		EVENTUALLY(5,
+			result = getChannelMode() == FileBufferedChannel::IN_FILE_MODE;
+		);
+
+		startChannel();
+
+		EVENTUALLY(10,
+			result = getChannelReaderState() == FileBufferedChannel::RS_TERMINATED;
+		);
+		{
+			LOCK();
+			ensure_equals(flattenDataLog(log), expected);
+		}
+	}
+
+	TEST_METHOD(50) {
+		set_test_name("If switching to in-file mode fails (e.g. because the buffer "
+			"directory doesn't exist) while the channel is stopped, then starting "
+			"it afterwards still eventually reports the error instead of hanging "
+			"forever.");
+
+		Json::Value config;
+		vector<ConfigKit::Error> errors;
+		config["file_buffered_channel_threshold"] = 1;
+		config["file_buffered_channel_buffer_dir"] = "/nonexistent-dir-for-gh-2569-test";
+		ensure(context.configure(config, errors));
+
+		channel.stop();
+		startLoop();
+
+		for (int i = 0; i < 10; i++) {
+			feedChannel("buf" + toString(i));
+		}
+		feedChannel(""); // EOF
+
+		EVENTUALLY(5,
+			result = getChannelMode() == FileBufferedChannel::ERROR
+				|| getChannelMode() == FileBufferedChannel::ERROR_WAITING;
+		);
+
+		startChannel();
+
+		EVENTUALLY(5,
+			LOCK();
+			result = log.find("Error: ") == 0;
+		);
+	}
 }

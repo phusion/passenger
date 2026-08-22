@@ -607,6 +607,46 @@ namespace tut {
 		ensure_equals(StaticString(buf, 3), "cde");
 	}
 
+	TEST_METHOD(16) {
+		set_test_name("Reproduces GH-2569: when body buffering is on and the body is "
+			"larger than the file_buffered_channel_threshold (default 128 KB), "
+			"e.g. a large file upload, the full body is still forwarded instead "
+			"of the request hanging forever in BUFFERING_REQUEST_BODY");
+
+		init();
+		mockNextSession();
+
+		// Comfortably exceeds DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD (131072),
+		// like the >=128 KB uploads that were reported to hang.
+		const size_t BODY_SIZE = 133 * 1024;
+		string body;
+		body.reserve(BODY_SIZE);
+		for (size_t i = 0; i < BODY_SIZE; i++) {
+			body += (char) ('A' + (i % 26));
+		}
+
+		connectToServer();
+		sendRequest(
+			"POST /hello HTTP/1.1\r\n"
+			"!~: \r\n"
+			"!~FLAGS: B\r\n"
+			"!~: \r\n"
+			"Host: localhost\r\n"
+			"Content-Length: " + toString(BODY_SIZE) + "\r\n"
+			"Connection: close\r\n"
+			"\r\n" + body);
+		waitUntilSessionInitiated();
+
+		Json::Value state = inspectStateAsJson();
+		Json::Value reqState = state["active_clients"]["1-1"]["current_request"];
+		ensure("Body buffering is on", reqState.isMember("body_bytes_buffered"));
+
+		string expectedContentLengthVar = string("CONTENT_LENGTH") + string(1, '\0')
+			+ toString(BODY_SIZE) + string(1, '\0');
+		ensure(containsSubstring(readPeerRequestHeader(), expectedContentLengthVar));
+		ensure_equals(readPeerBody(), body);
+	}
+
 
 	/***** Application response body handling *****/
 
