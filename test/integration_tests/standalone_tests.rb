@@ -32,9 +32,8 @@ describe 'Passenger Standalone' do
 
   def capture_output(command)
     output = `#{command} 2>&1`.strip
-    if output.respond_to?(:force_encoding)
-      output.force_encoding('utf-8')
-    end
+    output.force_encoding(Encoding::UTF_8)
+
     if $?.exitstatus == 0
       output
     else

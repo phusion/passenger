@@ -351,17 +351,6 @@ module TestHelper
       instance
     end
   end
-
-  if ''.respond_to?(:force_encoding)
-    def binary_string(str)
-      str.force_encoding('binary')
-    end
-  else
-    def binary_string(str)
-      str
-    end
-  end
-
 end
 
 File.class_eval do

@@ -603,12 +603,7 @@ private
     # We do this instead of using #file, for Ruby 1.8.5 support.
     digest = Digest::SHA256.new
     File.open(path, "rb") do |f|
-      if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('2.3.0')
-        buf = String.new(encoding: Encoding::BINARY)
-      else
-        buf = ""
-        buf.force_encoding('binary') if buf.respond_to?(:force_encoding)
-      end
+      buf = ''.b
       while !f.eof?
         f.read(1024 * 16, buf)
         digest.update(buf)

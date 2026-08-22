@@ -64,9 +64,9 @@ RSpec.shared_examples_for 'an example web app' do
         io.read
       end
       response.should ==
-        binary_string("name 1 = Kotonoha\n") <<
-        binary_string("name 2 = Sekai\n") <<
-        binary_string('data = ') << static_file.read
+        "name 1 = Kotonoha\n".b <<
+        "name 2 = Sekai\n".b <<
+        "data = ".b << static_file.read
     ensure
       static_file.close
     end
