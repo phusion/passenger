@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2024-2025 Asynchronous B.V.
 #
@@ -24,6 +25,7 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
 module Utils
 
 # A minimal pure-Ruby StringScanner implementation so that
@@ -64,4 +66,5 @@ class StringScanner
 end
 
 end # module Utils
+
 end # module PhusionPassenger

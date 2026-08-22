@@ -35,6 +35,7 @@ PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 
 module PhusionPassenger
+
   module Config
 
     class RestartAppCommand < Command
@@ -224,8 +225,8 @@ module PhusionPassenger
           try_performing_full_admin_basic_auth(request, @instance)
           request.content_type = "application/json"
           request.body = PhusionPassenger::Utils::JSON.generate(
-            :name => group_name,
-            :restart_method => restart_method)
+            name: group_name,
+            restart_method: restart_method)
           response = @instance.http_request("agents.s/core_api", request)
           if response.code.to_i / 100 == 2
             response.body
@@ -255,9 +256,9 @@ module PhusionPassenger
         response = @instance.http_request("agents.s/core_api", request)
         if response.code.to_i / 100 == 2
           if RUBY_VERSION >= '2.3'
-            JSON.parse(response.body, symbolize_names: true).to_a.map{|(key,value)| {name: key.to_s, app_root: value.dig(:app_root,0,:value)}}
+            JSON.parse(response.body, symbolize_names: true).to_a.map { |(key, value)| { name: key.to_s, app_root: value.dig(:app_root, 0, :value) } }
           else
-            JSON.parse(response.body, symbolize_names: true).to_a.map{|(key,value)| {name: key.to_s, app_root: value[:app_root][0][:value]}}
+            JSON.parse(response.body, symbolize_names: true).to_a.map { |(key, value)| { name: key.to_s, app_root: value[:app_root][0][:value] } }
           end
         elsif response.code.to_i == 401
           if response["pool-empty"] == "true"
@@ -278,4 +279,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

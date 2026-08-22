@@ -15,7 +15,7 @@ RESET = "\e[0m"
 TERMINATION_SIGNALS = [
   Signal.list['INT'],
   Signal.list['TERM'],
-  Signal.list['HUP']
+  Signal.list['HUP'],
 ]
 
 def main
@@ -175,7 +175,7 @@ end
 def open_input(options)
   if options[:filename]
     if options[:follow]
-      IO.popen(['tail', '-n', '0', '-f', options[:filename]], 'r:utf-8')
+      IO.popen([ 'tail', '-n', '0', '-f', options[:filename] ], 'r:utf-8')
     else
       File.open(options[:filename], 'r:utf-8')
     end
@@ -214,7 +214,7 @@ def colorize(line, last_message_color)
   elsif line =~ /^App [0-9]+ output: /
     colorize_app_output_line(line)
   else
-    ["#{last_message_color}#{line}#{RESET}", last_message_color]
+    [ "#{last_message_color}#{line}#{RESET}", last_message_color ]
   end
 end
 
@@ -255,9 +255,9 @@ def colorize_loggingkit_line(line)
     subprefix = message[0 .. offset.last - 1]
     submessage = message[offset.last + 1 .. -1]
 
-    ["#{prefix_color}#{prefix}#{RESET} #{UNDERLINE}#{message_color}#{subprefix}#{RESET} #{message_color}#{submessage}#{RESET}", message_color]
+    [ "#{prefix_color}#{prefix}#{RESET} #{UNDERLINE}#{message_color}#{subprefix}#{RESET} #{message_color}#{submessage}#{RESET}", message_color ]
   else
-    ["#{prefix_color}#{prefix}#{RESET} #{message_color}#{message}#{RESET}", message_color]
+    [ "#{prefix_color}#{prefix}#{RESET} #{message_color}#{message}#{RESET}", message_color ]
   end
 end
 
@@ -266,7 +266,7 @@ def colorize_app_output_line(line)
   prefix = line[0 .. message_start_index - 1]
   message = line[message_start_index .. -1]
 
-  ["#{GREEN34}#{prefix}#{RESET}#{GREEN48}#{message}#{RESET}", WHITE]
+  [ "#{GREEN34}#{prefix}#{RESET}#{GREEN48}#{message}#{RESET}", WHITE ]
 end
 
 main

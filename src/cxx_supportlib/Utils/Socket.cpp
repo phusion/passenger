@@ -1,0 +1,67 @@
+/*
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2026 Asynchronous B.V.
+ *
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Asynchronous B.V.
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+#ifndef _PASSENGER_SOCKETUTILS_H_
+#define _PASSENGER_SOCKETUTILS_H_
+
+#include <Utils/Socket.h>
+#include <IOTools/IOUtils.h>
+
+#include <netinet/in.h>
+#include <sys/un.h>
+
+namespace Passenger {
+
+	using namespace std;
+	using namespace oxt;
+
+	bool fdIsUnixDomainSocket(int fd) {
+		union {
+			struct sockaddr genericAddress;
+			struct sockaddr_un unixAddress;
+			struct sockaddr_in inetAddress;
+			struct sockaddr_in6 inetAddress6;
+		} addr;
+		socklen_t len = sizeof(addr);
+		int ret;
+
+		do {
+			ret = getsockname(fd, &addr.genericAddress, &len);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			int e = errno;
+			throw SystemException("Unable to autodetect socket type (getsockname() failed)", e);
+		} else {
+#ifdef AF_UNIX
+			return addr.genericAddress.sa_family == AF_UNIX;
+#else
+			return addr.genericAddress.sa_family == AF_LOCAL;
+#endif
+		}
+	}
+
+} // namespace Passenger
+
+#endif /* _PASSENGER_SOCKETUTILS_H_ */

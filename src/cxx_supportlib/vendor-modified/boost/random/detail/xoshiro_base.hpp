@@ -53,12 +53,12 @@ private:
     template <typename Sseq>
     inline void sseq_seed_64(Sseq& seq)
     {
-        for (auto& i : state_)
-        {
-            std::array<std::uint32_t, 2> seeds;
-            seq.generate(seeds.begin(), seeds.end());
+        std::array<std::uint32_t, N * 2> seeds;
+        seq.generate(seeds.begin(), seeds.end());
 
-            i = concatenate(seeds[0], seeds[1]);
+        for (std::size_t i = 0; i < state_.size(); ++i)
+        {
+            state_[i] = concatenate(seeds[2*i], seeds[2*i + 1]);
         }
     }
 

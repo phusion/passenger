@@ -8,7 +8,7 @@ end
 require 'phusion_passenger'
 
 PhusionPassenger.locate_directories
-PhusionPassenger.require_passenger_lib  'utils/json'
+PhusionPassenger.require_passenger_lib 'utils/json'
 
 SimpleJSON = PhusionPassenger::Utils::JSON
 
@@ -55,7 +55,7 @@ def format_inline_comment_for_schema(prefix, class_name)
     "BEGIN ConfigKit schema: #{class_name}",
     "(do not edit: following text is automatically generated",
     "by 'rake configkit_schemas_inline_comments')",
-    ""
+    "",
   ]
 
   if schema = SCHEMAS[class_name]
@@ -65,7 +65,7 @@ def format_inline_comment_for_schema(prefix, class_name)
         key,
         info['type'],
         info['required'] ? 'required' : '-',
-        format_option_names(info)
+        format_option_names(info),
       ]
     end
 
@@ -84,7 +84,7 @@ def format_inline_comment_for_schema(prefix, class_name)
 
   lines << ""
   lines << "END"
-  lines.map{ |x| "#{prefix}#{x}".rstrip }.join("\n")
+  lines.map { |x| "#{prefix}#{x}".rstrip }.join("\n")
 end
 
 def format_option_names(schema_entry)
@@ -108,7 +108,7 @@ def format_default_value_desc(value)
   if value.is_a?(Array) || value.is_a?(Hash)
     SimpleJSON.generate(value)
   else
-    SimpleJSON.generate([value]).sub(/\A\[/, '').sub(/\]\Z/, '')
+    SimpleJSON.generate([ value ]).sub(/\A\[/, '').sub(/\]\Z/, '')
   end
 end
 

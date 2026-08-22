@@ -28,12 +28,12 @@ module PhusionPassenger
 
   class NativeSupportLoader
     def self.supported?
-      return !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby" || RUBY_ENGINE == "rbx"
+      !defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby" || RUBY_ENGINE == "rbx"
     end
 
     def try_load
       if defined?(NativeSupport)
-        return true
+        true
       else
         load_from_native_support_output_dir ||
         load_from_buildout_dir ||
@@ -46,16 +46,16 @@ module PhusionPassenger
       if ENV['PASSENGER_USE_RUBY_NATIVE_SUPPORT'] == '0'
         STDERR.puts " [#{library_name}] will not be used (PASSENGER_USE_RUBY_NATIVE_SUPPORT=0)"
         STDERR.puts "  --> Passenger will still operate normally."
-        return false
+        false
       elsif try_load
-        return true
+        true
       elsif compile_and_load || download_binary_and_load
         STDERR.puts " [#{library_name}] successfully loaded."
-        return true
+        true
       else
         STDERR.puts " [#{library_name}] will not be used (can't compile or download) "
         STDERR.puts "  --> Passenger will still operate normally."
-        return false
+        false
       end
     end
 
@@ -75,7 +75,7 @@ module PhusionPassenger
     end
 
     def library_name
-      return "passenger_native_support.#{libext}"
+      "passenger_native_support.#{libext}"
     end
 
     def extconf_rb
@@ -88,38 +88,38 @@ module PhusionPassenger
       output_dir = ENV['PASSENGER_NATIVE_SUPPORT_OUTPUT_DIR']
       if output_dir && !output_dir.empty?
         begin
-          return load_native_extension("#{output_dir}/#{VERSION_STRING}/#{archdir}/#{library_name}")
+          load_native_extension("#{output_dir}/#{VERSION_STRING}/#{archdir}/#{library_name}")
         rescue LoadError
-          return false
+          false
         end
       else
-        return false
+        false
       end
     end
 
     def load_from_buildout_dir
       if PhusionPassenger.build_system_dir
         begin
-          return load_native_extension("#{PhusionPassenger.build_system_dir}/buildout/ruby/#{archdir}/#{library_name}")
+          load_native_extension("#{PhusionPassenger.build_system_dir}/buildout/ruby/#{archdir}/#{library_name}")
         rescue LoadError
-          return false
+          false
         end
       else
-        return false
+        false
       end
     end
 
     def load_from_load_path
-      return load_native_extension('passenger_native_support')
+      load_native_extension('passenger_native_support')
     rescue LoadError
-      return false
+      false
     end
 
     def load_from_home_dir
       begin
-        return load_native_extension("#{PhusionPassenger.home_dir}/#{USER_NAMESPACE_DIRNAME}/native_support/#{VERSION_STRING}/#{archdir}/#{library_name}")
+        load_native_extension("#{PhusionPassenger.home_dir}/#{USER_NAMESPACE_DIRNAME}/native_support/#{VERSION_STRING}/#{archdir}/#{library_name}")
       rescue LoadError
-        return false
+        false
       end
     end
 
@@ -145,7 +145,7 @@ module PhusionPassenger
       PhusionPassenger::Utils.mktmpdir("passenger-native-support-") do |dir|
         Dir.chdir(dir) do
           basename = "rubyext-#{archdir}.tar.gz"
-          if !download(basename, dir, :total_timeout => 30)
+          if !download(basename, dir, total_timeout: 30)
             return false
           end
 
@@ -170,10 +170,10 @@ module PhusionPassenger
             File.unlink("test.txt")
             result = try_directories(installation_target_dirs) do |target_dir|
               files = Dir["#{dir}/*"]
-              STDERR.puts "     Installing " + files.map{ |n| File.basename(n) }.join(' ')
+              STDERR.puts "     Installing " + files.map { |n| File.basename(n) }.join(' ')
               FileUtils.cp(files, target_dir)
               load_result = load_native_extension("#{target_dir}/#{library_name}")
-              [load_result, false]
+              [ load_result, false ]
             end
             return result
           else
@@ -218,9 +218,9 @@ module PhusionPassenger
 
       target_dir = compile(installation_target_dirs)
       if target_dir
-        return load_native_extension("#{target_dir}/#{library_name}")
+        load_native_extension("#{target_dir}/#{library_name}")
       else
-        return false
+        false
       end
     end
 
@@ -234,9 +234,9 @@ module PhusionPassenger
         user = nil
       end
       if user
-        return user.name
+        user.name
       else
-        return "##{Process.uid}"
+        "##{Process.uid}"
       end
     end
 
@@ -249,7 +249,7 @@ module PhusionPassenger
         target_dirs << "#{PhusionPassenger.build_system_dir}/buildout/ruby/#{archdir}"
       end
       target_dirs << "#{PhusionPassenger.home_dir}/#{USER_NAMESPACE_DIRNAME}/native_support/#{VERSION_STRING}/#{archdir}"
-      return target_dirs
+      target_dirs
     end
 
     def download(name, output_dir, options = {})
@@ -267,7 +267,7 @@ module PhusionPassenger
           logger.warn "Trying next mirror..."
         end
       end
-      return false
+      false
     end
 
     def real_download(site, name, output_dir, logger, options)
@@ -278,11 +278,11 @@ module PhusionPassenger
       end
       filename = "#{output_dir}/#{name}"
       real_options = options.merge(
-        :cacert => site[:cacert],
-        :use_cache => true,
-        :logger => logger
+        cacert: site[:cacert],
+        use_cache: true,
+        logger: logger
       )
-      return PhusionPassenger::Utils::Download.download(url, filename, real_options)
+      PhusionPassenger::Utils::Download.download(url, filename, real_options)
     end
 
     def log(message, options = {})
@@ -311,7 +311,7 @@ module PhusionPassenger
       log("# #{command_string}", options)
       if logger = options[:logger]
         s_logpath = Shellwords.escape(logger.path)
-        return system("(#{command_string}) >>#{s_logpath} 2>&1")
+        system("(#{command_string}) >>#{s_logpath} 2>&1")
       else
         Utils.mktmpdir("passenger-native-support-") do |tmpdir|
           s_tmpdir = Shellwords.escape(tmpdir)
@@ -324,11 +324,11 @@ module PhusionPassenger
 
     def compile(target_dirs)
       logger = Utils::TmpIO.new('passenger_native_support',
-        :mode   => File::WRONLY | File::APPEND,
-        :binary => false,
-        :suffix => ".log",
-        :unlink_immediately => false)
-      options = { :logger => logger }
+        mode: File::WRONLY | File::APPEND,
+        binary: false,
+        suffix: ".log",
+        unlink_immediately: false)
+      options = { logger: logger }
       begin
         result = try_directories(target_dirs, options) do |target_dir|
           make_result = nil
@@ -354,16 +354,16 @@ module PhusionPassenger
           if make_result
             log "Compilation successful. The logs are here:"
             log logger.path
-            [target_dir, false]
+            [ target_dir, false ]
           else
-            [nil, false]
+            [ nil, false ]
           end
         end
         if !result
           log "Warning: compilation didn't succeed. To learn why, read this file:"
           log logger.path
         end
-        return result
+        result
       end
     ensure
       logger.close if logger
@@ -425,17 +425,17 @@ module PhusionPassenger
       $LOADED_FEATURES.reject! { |fn| File.basename(fn) == library_name }
       begin
         require(name_or_filename)
-        return defined?(PhusionPassenger::NativeSupport)
+        defined?(PhusionPassenger::NativeSupport)
       rescue LoadError => e
         begin
           s = e.to_s
-          s = s.encode("US-ASCII", :invalid => :replace) if s.respond_to?(:encode)
+          s = s.encode("US-ASCII", invalid: :replace) if s.respond_to?(:encode)
           if s =~ /dlopen/
             # Print dlopen failures. We're not interested in any other
             # kinds of failures, such as file-not-found.
             puts s.gsub(/^/, "     ")
           end
-          return false
+          false
         rescue EncodingError
         end
       end

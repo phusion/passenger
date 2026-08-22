@@ -91,7 +91,7 @@ namespace dtl {
 template<class T, class ...Args>
 BOOST_CONTAINER_FORCEINLINE void construct_type(T *p, BOOST_FWD_REF(Args) ...args)
 {
-   ::new((void*)p, boost_container_new_t()) T(::boost::forward<Args>(args)...);
+   ::new(const_cast<void*>(static_cast<const volatile void*>(p)), boost_container_new_t()) T(::boost::forward<Args>(args)...);
 }
 
 #else
@@ -102,7 +102,7 @@ BOOST_CONTAINER_FORCEINLINE \
    typename dtl::disable_if_c<dtl::is_pair<T>::value, void >::type \
 construct_type(T *p BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
 {\
-   ::new((void*)p, boost_container_new_t()) T( BOOST_MOVE_FWD##N );\
+   ::new(const_cast<void*>(static_cast<const volatile void*>(p)), boost_container_new_t()) T( BOOST_MOVE_FWD##N );\
 }\
 //
 BOOST_MOVE_ITERATE_0TO8(BOOST_CONTAINER_ALLOCATOR_TRAITS_CONSTRUCT_TYPEJ)
@@ -227,6 +227,11 @@ template<class Allocator>
 struct is_not_std_allocator
 {  BOOST_STATIC_CONSTEXPR bool value = !is_std_allocator<Allocator>::value; };
 
+#if defined(BOOST_CONTAINER_GCC_COMPATIBLE_HAS_DIAGNOSTIC_IGNORED)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(pointer)
 BOOST_INTRUSIVE_INSTANTIATE_EVAL_DEFAULT_TYPE_TMPLT(const_pointer)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(reference)
@@ -240,6 +245,10 @@ BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(propagate_on_container_swap)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(is_always_equal)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(difference_type)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(is_partially_propagable)
+
+#if defined(BOOST_CONTAINER_GCC_COMPATIBLE_HAS_DIAGNOSTIC_IGNORED)
+#pragma GCC diagnostic pop
+#endif
 
 }  //namespace dtl {
 

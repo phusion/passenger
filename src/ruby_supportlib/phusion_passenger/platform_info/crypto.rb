@@ -29,17 +29,18 @@ PhusionPassenger.require_passenger_lib 'platform_info/openssl'
 module PhusionPassenger
 
   module PlatformInfo
+
     def self.crypto_libs
       prefix = ' -framework CoreFoundation -framework Security'
       suffix = ' -lcrypto'
       if os_name_simple == "macosx"
         if os_version < '10.13'
-          return prefix
+          prefix
         else
-          return "#{prefix} #{openssl_extra_ldflags} #{suffix}"
+          "#{prefix} #{openssl_extra_ldflags} #{suffix}"
         end
       else
-        return suffix
+        suffix
       end
     end
     memoize :crypto_libs
@@ -47,12 +48,12 @@ module PhusionPassenger
     def self.crypto_extra_cflags
       if os_name_simple == "macosx"
         if os_version < '10.13'
-          return ' -Wno-deprecated-declarations'
+          ' -Wno-deprecated-declarations'
         else
-          return " -Wno-deprecated-declarations #{openssl_extra_cflags}"
+          " -Wno-deprecated-declarations #{openssl_extra_cflags}"
         end
       else
-        return ''
+        ''
       end
     end
     memoize :crypto_extra_cflags

@@ -48,7 +48,7 @@ class CommonLibraryBuilder
   end
 
   def initialize_copy(other)
-    [:all_components, :all_ordered_components, :selected_components, :namespace, :output_dir].each do |name|
+    [ :all_components, :all_ordered_components, :selected_components, :namespace, :output_dir ].each do |name|
       var_name = "@#{name}"
       instance_variable_set(var_name, other.instance_variable_get(var_name).dup)
     end
@@ -153,43 +153,43 @@ private
       object_file,
       source_file,
       lambda { {
-        :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
-        :flags => [
+        include_paths: CXX_SUPPORTLIB_INCLUDE_PATHS,
+        flags: [
           libev_cflags,
           libuv_cflags,
           optimize,
-          "#{maybe_eval_lambda(extra_compiler_flags)} #{options[:cflags]}".strip
-        ]
+          "#{maybe_eval_lambda(extra_compiler_flags)} #{options[:cflags]}".strip,
+        ],
       } }
     )
   end
 
   def set_namespace!(namespace)
     @namespace = namespace
-    return self
+    self
   end
 
   def set_output_dir!(dir)
     @output_dir = dir
-    return self
+    self
   end
 
   def only!(*selector)
     new_components = apply_selector(*selector)
     @selected_components = new_components
-    return self
+    self
   end
 
   def exclude!(*selector)
     apply_selector(*selector).each_key do |object_name|
       @selected_components.delete(object_name)
     end
-    return self
+    self
   end
 
   def apply_selector(*selector)
     result = {}
-    selector = [selector].flatten
+    selector = [ selector ].flatten
     selector.each do |condition|
       @selected_components.each do |object_name, options|
         if component_satisfies_condition?(object_name, options, condition)
@@ -197,15 +197,15 @@ private
         end
       end
     end
-    return result
+    result
   end
 
   def component_satisfies_condition?(object_name, options, condition)
     case condition
     when Symbol
-      return condition == :all || options[:category] == condition
+      condition == :all || options[:category] == condition
     when String
-      return object_name == condition
+      object_name == condition
     else
       raise ArgumentError, "Invalid condition #{condition.inspect}"
     end
@@ -216,7 +216,7 @@ private
     @selected_components.each_value do |options|
       categories[options[:category]] = true
     end
-    return categories.keys
+    categories.keys
   end
 
   def category_complete?(category)
@@ -232,7 +232,7 @@ private
         actual += 1
       end
     end
-    return expected == actual
+    expected == actual
   end
 
   def selected_objects_belonging_to_category(category)
@@ -242,11 +242,11 @@ private
         result << object_name
       end
     end
-    return result
+    result
   end
 
   def object_filenames_for(object_names)
-    return object_names.map { |name| "#{@output_dir}/#{name}" }
+    object_names.map { |name| "#{@output_dir}/#{name}" }
   end
 
   def group_all_components_by_category
@@ -257,7 +257,7 @@ private
       categories[category] ||= []
       categories[category] << object_name
     end
-    return categories
+    categories
   end
 
   def locate_source_file(path)
@@ -268,131 +268,134 @@ end
 
 COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'LoggingKit.o',
-    :source   => 'LoggingKit/Implementation.cpp',
-    :category => :base,
-    :optimize => :very_heavy
+    source: 'LoggingKit/Implementation.cpp',
+    category: :base,
+    optimize: :very_heavy
   define_component 'Exceptions.o',
-    :source   => 'Exceptions.cpp',
-    :category => :base
+    source: 'Exceptions.cpp',
+    category: :base
   define_component 'FileTools/PathManip.o',
-    :source   => 'FileTools/PathManip.cpp',
-    :category => :base
+    source: 'FileTools/PathManip.cpp',
+    category: :base
   define_component 'FileTools/FileManip.o',
-    :source   => 'FileTools/FileManip.cpp',
-    :category => :base
+    source: 'FileTools/FileManip.cpp',
+    category: :base
   define_component 'FileTools/PathSecurityCheck.o',
-    :source   => 'FileTools/PathSecurityCheck.cpp',
-    :category => :base
+    source: 'FileTools/PathSecurityCheck.cpp',
+    category: :base
   define_component 'ProcessManagement/Spawn.o',
-    :source   => 'ProcessManagement/Spawn.cpp',
-    :category => :base
+    source: 'ProcessManagement/Spawn.cpp',
+    category: :base
   define_component 'ProcessManagement/Utils.o',
-    :source   => 'ProcessManagement/Utils.cpp',
-    :category => :base
+    source: 'ProcessManagement/Utils.cpp',
+    category: :base
   define_component 'SystemTools/UserDatabase.o',
-    :source   => 'SystemTools/UserDatabase.cpp',
-    :category => :base
+    source: 'SystemTools/UserDatabase.cpp',
+    category: :base
   define_component 'Utils/SystemTime.o',
-    :source   => 'SystemTools/SystemTime.cpp',
-    :category => :base
+    source: 'SystemTools/SystemTime.cpp',
+    category: :base
+  define_component 'Utils/Socket.o',
+    source: 'Utils/Socket.cpp',
+    category: :base
   define_component 'StrIntTools/StrIntUtils.o',
-    :source   => 'StrIntTools/StrIntUtils.cpp',
-    :category => :base,
-    :optimize => :very_heavy
+    source: 'StrIntTools/StrIntUtils.cpp',
+    category: :base,
+    optimize: :very_heavy
   define_component 'StrIntTools/StrIntUtilsNoStrictAliasing.o',
-    :source   => 'StrIntTools/StrIntUtilsNoStrictAliasing.cpp',
-    :category => :base,
-    :optimize => :very_heavy,
+    source: 'StrIntTools/StrIntUtilsNoStrictAliasing.cpp',
+    category: :base,
+    optimize: :very_heavy,
     # Compiling with SSE2 causes segfaults on Amazon Linux 2
-    :cflags => RbConfig::CONFIG['host_cpu'] == 'x86_64' && RbConfig::CONFIG['host_os'].include?('linux') ? ' -mno-sse2' : '',
-    :strict_aliasing => false
+    cflags: RbConfig::CONFIG['host_cpu'] == 'x86_64' && RbConfig::CONFIG['host_os'].include?('linux') ? ' -mno-sse2' : '',
+    strict_aliasing: false
   define_component 'IOTools/IOUtils.o',
-    :source   => 'IOTools/IOUtils.cpp',
-    :optimize => :light,
-    :category => :base
+    source: 'IOTools/IOUtils.cpp',
+    optimize: :light,
+    category: :base
   define_component 'Algorithms/Hasher.o',
-    :source   => 'Algorithms/Hasher.cpp',
-    :category => :base,
-    :optimize => :very_heavy
+    source: 'Algorithms/Hasher.cpp',
+    category: :base,
+    optimize: :very_heavy
   define_component 'Utils.o',
-    :source   => 'Utils.cpp',
-    :category => :base
+    source: 'Utils.cpp',
+    category: :base
   define_component 'jsoncpp.o',
-    :source   => 'vendor-modified/jsoncpp/jsoncpp.cpp',
-    :category => :base,
-    :optimize => true
+    source: 'vendor-modified/jsoncpp/jsoncpp.cpp',
+    category: :base,
+    optimize: true
 
   define_component 'SecurityKit/Crypto.o',
-    :source   => 'SecurityKit/Crypto.cpp',
-    :category => :other,
-    :cflags   => PhusionPassenger::PlatformInfo.crypto_extra_cflags
+    source: 'SecurityKit/Crypto.cpp',
+    category: :other,
+    cflags: PhusionPassenger::PlatformInfo.crypto_extra_cflags
   define_component 'Utils/CachedFileStat.o',
-    :source   => 'Utils/CachedFileStat.cpp',
-    :category => :other
+    source: 'Utils/CachedFileStat.cpp',
+    category: :other
   define_component 'WatchdogLauncher.o',
-    :source   => 'WatchdogLauncher.cpp',
-    :category => :other
+    source: 'WatchdogLauncher.cpp',
+    category: :other
   define_component 'MemoryKit/mbuf.o',
-    :source   => 'MemoryKit/mbuf.cpp',
-    :category => :other,
-    :optimize => true
+    source: 'MemoryKit/mbuf.cpp',
+    category: :other,
+    optimize: true
   define_component 'MemoryKit/palloc.o',
-    :source   => 'MemoryKit/palloc.cpp',
-    :category => :other,
-    :optimize => true
+    source: 'MemoryKit/palloc.cpp',
+    category: :other,
+    optimize: true
   define_component 'ServerKit/url_parser.o',
-    :source   => 'ServerKit/url_parser.c',
-    :category => :other,
-    :optimize => :very_heavy
+    source: 'ServerKit/url_parser.c',
+    category: :other,
+    optimize: :very_heavy
   define_component 'ServerKit/llhttp.o',
-    :source   => 'ServerKit/llhttp.c',
-    :category => :other,
-    :optimize => :very_heavy
+    source: 'ServerKit/llhttp.c',
+    category: :other,
+    optimize: :very_heavy
   define_component 'ServerKit/llhttp_http.o',
-    :source   => 'ServerKit/llhttp_http.c',
-    :category => :other,
-    :optimize => :very_heavy
+    source: 'ServerKit/llhttp_http.c',
+    category: :other,
+    optimize: :very_heavy
   define_component 'ServerKit/llhttp_api.o',
-    :source   => 'ServerKit/llhttp_api.c',
-    :category => :other,
-    :optimize => :very_heavy
+    source: 'ServerKit/llhttp_api.c',
+    category: :other,
+    optimize: :very_heavy
   define_component 'ServerKit/Implementation.o',
-    :source   => 'ServerKit/Implementation.cpp',
-    :category => :other,
-    :optimize => true
+    source: 'ServerKit/Implementation.cpp',
+    category: :other,
+    optimize: true
   define_component 'DataStructures/LString.o',
-    :source   => 'DataStructures/LString.cpp',
-    :category => :other
+    source: 'DataStructures/LString.cpp',
+    category: :other
   define_component 'AppTypeDetector/CBindings.o',
-    :source   => 'AppTypeDetector/CBindings.cpp',
-    :category => :other
+    source: 'AppTypeDetector/CBindings.cpp',
+    category: :other
   define_component 'WrapperRegistry/CBindings.o',
-    :source   => 'WrapperRegistry/CBindings.cpp',
-    :category => :other
+    source: 'WrapperRegistry/CBindings.cpp',
+    category: :other
 
   define_component 'vendor-modified/modp_b64.o',
-    :source   => 'vendor-modified/modp_b64.cpp',
-    :category => :base64,
-    :optimize => true,
-    :strict_aliasing => false
+    source: 'vendor-modified/modp_b64.cpp',
+    category: :base64,
+    optimize: true,
+    strict_aliasing: false
   define_component 'vendor-modified/modp_b64_strict_aliasing.o',
-    :source   => 'vendor-modified/modp_b64_strict_aliasing.cpp',
-    :category => :base64,
-    :optimize => true
+    source: 'vendor-modified/modp_b64_strict_aliasing.cpp',
+    category: :base64,
+    optimize: true
 
   define_component 'JsonTools/CBindings.o',
-    :source   => 'JsonTools/CBindings.cpp',
-    :category => :json_tools
+    source: 'JsonTools/CBindings.cpp',
+    category: :json_tools
   define_component 'FileTools/PathManipCBindings.o',
-    :source   => 'FileTools/PathManipCBindings.cpp',
-    :category => :file_tools_path_manip_cbindings
+    source: 'FileTools/PathManipCBindings.cpp',
+    category: :file_tools_path_manip_cbindings
   define_component 'ProcessManagement/Ruby.o',
-    :source   => 'ProcessManagement/Ruby.cpp',
-    :category => :process_management_ruby
+    source: 'ProcessManagement/Ruby.cpp',
+    category: :process_management_ruby
 end
 
 # A subset of the objects are linked to the Nginx binary. This defines
 # what those objects are.
-NGINX_LIBS_SELECTOR = [:base, 'WatchdogLauncher.o', 'AppTypeDetector/CBindings.o',
+NGINX_LIBS_SELECTOR = [ :base, 'WatchdogLauncher.o', 'AppTypeDetector/CBindings.o',
   'WrapperRegistry/CBindings.o', 'Utils/CachedFileStat.o', 'JsonTools/CBindings.o',
-  'FileTools/PathManipCBindings.o']
+  'FileTools/PathManipCBindings.o' ]

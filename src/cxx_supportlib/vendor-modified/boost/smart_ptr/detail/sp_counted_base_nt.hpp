@@ -20,7 +20,7 @@
 
 #include <boost/smart_ptr/detail/sp_typeinfo_.hpp>
 #include <boost/config.hpp>
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 #if defined(BOOST_SP_REPORT_IMPLEMENTATION)
 
@@ -42,8 +42,8 @@ private:
     sp_counted_base( sp_counted_base const & );
     sp_counted_base & operator= ( sp_counted_base const & );
 
-    boost::int_least32_t use_count_;        // #shared
-    boost::int_least32_t weak_count_;       // #weak + (#shared != 0)
+    std::int_least32_t use_count_;        // #shared
+    std::int_least32_t weak_count_;       // #weak + (#shared != 0)
 
 public:
 

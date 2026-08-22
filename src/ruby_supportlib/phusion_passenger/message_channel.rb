@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -93,9 +94,9 @@ module PhusionPassenger
         offset = delimiter_pos + 1
         delimiter_pos = buffer.index(DELIMITER, offset)
       end
-      return message
+      message
     rescue Errno::ECONNRESET
-      return nil
+      nil
     end
 
     # Read an array message from the underlying file descriptor and return the
@@ -156,9 +157,9 @@ module PhusionPassenger
         offset = delimiter_pos + 1
         delimiter_pos = buffer.index(DELIMITER, offset)
       end
-      return result
+      result
     rescue Errno::ECONNRESET
-      return nil
+      nil
     end
 
     # Read a scalar message from the underlying IO object. Returns the
@@ -190,7 +191,7 @@ module PhusionPassenger
       size = buffer.unpack(UINT32_PACK_FORMAT)[0]
       if size == 0
         buffer.replace('')
-        return buffer
+        buffer
       else
         if !max_size.nil? && size > max_size
           raise SecurityError, "Scalar message size (#{size}) " <<
@@ -209,10 +210,10 @@ module PhusionPassenger
             end
           end
         end
-        return buffer
+        buffer
       end
     rescue Errno::ECONNRESET
-      return nil
+      nil
     end
 
     # Send an array message, which consists of the given elements, over the underlying
@@ -237,7 +238,7 @@ module PhusionPassenger
         raise ArgumentError, 'Message size too large'
       end
 
-      @io.write([message.size].pack('n') << message)
+      @io.write([ message.size ].pack('n') << message)
       @io.flush
     end
 
@@ -246,7 +247,7 @@ module PhusionPassenger
     # Might raise SystemCallError, IOError or SocketError when something
     # goes wrong.
     def write_scalar(data)
-      @io.write([data.size].pack('N') << data)
+      @io.write([ data.size ].pack('N') << data)
       @io.flush
     end
 
@@ -260,7 +261,7 @@ module PhusionPassenger
       write("pass IO") if negotiate
       io = @io.recv_io(klass)
       write("got IO") if negotiate
-      return io
+      io
     end
 
     # Send an IO object (a file descriptor) over the channel. The other
@@ -293,7 +294,7 @@ module PhusionPassenger
       result = read
       if !result
         raise EOFError, "End of stream"
-      elsif result != ["pass IO"]
+      elsif result != [ "pass IO" ]
         raise IOError, "IO passing pre-negotiation header expected"
       else
         @io.send_io(io)
@@ -306,7 +307,7 @@ module PhusionPassenger
         result = read
         if !result
           raise EOFError, "End of stream"
-        elsif result != ["got IO"]
+        elsif result != [ "got IO" ]
           raise IOError, "IO passing post-negotiation header expected"
         end
       end
@@ -314,7 +315,7 @@ module PhusionPassenger
 
     # Return the file descriptor of the underlying IO object.
     def fileno
-      return @io.fileno
+      @io.fileno
     end
 
     # Close the underlying IO stream. Might raise SystemCallError or
@@ -325,7 +326,7 @@ module PhusionPassenger
 
     # Checks whether the underlying IO stream is closed.
     def closed?
-      return @io.closed?
+      @io.closed?
     end
 
   private
@@ -337,11 +338,11 @@ module PhusionPassenger
 
     if defined?(ByteString)
       def new_buffer
-        return ByteString.new
+        ByteString.new
       end
     else
       def new_buffer
-        return ""
+        ""
       end
     end
   end

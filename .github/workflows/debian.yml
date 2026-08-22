@@ -14,7 +14,7 @@ jobs:
     outputs:
       distros: ${{ steps.distros.outputs.distros }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
@@ -42,16 +42,9 @@ jobs:
       CACHE_DIR: ${{ github.workspace }}/cache/debian-test/${{ matrix.distro }}-${{ matrix.arch.name }}
       DISTRIBUTION: ${{ matrix.distro }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           submodules: true
-
-      # backport trixie data to ubuntu noble runner
-      - run: |
-          echo -e 'Package: distro-info-data\nPin: release n=questing\nPin-Priority: 990\n\nPackage: *\nPin: release n=noble\nPin-Priority: 900\n\nPackage: *\nPin: release o=Ubuntu\nPin-Priority: -10\n' | sudo tee -a /etc/apt/preferences
-          sed -e 's/noble/questing/g' /etc/apt/sources.list.d/ubuntu.sources | sudo tee -a /etc/apt/sources.list.d/ubuntu.sources
-          sudo apt update
-          sudo apt install -y distro-info-data
 
       - run: mkdir work cache output
 
@@ -100,7 +93,7 @@ jobs:
           CACHE_PATH: packaging/debian/cache
           SUDO: true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         timeout-minutes: 1
         with:
           name: debian-${{ matrix.distro }}-${{ matrix.arch.name }}

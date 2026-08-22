@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -27,21 +28,25 @@ PhusionPassenger.require_passenger_lib 'utils/tee_input'
 
 if defined?(::Rack::BodyProxy) && !::Rack::BodyProxy.new("").respond_to?(:each)
   module ::Rack
+
     class BodyProxy
       def each
         @body.each { |body| yield body }
       end
     end
+
   end
 end
 
 module PhusionPassenger
+
   module Rack
 
     module ThreadHandlerExtension
+
       # Constants which exist to relieve Ruby's garbage collector.
       RACK_VERSION       = "rack.version"        # :nodoc:
-      RACK_VERSION_VALUE = [1, 3]                # :nodoc:
+      RACK_VERSION_VALUE = [ 1, 3 ]                # :nodoc:
       RACK_INPUT         = "rack.input"          # :nodoc:
       RACK_ERRORS        = "rack.errors"         # :nodoc:
       RACK_MULTITHREAD   = "rack.multithread"    # :nodoc:
@@ -50,14 +55,15 @@ module PhusionPassenger
       RACK_URL_SCHEME    = "rack.url_scheme"     # :nodoc:
       RACK_HIJACK_P      = "rack.hijack?"        # :nodoc:
       RACK_HIJACK        = "rack.hijack"         # :nodoc:
+      RACK_RESPONSE_FINISHED    = "rack.response_finished" # :nodoc:
       HTTP_VERSION       = "HTTP_VERSION"        # :nodoc:
       HTTP_1_1           = "HTTP/1.1"            # :nodoc:
       SCRIPT_NAME        = "SCRIPT_NAME"         # :nodoc:
       REQUEST_METHOD = "REQUEST_METHOD"          # :nodoc:
       TRANSFER_ENCODING_HEADER  = "Transfer-Encoding"   # :nodoc:
-      TRANSFER_ENCODING_HEADERS = ["Transfer-Encoding", "Transfer-encoding", "transfer-encoding"] # :nodoc:
+      TRANSFER_ENCODING_HEADERS = [ "Transfer-Encoding", "Transfer-encoding", "transfer-encoding" ] # :nodoc:
       CONTENT_LENGTH_HEADER     = "Content-Length"      # :nodoc:
-      CONTENT_LENGTH_HEADERS    = ["Content-Length", "Content-length", "content-length"] # :nodoc:
+      CONTENT_LENGTH_HEADERS    = [ "Content-Length", "Content-length", "content-length" ] # :nodoc:
       X_SENDFILE_HEADER         = "X-Sendfile"          # :nodoc:
       X_ACCEL_REDIRECT_HEADER   = "X-Accel-Redirect"    # :nodoc:
       CONTENT_LENGTH_HEADER_AND_SEPARATOR      = "Content-Length: " # :nodoc
@@ -97,6 +103,7 @@ module PhusionPassenger
               connection
             end
           end
+          env[RACK_RESPONSE_FINISHED] = []
           env[HTTP_VERSION] = HTTP_1_1
 
           # Rails somehow modifies env['REQUEST_METHOD'], so we perform the comparison
@@ -113,6 +120,11 @@ module PhusionPassenger
               # It's a good idea to catch application exceptions here because
               # otherwise maliciously crafted responses can crash the app,
               # forcing it to be respawned, and thereby effectively DoSing it.
+              print_exception("Rack application object", e)
+            end
+            env[RACK_RESPONSE_FINISHED].reverse_each do | cb |
+              cb.call(env, status, headers, e)
+            rescue => e
               print_exception("Rack application object", e)
             end
             return false
@@ -166,6 +178,11 @@ module PhusionPassenger
             end
           ensure
             close_body(body, env, socket_wrapper)
+            env[RACK_RESPONSE_FINISHED].reverse_each do | cb |
+              cb.call(env, status, headers, nil)
+            rescue => e
+              print_exception("Rack application object", e)
+            end
           end
           false
         ensure
@@ -175,15 +192,11 @@ module PhusionPassenger
 
     private
       def process_body(env, connection, socket_wrapper, status, is_head_request, headers, body)
-        if @ush_reporter
-          ush_log_id = @ush_reporter.log_writing_rack_body_begin
-        end
-
         # Fix up incompliant body objects. Ensure that the body object
         # can respond to #each.
         output_body = should_output_body?(status, is_head_request)
         if body.is_a?(String)
-          body = [body]
+          body = [ body ]
         elsif body.nil?
           body = []
         elsif output_body && body.is_a?(Array)
@@ -317,16 +330,9 @@ module PhusionPassenger
         end
 
         signal_keep_alive_allowed!
-      ensure
-        if @ush_reporter && ush_log_id
-          @ush_reporter.log_writing_rack_body_end(ush_log_id)
-        end
       end
 
       def close_body(body, env, socket_wrapper)
-        if @ush_reporter
-          ush_log_id = @ush_reporter.log_closing_rack_body_begin
-        end
         begin
           body.close if body && body.respond_to?(:close)
         rescue => e
@@ -336,16 +342,12 @@ module PhusionPassenger
           if !should_swallow_app_error?(e, socket_wrapper)
             print_exception("Rack response body object's #close method", e)
           end
-        ensure
-          if @ush_reporter && ush_log_id
-            @ush_reporter.log_closing_rack_body_end(ush_log_id)
-          end
         end
       end
 
       def generate_headers_array(status, headers)
         status_str = status.to_s
-        result = ["HTTP/1.1 #{status_str} Whatever\r\n"]
+        result = [ "HTTP/1.1 #{status_str} Whatever\r\n" ]
         headers.each do |key, values|
           if values.is_a?(String)
             values = values.split(NEWLINE)
@@ -365,7 +367,7 @@ module PhusionPassenger
             result << CRLF
           end
         end
-        return result
+        result
       end
 
       def lookup_header(haystack, needles)
@@ -386,7 +388,7 @@ module PhusionPassenger
       end
 
       def chunk_data(data, size)
-        [size.to_s(16), CRLF, data, CRLF]
+        [ size.to_s(16), CRLF, data, CRLF ]
       end
 
       # Called when body is written out successfully. Indicates that we should
@@ -404,7 +406,9 @@ module PhusionPassenger
           str.size
         end
       end
+
     end
 
   end # module Rack
+
 end # module PhusionPassenger

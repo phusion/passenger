@@ -33,10 +33,12 @@ PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
-  module Standalone
-    class StartCommand
 
+  module Standalone
+
+    class StartCommand
       module NginxEngine
+
       private
         def start_engine_real
           write_nginx_config_file(nginx_config_path)
@@ -121,7 +123,7 @@ module PhusionPassenger
               "message returned by the Nginx engine is:\n\n" \
               "#{output}\n\n"
             debug_log_file = Utils::TmpIO.new('passenger-standalone',
-              :suffix => '.log', :binary => true, :unlink_immediately => false)
+              suffix: '.log', binary: true, unlink_immediately: false)
             begin
               File.open(path, 'rb') do |f|
                 debug_log_file.write(f.read)
@@ -149,31 +151,31 @@ module PhusionPassenger
 
         def build_daemon_controller_options
           if @options[:socket_file]
-            ping_spec = [:unix, @options[:socket_file]]
+            ping_spec = [ :unix, @options[:socket_file] ]
           else
-            ping_spec = [:tcp, @options[:address], @options[:port]]
+            ping_spec = [ :tcp, @options[:address], @options[:port] ]
           end
-          return {
-            :identifier    => 'Nginx',
-            :start_command => "#{Shellwords.escape @nginx_binary} " \
+          {
+            identifier: 'Nginx',
+            start_command: "#{Shellwords.escape @nginx_binary} " \
               "-c #{Shellwords.escape nginx_config_path} " \
               "-p #{Shellwords.escape @working_dir}",
-            :stop_command => "#{Shellwords.escape @nginx_binary} " \
+            stop_command: "#{Shellwords.escape @nginx_binary} " \
               "-c #{Shellwords.escape nginx_config_path} " \
               "-p #{Shellwords.escape @working_dir} " \
               '-s quit',
-            :ping_command  => ping_spec,
-            :pid_file      => @options[:pid_file],
-            :log_file      => @options[:log_file],
-            :start_timeout => 25,
-            :stop_timeout  => @options[:stop_timeout],
-            :log_file_activity_timeout => 12,
-            :dont_stop_if_pid_file_invalid => true
+            ping_command: ping_spec,
+            pid_file: @options[:pid_file],
+            log_file: @options[:log_file],
+            start_timeout: 25,
+            stop_timeout: @options[:stop_timeout],
+            log_file_activity_timeout: 12,
+            dont_stop_if_pid_file_invalid: true,
           }
         end
 
         def nginx_config_path
-          return "#{@working_dir}/nginx.conf"
+          "#{@working_dir}/nginx.conf"
         end
 
         def write_nginx_config_file(path)
@@ -200,15 +202,15 @@ module PhusionPassenger
 
         def nginx_config_template_filename
           if @options[:nginx_config_template]
-            return @options[:nginx_config_template]
+            @options[:nginx_config_template]
           else
-            return File.join(PhusionPassenger.resources_dir,
+            File.join(PhusionPassenger.resources_dir,
               "templates", "standalone", "config.erb")
           end
         end
 
         def debugging?
-          return ENV['PASSENGER_DEBUG'] && !ENV['PASSENGER_DEBUG'].empty?
+          ENV['PASSENGER_DEBUG'] && !ENV['PASSENGER_DEBUG'].empty?
         end
 
         def next_eoutvar
@@ -238,7 +240,7 @@ module PhusionPassenger
         def default_group_for(username)
           user = Etc.getpwnam(username)
           group = Etc.getgrgid(user.gid)
-          return group.name
+          group.name
         end
 
         def nginx_http_option(option_name)
@@ -318,22 +320,20 @@ module PhusionPassenger
         def default_group_for(username)
           user = Etc.getpwnam(username)
           group = Etc.getgrgid(user.gid)
-          return group.name
+          group.name
         end
 
         def serialize_strset(*items)
-          if "".respond_to?(:force_encoding)
-            items = items.map { |x| x.force_encoding('binary') }
-            null  = "\0".force_encoding('binary')
-          else
-            null  = "\0"
-          end
+          items = items.map(&:b)
+          null  = "\0".b
           return [items.join(null)].pack('m*').gsub("\n", "").strip
         end
 
         #####################
-      end # module NginxEngine
 
+      end # module NginxEngine
     end # module StartCommand
+
   end # module Standalone
+
 end # module PhusionPassenger

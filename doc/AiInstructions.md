@@ -57,8 +57,8 @@ This is codebase of the Passenger application server.
 
 ## Build system
 
-- Building agents: `drake -j4 nginx` (for concurrent building) or `rake nginx`
-- Building C++ test suite: `drake -j4 test:cxx:build` (for concurrent building) or `rake test:cxx:build`
+- Building agents: `rake -m -j4 nginx` (for concurrent building) or `rake nginx`
+- Building C++ test suite: `rake -m -j4 test:cxx:build` (for concurrent building) or `rake test:cxx:build`
 
 ## Special files
 

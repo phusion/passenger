@@ -29,13 +29,14 @@ PhusionPassenger.require_passenger_lib 'config/agent_compiler'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 module PhusionPassenger
+
   module Config
 
     class CompileAgentCommand < Command
       include InstallationUtils
 
       def run
-        @options = { :auto => !STDIN.tty? || !STDOUT.tty?, :colorize => :auto, :force_tip => true }
+        @options = { auto: !STDIN.tty? || !STDOUT.tty?, colorize: :auto, force_tip: true }
         parse_options
         initialize_objects
         sanity_check
@@ -100,4 +101,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

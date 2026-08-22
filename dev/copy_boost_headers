@@ -83,7 +83,7 @@ EXCLUDE = [
   "boost/atomic/detail/windows.hpp",
   "boost/regex/icu.hpp",
 ]
-PROGRAM_SOURCE = %q{
+PROGRAM_SOURCE = %q(
   #include <boost/aligned_storage.hpp>
   #include <boost/atomic.hpp>
   #include <boost/bind/bind.hpp>
@@ -136,7 +136,7 @@ PROGRAM_SOURCE = %q{
   #include <boost/thread/thread_time.hpp>
   #include <boost/cregex.hpp>
   #include <boost/pointer_cast.hpp>
-}
+)
 
 require 'fileutils'
 BOOST_DIR = ARGV[0]
@@ -156,7 +156,7 @@ def install(source_filename, target_filename)
   if !File.exist?(dir)
     sh "mkdir", "-p", dir
   end
-  command = ["install", "-m", "u+rw,g+r,o+r", source_filename, target_filename]
+  command = [ "install", "-m", "u+rw,g+r,o+r", source_filename, target_filename ]
   sh(*command)
 end
 
@@ -167,7 +167,7 @@ def copy_boost_files(patterns, exclude = nil)
     files.each do |source|
       if File.directory?(source)
         source.slice!(0 .. BOOST_DIR.size)
-        copy_boost_files(["#{source}/*"], exclude)
+        copy_boost_files([ "#{source}/*" ], exclude)
       else
         target = source.slice(BOOST_DIR.size + 1 .. source.size - 1)
         if target =~ /^libs\//
@@ -226,17 +226,24 @@ def copy_dependencies(cflags)
     File.unlink('test.o') if File.exist?('test.o')
     missing_headers = compiler_output.lines.
       grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
-      reject{|s| s =~ /\/usr\/include\// }.
+      reject { |s| s =~ /\/usr\/include\// }.
       map do |line|
-      file = $1
-      if file =~ /^boost\//
-        file
-      else
-        line =~ /(.*?):/
-        source = $1
-        File.dirname(source) + "/" + file
+        if line =~ /error: (.*): No such file/
+          file = $1
+        elsif line =~ /fatal error: '(.*)' file not found/
+          file = $1
+        else
+          abort "Bug"
+        end
+
+        if file =~ /^boost\//
+          file
+        else
+          line =~ /(.*?):/
+          source = $1
+          File.dirname(source) + "/" + file
+        end
       end
-    end
     missing_headers.each do |header|
       install("#{BOOST_DIR}/#{header}", header)
     end
@@ -263,10 +270,10 @@ def start
       20,
       23,
       26,
-    ].product(['c++', 'gnu++'])
-      .map{|v,l| "-std=#{l}#{v}" }
+    ].product([ 'c++', 'gnu++' ])
+      .map { |v, l| "-std=#{l}#{v}" }
       .push("")
-      .product(["-m64",""])
+      .product([ "-m64", "" ])
       .each do |flags|
     copy_dependencies(flags)
   end

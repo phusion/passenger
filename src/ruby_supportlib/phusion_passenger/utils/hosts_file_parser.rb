@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -26,6 +27,7 @@
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 
 module PhusionPassenger
+
   module Utils
 
     # A /etc/hosts parser. Also supports writing groups of data to the file.
@@ -47,24 +49,24 @@ module PhusionPassenger
       end
 
       def ip_count
-        return @ips.size
+        @ips.size
       end
 
       def host_count
-        return @host_names.size
+        @host_names.size
       end
 
       def resolve(host_name)
         if host_name.downcase == "localhost"
-          return "127.0.0.1"
+          "127.0.0.1"
         else
-          return @host_names[host_name.downcase]
+          @host_names[host_name.downcase]
         end
       end
 
       def resolves_to_localhost?(hostname)
         ip = resolve(hostname)
-        return ip == "127.0.0.1" || ip == "::1" || ip == "0.0.0.0"
+        ip == "127.0.0.1" || ip == "::1" || ip == "0.0.0.0"
       end
 
       def add_group_data(marker, data)
@@ -113,7 +115,7 @@ module PhusionPassenger
         line = line.strip
         return nil if line.empty?
         ip, *host_names = line.split(/[ \t]+/)
-        return [ip, host_names]
+        [ ip, host_names ]
       end
 
       def find_line(start_index, content)
@@ -125,9 +127,10 @@ module PhusionPassenger
             i += 1
           end
         end
-        return nil
+        nil
       end
     end
 
   end
+
 end

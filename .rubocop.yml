@@ -1,0 +1,21 @@
+# Omakase Ruby styling for Rails
+inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+
+# Overwrite or add rules to create your own house style
+
+Layout/EmptyLinesAroundModuleBody:
+  EnforcedStyle: empty_lines
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: diff_comma
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: diff_comma
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+AllCops:
+  TargetRubyVersion: 2.5
+  Exclude:
+    - 'packaging/homebrew/**/*'

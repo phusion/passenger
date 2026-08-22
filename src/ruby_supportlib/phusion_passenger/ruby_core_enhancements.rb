@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -55,7 +56,7 @@ class Exception
     if thread_name = current_thread[:name]
       thread_name = "(#{thread_name})"
     end
-    return "*** Exception #{self.class} #{location}" <<
+    "*** Exception #{self.class} #{location}" <<
       "(#{self}) (process #{$$}, thread #{thread_id}#{thread_name}):\n" <<
       "\tfrom " << backtrace.join("\n\tfrom ")
   end
@@ -108,16 +109,17 @@ class File
   # do that too. This method fixes that by using Dir.logical_pwd.
   if File.respond_to?(:absolute_path)
     def self.absolute_logical_path(path, base = Dir.logical_pwd)
-      return File.absolute_path(path, base)
+      File.absolute_path(path, base)
     end
   else
     def self.absolute_logical_path(path, base = Dir.logical_pwd)
-      return File.expand_path(path, base)
+      File.expand_path(path, base)
     end
   end
 end
 
 module Signal
+
   # Like Signal.list, but only returns signals that we can actually trap.
   def self.list_trappable
     ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
@@ -152,16 +154,19 @@ module Signal
     # See https://github.com/phusion/passenger/issues/2489 for details.
     result.delete("PROF")
 
-    return result
+    result
   end
+
 end
 
 module GC
+
   if !respond_to?(:copy_on_write_friendly?)
     # Checks whether the current Ruby interpreter's garbage
     # collector is copy-on-write friendly.
     def self.copy_on_write_friendly?
-      return false
+      false
     end
   end
+
 end

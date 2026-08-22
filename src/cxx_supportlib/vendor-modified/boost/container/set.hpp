@@ -27,6 +27,7 @@
 #include <boost/container/detail/mpl.hpp>
 #include <boost/container/detail/tree.hpp>
 #include <boost/container/new_allocator.hpp> //new_allocator
+#include <boost/container/detail/algorithm.hpp>
 // intrusive/detail
 #include <boost/intrusive/detail/minimal_pair_header.hpp>      //pair
 #include <boost/intrusive/detail/minimal_less_equal_header.hpp>//less, equal
@@ -957,6 +958,15 @@ class set
    #endif   //#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 };
 
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class K, class C, class A, class O, class Pred>
+inline typename set<K, C, A, O>::size_type erase_if(set<K, C, A, O>& c, Pred pred)
+{
+   return container_erase_if(c, pred);
+}
+
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
 
 template <typename InputIterator>
@@ -1611,6 +1621,15 @@ class multiset
 
    #endif   //#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 };
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class K, class C, class A, class O, class Pred>
+inline typename multiset<K, C, A, O>::size_type erase_if(multiset<K, C, A, O>& c, Pred pred)
+{
+   return container_erase_if(c, pred);
+}
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
 

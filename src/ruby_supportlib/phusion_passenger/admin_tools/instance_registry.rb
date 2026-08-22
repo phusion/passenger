@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2014-2025 Asynchronous B.V.
 #
@@ -27,16 +28,17 @@ require 'fileutils'
 PhusionPassenger.require_passenger_lib 'admin_tools/instance'
 
 module PhusionPassenger
+
   module AdminTools
 
     class InstanceRegistry
       def initialize(paths = nil)
-        @paths = [paths || default_paths].flatten.uniq
+        @paths = [ paths || default_paths ].flatten.uniq
       end
 
       def list(options = {})
         options = {
-          :clean_stale_or_corrupted => true
+          clean_stale_or_corrupted: true,
         }.merge(options)
 
         instances = []
@@ -69,16 +71,16 @@ module PhusionPassenger
       end
 
       def find_by_name(name, options = {})
-        return list(options).find { |instance| instance.name == name }
+        list(options).find { |instance| instance.name == name }
       end
 
       def find_by_name_prefix(name, options = {})
         prefix = /^#{Regexp.escape name}/
         results = list(options).find_all { |instance| instance.name =~ prefix }
         if results.size <= 1
-          return results.first
+          results.first
         else
-          return :ambiguous
+          :ambiguous
         end
       end
 
@@ -87,13 +89,13 @@ module PhusionPassenger
       # return: the matching instance, if found; nil otherwise.
       #
       def find_by_watchdog_pid(pid, options = {})
-        return list(options).detect { |instance| instance.watchdog_pid == pid }
+        list(options).detect { |instance| instance.watchdog_pid == pid }
       end
 
     private
       def default_paths
         if result = string_env("PASSENGER_INSTANCE_REGISTRY_DIR")
-          return [result]
+          return [ result ]
         end
 
         # On OSX, TMPDIR is set to a different value per-user. But Apache
@@ -106,7 +108,7 @@ module PhusionPassenger
         # systemd's PrivateTmp feature works like an inverted OSX, apache gets its own
         # TMPDIR and users use /tmp, however the path is often too long because socket paths can
         # only be up to 108 characters long.
-        [string_env("TMPDIR"), "/tmp", "/var/run/passenger-instreg",*Dir['/tmp/systemd-private-*-{httpd,nginx,apache2}.service-*/tmp']].compact
+        [ string_env("TMPDIR"), "/tmp", "/var/run/passenger-instreg", *Dir['/tmp/systemd-private-*-{httpd,nginx,apache2}.service-*/tmp'] ].compact
       end
 
       def string_env(name)
@@ -129,4 +131,5 @@ module PhusionPassenger
     end
 
   end # module AdminTools
+
 end # module PhusionPassenger

@@ -353,9 +353,13 @@ Controller::writeRequestQueueFullExceptionErrorResponse(Client *client, Request 
 		" due to: " << e->what());
 
 	endRequestWithSimpleResponse(&client, &req,
+		"<html><head>"
+		"<meta name='viewport' content='width=device-width, initial-scale=1'>"
+		"</head><body>"
 		"<h2>This website is under heavy load (queue full)</h2>"
 		"<p>We're sorry, too many people are accessing this website at the same "
-		"time. We're working on this problem. Please try again later.</p>",
+		"time. We're working on this problem. Please try again later.</p>"
+		"</body></html>",
 		requestQueueOverflowStatusCode);
 }
 

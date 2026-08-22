@@ -454,16 +454,16 @@ struct vector_alloc_holder
       }
    }
 
-   inline void set_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE void set_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_size = static_cast<stored_size_type>(s);   }
 
-   inline void dec_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE void dec_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_size = static_cast<stored_size_type>(this->m_size - s);   }
 
-   inline void inc_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE void inc_stored_size(size_type s) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_size = static_cast<stored_size_type>(this->m_size + s);   }
 
-   inline void set_stored_capacity(size_type c) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE void set_stored_capacity(size_type c) BOOST_NOEXCEPT_OR_NOTHROW
       {  this->m_capacity = static_cast<stored_size_type>(c);  }
 
    inline pointer allocation_command(boost::container::allocation_type command,
@@ -546,13 +546,13 @@ struct vector_alloc_holder
    inline const allocator_type &alloc() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return *this;  }
 
-   inline pointer   start() const     BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE pointer   start() const     BOOST_NOEXCEPT_OR_NOTHROW
       {  return m_start;  }
-   inline       size_type capacity() const     BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE size_type capacity() const     BOOST_NOEXCEPT_OR_NOTHROW
       {  return m_capacity;  }
-   inline void start(const pointer &p)       BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE void start(const pointer &p)       BOOST_NOEXCEPT_OR_NOTHROW
       {  m_start = p;  }
-   inline void capacity(const size_type &c)  BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE void capacity(const size_type &c)  BOOST_NOEXCEPT_OR_NOTHROW
       {  BOOST_ASSERT( c <= stored_size_type(-1)); this->set_stored_capacity(c);  }
 
    static inline void on_capacity_overflow()
@@ -729,13 +729,13 @@ struct vector_alloc_holder<Allocator, StoredSizeType, version_0>
    inline const allocator_type &alloc() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return *this;  }
 
-   inline bool try_expand_fwd(size_type at_least)
+   BOOST_CONTAINER_FORCEINLINE bool try_expand_fwd(size_type at_least)
    {  return !at_least;  }
 
-   inline pointer start() const       BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE pointer start() const       BOOST_NOEXCEPT_OR_NOTHROW
    {  return allocator_type::internal_storage();  }
    
-   inline size_type capacity() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE size_type capacity() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return allocator_type::internal_capacity;  }
    
    stored_size_type m_size;
@@ -2100,8 +2100,8 @@ private:
          >::type * = 0
       )
    {
-      typedef typename iter_size<FwdIt>::type it_size_type;
       BOOST_ASSERT(this->priv_in_range_or_end(pos));
+      typedef typename iter_size<FwdIt>::type it_size_type;
       const it_size_type sz = boost::container::iterator_udistance(first, last);
       if (BOOST_UNLIKELY(sz > size_type(-1))){
          boost::container::throw_length_error("vector::insert, FwdIt's max length reached");
@@ -2573,7 +2573,7 @@ private:
       new_values_destroyer.release();
    }
 
-   inline bool room_enough() const
+   BOOST_CONTAINER_FORCEINLINE bool room_enough() const
    {  return this->m_holder.m_size != this->m_holder.capacity();   }
 
    inline pointer back_ptr() const
@@ -2897,13 +2897,13 @@ private:
    }
 
    template<class U>
-   inline iterator priv_insert(const const_iterator &p, BOOST_FWD_REF(U) u)
+   BOOST_CONTAINER_FORCEINLINE iterator priv_insert(const const_iterator &p, BOOST_FWD_REF(U) u)
    {
       return this->emplace(p, ::boost::forward<U>(u));
    }
 
    template <class U>
-   inline void priv_push_back(BOOST_FWD_REF(U) u)
+   BOOST_CONTAINER_FORCEINLINE void priv_push_back(BOOST_FWD_REF(U) u)
    {
       this->emplace_back(::boost::forward<U>(u));
    }
@@ -3014,6 +3014,7 @@ private:
    {
       return alloc_holder_t::on_capacity_overflow(), iterator();
    }
+
    #ifdef _MSC_VER
    #pragma warning (pop)
    #endif
@@ -3022,15 +3023,14 @@ private:
    BOOST_CONTAINER_NOINLINE iterator priv_insert_forward_range_no_capacity
       (T *const raw_pos, const size_type n, const InsertionProxy insert_range_proxy, version_1)
    {
-      //Check if we have enough memory or try to expand current memory
-      const size_type n_pos = static_cast<size_type>(raw_pos - this->priv_raw_begin());
-
       const size_type new_cap = this->m_holder.template next_capacity<growth_factor_type>(n);
       //Pass the hint so that allocators can take advantage of this.
       T * const new_buf = boost::movelib::to_raw_pointer(this->m_holder.allocate(new_cap));
       #ifdef BOOST_CONTAINER_VECTOR_ALLOC_STATS
       ++this->num_alloc;
       #endif
+      //Check if we have enough memory or try to expand current memory
+      const size_type n_pos = static_cast<size_type>(raw_pos - this->priv_raw_begin());
       this->priv_insert_forward_range_new_allocation(new_buf, new_cap, raw_pos, n, insert_range_proxy);
       return iterator(this->m_holder.start() + difference_type(n_pos));
    }
@@ -3221,10 +3221,10 @@ private:
    }
 
    private:
-   inline T *priv_raw_begin() const
+   BOOST_CONTAINER_FORCEINLINE T *priv_raw_begin() const
    {  return boost::movelib::to_raw_pointer(m_holder.start());  }
 
-   inline T* priv_raw_end() const
+   BOOST_CONTAINER_FORCEINLINE T* priv_raw_end() const
    {  return this->priv_raw_begin() + this->m_holder.m_size;  }
 
    template <class InsertionProxy>  //inline single-element version as it is significantly smaller
@@ -3351,6 +3351,27 @@ vector(InputIterator, InputIterator, Allocator const&) ->
 
 #endif
 
+//! <b>Effects</b>: Erases all elements that compare equal to v from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, class A, class O, class U>
+inline typename vector<T, A, O>::size_type erase(vector<T, A, O>& c, const U& v)
+{
+  typename vector<T, A, O>::size_type old_size = c.size();
+  c.erase(boost::container::remove(c.begin(), c.end(), v), c.end());
+  return old_size - c.size();
+}
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, class A, class O, class Pred>
+inline typename vector<T, A, O>::size_type erase_if(vector<T, A, O>& c, Pred pred)
+{
+   typename vector<T, A, O>::size_type old_size = c.size();
+   c.erase(boost::container::remove_if(c.begin(), c.end(), pred), c.end());
+   return old_size - c.size();
+}
 
 }} //namespace boost::container
 

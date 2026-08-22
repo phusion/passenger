@@ -34,24 +34,25 @@ PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
+
   module Config
 
     class InstallStandaloneRuntimeCommand < Command
       def run
         @options = {
-          :log_level => Logger::INFO,
-          :colorize => :auto,
-          :force => false,
-          :force_tip => true,
-          :compile => true,
-          :install_agent => true,
-          :install_agent_args => [],
-          :download_args => [
+          log_level: Logger::INFO,
+          colorize: :auto,
+          force: false,
+          force_tip: true,
+          compile: true,
+          install_agent: true,
+          install_agent_args: [],
+          download_args: [
             "--no-error-colors",
-            "--no-compilation-tip"
+            "--no-compilation-tip",
           ],
-          :engine => "nginx",
-          :compile_args => []
+          engine: "nginx",
+          compile_args: [],
         }
         parse_options
         initialize_objects
@@ -182,11 +183,9 @@ module PhusionPassenger
           else
             color = nil
           end
-          result = ""
-          msg.split("\n", -1).map do |line|
-            result << "#{color}#{@options[:log_prefix]}#{line}#{@colors.reset}\n"
-          end
-          result
+          msg.lines(chomp: true).map do |line|
+            "#{color}#{@options[:log_prefix]}#{line}#{@colors.reset}\n"
+          end.join
         end
         if @options[:engine] == "nginx"
           if !@options[:nginx_version]
@@ -285,9 +284,10 @@ module PhusionPassenger
       end
 
       def boolean_option(env_name)
-        ["true", "on", "yes", "1"].include?(ENV[env_name])
+        [ "true", "on", "yes", "1" ].include?(ENV[env_name])
       end
     end
 
   end # module Config
+
 end # module PhusionPassenger

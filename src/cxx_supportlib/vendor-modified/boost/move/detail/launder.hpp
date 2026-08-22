@@ -44,7 +44,7 @@ BOOST_MOVE_FORCEINLINE T* launder(T* p)
 template<class T>
 BOOST_MOVE_FORCEINLINE T launder_cast(const volatile void* p)
 {
-   return (launder)((T)p);
+   return (launder)(static_cast<T>(const_cast<void*>(p)));
 }
 
 }  //namespace move_detail {

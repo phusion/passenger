@@ -36,8 +36,29 @@ class equal_to_value
       :  t_(t)
    {}
 
-   inline bool operator()(const value_type &t)const
-   {  return t_ == t;   }
+   template <class U>
+   inline bool operator()(const U &t)const
+   {
+      return t_ == t;
+   }
+};
+
+template<class ValueType>
+class equal_to_value_first
+{
+   typedef ValueType value_type;
+   const value_type &t_;
+
+   public:
+   inline explicit equal_to_value_first(const value_type &t)
+      :  t_(t)
+   {}
+
+   template <class U>
+   inline bool operator()(const U &t)const
+   {
+      return t_ == t.first;
+   }
 };
 
 template<class Node, class Pred, class Ret = bool>

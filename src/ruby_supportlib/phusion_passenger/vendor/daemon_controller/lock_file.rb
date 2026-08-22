@@ -24,6 +24,7 @@
 require "fcntl"
 
 module PhusionPassenger
+
 class DaemonController
   # A lock file is a synchronization mechanism, like a Mutex, but it also allows
   # inter-process synchronization (as opposed to only inter-thread synchronization
@@ -126,4 +127,5 @@ class DaemonController
     end
   end # class LockFile
 end # class DaemonController
+
 end # module PhusionPassenger

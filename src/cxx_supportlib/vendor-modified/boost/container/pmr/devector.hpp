@@ -26,9 +26,9 @@ namespace pmr {
 
 template <
   typename T,
-  typename GrowthPolicy = growth_factor_60
+  typename Options = void
 >
-using devector = boost::container::devector<T, GrowthPolicy, polymorphic_allocator<T> >;
+using devector = boost::container::devector<T, polymorphic_allocator<T>, Options >;
 
 #endif
 
@@ -36,12 +36,14 @@ using devector = boost::container::devector<T, GrowthPolicy, polymorphic_allocat
 //! that uses a polymorphic allocator
 template <
   typename T,
-  typename GrowthPolicy = growth_factor_60
+  typename Options = void
 >
 struct devector_of
 {
    typedef boost::container::devector
-      < T, GrowthPolicy, polymorphic_allocator<T> > type;
+      < T
+      , polymorphic_allocator<T>
+      , Options > type;
 };
 
 }  //namespace pmr {

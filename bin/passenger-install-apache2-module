@@ -421,7 +421,7 @@ private
         # Running apache2:clean deletes some object files needed
         # by passenger-install-nginx-module, so we ensure those
         # object files are compiled.
-        command << " nginx"
+        command += " nginx"
       end
       return sh(command)
     else
@@ -435,14 +435,14 @@ private
   end
 
   def config_snippet
-    result = "<IfModule mod_passenger.c>\n" +
-      "  PassengerRoot #{PhusionPassenger.install_spec}\n" +
-      "  PassengerDefaultRuby #{PlatformInfo.ruby_command}\n"
+    result = ["<IfModule mod_passenger.c>",
+      "  PassengerRoot #{PhusionPassenger.install_spec}",
+      "  PassengerDefaultRuby #{PlatformInfo.ruby_command}"]
     if PhusionPassenger.packaging_method == "rpm"
-      result << "  PassengerInstanceRegistryDir /var/run/passenger-instreg\n"
+      result << "  PassengerInstanceRegistryDir /var/run/passenger-instreg"
     end
     result << "</IfModule>"
-    result
+    result.join("\n")
   end
 
   def apache2_config_snippets
@@ -574,18 +574,14 @@ private
   end
 
   def remove_duplicate_comment_blocks(filename, begin_marker, end_marker)
-    contents = File.open(filename, "rb") do |f|
-      f.read
-    end
+    contents = File.binread(filename)
     regexp = /#{Regexp.escape begin_marker}.*?#{Regexp.escape end_marker}\n?/m
     if m = regexp.match(contents)
       offset = m.end(0)
-      rest = contents.slice!(m.end(0) .. -1)
+      rest = contents.slice!(offset .. -1)
       rest.gsub!(regexp, '')
       contents << rest
-      File.open(filename, "wb") do |f|
-        f.write(contents)
-      end
+      File.binwrite(filename, contents)
     end
   end
 
@@ -916,9 +912,9 @@ parser = OptionParser.new do |opts|
 
   indent = ' ' * 37
   opts.separator "Options:"
-  opts.on("-a", "--auto", String, "Automatically build the Apache module,\n" <<
-          "#{indent}without interactively asking for user\n" <<
-          "#{indent}input.") do
+  opts.on("-a", "--auto", String, ["Automatically build the Apache module,",
+          "#{indent}without interactively asking for user",
+          "#{indent}input."].join("\n")) do
     options[:auto] = true
   end
   opts.on("--apxs2-path PATH", String, "Path to 'apxs2' command.") do |value|
@@ -927,9 +923,9 @@ parser = OptionParser.new do |opts|
   opts.on("--apr-config-path PATH", String, "Path to 'apr-config' command.") do |value|
     ENV['APR_CONFIG'] = value
   end
-  opts.on("--languages NAMES", "Comma-separated list of interested\n" <<
-      "#{indent}languages (e.g.\n" <<
-      "#{indent}'ruby,python,nodejs,meteor')") do |value|
+  opts.on("--languages NAMES", ["Comma-separated list of interested",
+      "#{indent}languages (e.g.",
+      "#{indent}'ruby,python,nodejs,meteor')"].join("\n")) do |value|
     options[:languages] = value.split(",")
   end
   opts.on("--no-compile", "Skip compilation.") do

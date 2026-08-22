@@ -31,21 +31,22 @@ PhusionPassenger.require_passenger_lib 'config/compile_agent_command'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 module PhusionPassenger
+
   module Config
 
     class InstallAgentCommand < Command
       def run
         @options = {
-          :log_level => Logger::INFO,
-          :colorize => :auto,
-          :force => false,
-          :force_tip => true,
-          :compile => true,
-          :download_args => [
+          log_level: Logger::INFO,
+          colorize: :auto,
+          force: false,
+          force_tip: true,
+          compile: true,
+          download_args: [
             "--no-error-colors",
-            "--no-compilation-tip"
+            "--no-compilation-tip",
           ],
-          :compile_args => []
+          compile_args: [],
         }
         parse_options
         initialize_objects
@@ -137,11 +138,9 @@ module PhusionPassenger
           else
             color = nil
           end
-          result = ""
-          msg.split("\n", -1).map do |line|
-            result << "#{color}#{@options[:log_prefix]}#{line}#{@colors.reset}\n"
-          end
-          result
+          msg.lines(chomp: true).map do |line|
+            "#{color}#{@options[:log_prefix]}#{line}#{@colors.reset}\n"
+          end.join
         end
       end
 
@@ -167,9 +166,9 @@ module PhusionPassenger
         end
         begin
           DownloadAgentCommand.new(@options[:download_args]).run
-          return true
+          true
         rescue SystemExit => e
-          return e.success?
+          e.success?
         end
       end
 
@@ -188,4 +187,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

@@ -25,9 +25,11 @@
 PhusionPassenger.require_passenger_lib 'constants'
 
 module PhusionPassenger
+
   module Config
 
     module Utils
+
       extend self    # Make methods available as class methods.
 
       def self.included(klass)
@@ -155,9 +157,11 @@ module PhusionPassenger
       end
 
       def is_enterprise?
-        return defined?(PhusionPassenger::PASSENGER_IS_ENTERPRISE) && PhusionPassenger::PASSENGER_IS_ENTERPRISE
+        defined?(PhusionPassenger::PASSENGER_IS_ENTERPRISE) && PhusionPassenger::PASSENGER_IS_ENTERPRISE
       end
+
     end
 
   end # module Config
+
 end # module PhusionPassenger

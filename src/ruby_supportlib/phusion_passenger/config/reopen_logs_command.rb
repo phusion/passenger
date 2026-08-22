@@ -32,6 +32,7 @@ PhusionPassenger.require_passenger_lib 'config/utils'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
+
   module Config
 
     class ReopenLogsCommand < Command
@@ -137,9 +138,10 @@ module PhusionPassenger
       end
 
       def should_ignore_error?(json)
-        return @options[:ignore_logs_not_available] && json["code"] == "NO_LOG_FILE"
+        @options[:ignore_logs_not_available] && json["code"] == "NO_LOG_FILE"
       end
     end
 
   end # module Config
+
 end # module PhusionPassenger

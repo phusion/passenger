@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+if [[ -z "$AZURE_STORAGE_CONNECTION_STRING" ]]; then
+    echo "AZURE_STORAGE_CONNECTION_STRING is required"
+    exit 1
+fi
+
+if [[ -z "$CONTAINER_NAME" ]]; then
+    echo "CONTAINER_NAME is required"
+    exit 1
+fi
+
+if [[ -z "$BLOB_NAME" ]]; then
+    echo "BLOB_NAME is required"
+    exit 1
+fi
+
+DEFAULT_ARGS=(--container-name "$CONTAINER_NAME" --name "$BLOB_NAME" --connection-string "$AZURE_STORAGE_CONNECTION_STRING")
+
+if [[ "$(az storage blob exists "${DEFAULT_ARGS[@]}" --output tsv)" = True ]]; then
+    echo "Deleting cache"
+    az storage blob delete "${DEFAULT_ARGS[@]}"
+fi

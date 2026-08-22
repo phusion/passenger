@@ -21,6 +21,7 @@
 // move
 #include <boost/move/adl_move_swap.hpp>
 #include <boost/move/utility_core.hpp>
+#include <boost/container/detail/mpl.hpp>
 
 namespace boost {
 namespace container {

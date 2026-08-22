@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -29,10 +30,12 @@ require 'thread'
 require 'logger'
 
 module PhusionPassenger
+
   module App
+
     def self.options
       @@options ||= {}
-      return @@options
+      @@options
     end
 
     def self.try_write_file(path, contents)
@@ -71,7 +74,7 @@ module PhusionPassenger
     end
 
     def self.read_startup_arguments
-	    work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+      work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
         @@options = File.open("#{work_dir}/args.json", 'rb') do |f|
           Utils::JSON.parse(f.read)
         end
@@ -79,23 +82,23 @@ module PhusionPassenger
 
     def self.advertise_port(port)
       work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
-	    path = work_dir + '/response/properties.json'
-	    doc = {
-		    'sockets': [{
-				             'name': 'main',
-				             'address': "tcp://127.0.0.1:#{port}",
-				             'protocol': 'http',
-				             'concurrency': 0,
-				             'accept_http_requests': true
-			              }]
-	    }
-	    File.write(path, Utils::JSON.generate(doc))
+      path = work_dir + '/response/properties.json'
+      doc = {
+        'sockets': [ {
+                     'name': 'main',
+                     'address': "tcp://127.0.0.1:#{port}",
+                     'protocol': 'http',
+                     'concurrency': 0,
+                     'accept_http_requests': true,
+                    } ],
+      }
+      File.write(path, Utils::JSON.generate(doc))
     end
 
     def self.advertise_readiness
-	    work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
-	    path = work_dir + '/response/finish'
-	    File.write(path, '1')
+      work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+      path = work_dir + '/response/finish'
+      File.write(path, '1')
     end
 
     def self.init_passenger
@@ -116,7 +119,6 @@ module PhusionPassenger
       PhusionPassenger.require_passenger_lib 'preloader_shared_helpers'
       PhusionPassenger.require_passenger_lib 'utils/json'
       require 'socket'
-
     end
 
     def self.ping_port(port)
@@ -127,7 +129,7 @@ module PhusionPassenger
         begin
           socket.connect_nonblock(sockaddr)
         rescue Errno::ENOENT, Errno::EINPROGRESS, Errno::EAGAIN, Errno::EWOULDBLOCK
-          if select(nil, [socket], nil, 0.1)
+          if select(nil, [ socket ], nil, 0.1)
             begin
               socket.connect_nonblock(sockaddr)
             rescue Errno::EISCONN
@@ -136,9 +138,9 @@ module PhusionPassenger
             raise Errno::ECONNREFUSED
           end
         end
-        return true
+        true
       rescue Errno::ECONNREFUSED, Errno::ENOENT
-        return false
+        false
       ensure
         socket.close if socket
       end
@@ -190,7 +192,7 @@ module PhusionPassenger
         rename_process "#{$0} (#{pid})"
       end
 
-      return [pid, port]
+      [ pid, port ]
     end
 
     def self.wait_for_exit_message
@@ -211,40 +213,40 @@ module PhusionPassenger
 
     record_journey_step_begin('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_IN_PROGRESS')
     begin
-		  read_startup_arguments
+      read_startup_arguments
     rescue Exception
-		  record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_ERRORED')
-		  raise
-	  else
-		  record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_PERFORMED')
+      record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_ERRORED')
+      raise
+    else
+      record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_PERFORMED')
     end
 
     record_journey_step_begin('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_IN_PROGRESS')
     begin
-		  pid, port = load_app
-	  rescue Exception
-		  record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_ERRORED')
-		  raise
-	  else
-		  record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_PERFORMED')
+      pid, port = load_app
+    rescue Exception
+      record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_ERRORED')
+      raise
+    else
+      record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_PERFORMED')
     end
 
     record_journey_step_begin('SUBPROCESS_LISTEN', 'STEP_IN_PROGRESS')
-	  begin
+    begin
       while !ping_port(port)
         sleep 0.01
       end
-	  rescue Exception
-		  record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_ERRORED')
-		  raise
-	  else
-		  record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_PERFORMED')
+    rescue Exception
+      record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_ERRORED')
+      raise
+    else
+      record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_PERFORMED')
     end
 
     advertise_port(port)
     advertise_readiness
     begin
-	    wait_for_exit_message
+      wait_for_exit_message
     ensure
       if pid
         Process.kill('INT', -pid) rescue nil
@@ -254,4 +256,5 @@ module PhusionPassenger
     end
 
   end # module App
+
 end # module PhusionPassenger

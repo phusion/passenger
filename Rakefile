@@ -26,22 +26,15 @@ $LOAD_PATH.unshift("#{SOURCE_ROOT}/src/ruby_supportlib")
 # Otherwise all Ruby commands will take slightly longer to start, which messes up
 # timing-sensitive tests like those in the C++ test suite.
 if defined?(Bundler)
-  clean_env = nil
-
-  if Bundler.respond_to?(:with_original_env)
-    Bundler.with_original_env do
-      clean_env = ENV.to_hash.dup
-    end
-  elsif Bundler.respond_to?(:with_unbundled_env)
-    Bundler.with_unbundled_env do
-      clean_env = ENV.to_hash.dup
-    end
+  if Bundler.respond_to?(:original_env)
+    clean_env = Bundler.original_env
+  elsif Bundler.respond_to?(:unbundled_env)
+    clean_env = Bundler.unbundled_env
   else
-    Bundler.with_clean_env do
-      clean_env = ENV.to_hash.dup
-    end
+    clean_env = Bundler.clean_env
   end
   ENV.replace(clean_env)
+
   ARGV.each do |arg|
     if arg =~ /^(\w+)=(.*)$/m
       ENV[$1] = $2
@@ -83,7 +76,7 @@ task :default do
 end
 
 desc "Remove compiled files"
-task :clean => 'clean:cache' do
+task clean: 'clean:cache' do
   if OUTPUT_DIR == "buildout/"
     sh "rm -rf buildout"
   end

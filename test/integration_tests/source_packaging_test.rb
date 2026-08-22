@@ -22,7 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-SOURCE_ROOT = File.expand_path("../..", File.dirname(__FILE__))
+SOURCE_ROOT = File.expand_path('../..', File.dirname(__FILE__))
 Dir.chdir(SOURCE_ROOT)
 $LOAD_PATH.unshift("#{SOURCE_ROOT}/src/ruby_supportlib")
 require 'phusion_passenger'
@@ -36,9 +36,9 @@ require 'yaml'
 PACKAGE_NAME = PhusionPassenger::PACKAGE_NAME
 VERSION      = PhusionPassenger::VERSION_STRING
 if RUBY_PLATFORM =~ /linux/
-  TAR = "tar --warning=none"
+  TAR = 'tar --warning=none'
 else
-  TAR = "tar"
+  TAR = 'tar'
 end
 
 def sh(*command)
@@ -47,8 +47,8 @@ def sh(*command)
   end
 end
 
-RSpec.shared_examples_for "a proper package" do
-  it "includes all files in the git repository" do
+RSpec.shared_examples_for 'a proper package' do
+  it 'includes all files in the git repository' do
     expected_files = `git ls-files`.split("\n")
     `git submodule status`.split("\n").each do |line|
       submodule_dir = line.strip.split(' ')[1]
@@ -76,36 +76,36 @@ RSpec.shared_examples_for "a proper package" do
         puts "File \"#{filename}\" is not in the package"
       end
     end
-    raise "Some files are not in the package" if error
+    raise 'Some files are not in the package' if error
   end
 end
 
-RSpec.shared_examples_for "a user-generated package" do
+RSpec.shared_examples_for 'a user-generated package' do
   it "isn't marked official" do
     File.exist?("#{@pkg_contents_dir}/resources/release.txt").should be_falsey
   end
 end
 
-RSpec.shared_examples_for "an official package" do
-  it "is marked official" do
+RSpec.shared_examples_for 'an official package' do
+  it 'is marked official' do
     File.exist?("#{@pkg_contents_dir}/resources/release.txt").should be_truthy
   end
 end
 
-describe "A user-generated gem" do
+describe 'A user-generated gem' do
   before :all do
     ENV['PKG_DIR'] = @temp_dir = Dir.mktmpdir
     basename = "#{PACKAGE_NAME}-#{VERSION}"
     @pkg_contents_dir = "#{@temp_dir}/#{basename}"
     Dir.chdir(SOURCE_ROOT) do
-      sh "rake", *PhusionPassenger::Packaging::PREGENERATED_FILES
+      sh 'rake', *PhusionPassenger::Packaging::PREGENERATED_FILES
       sh "gem build #{PACKAGE_NAME}.gemspec"
       sh "mv #{PACKAGE_NAME}-#{VERSION}.gem #{@temp_dir}/"
     end
     Dir.chdir(@temp_dir) do
       sh "#{TAR} -xf #{basename}.gem"
       sh "mkdir #{basename}"
-      sh "gunzip metadata.gz"
+      sh 'gunzip metadata.gz'
       Dir.chdir(basename) do
         sh "#{TAR} -xzf ../data.tar.gz"
       end
@@ -117,8 +117,8 @@ describe "A user-generated gem" do
     FileUtils.remove_entry_secure(@temp_dir)
   end
 
-  include_examples "a proper package"
-  include_examples "a user-generated package"
+  include_examples 'a proper package'
+  include_examples 'a user-generated package'
 
   it "doesn't invoke the binaries downloader upon gem installation" do
     spec = if Psych::VERSION >= '4.0'
@@ -130,12 +130,12 @@ describe "A user-generated gem" do
   end
 end
 
-describe "A user-generated tarball" do
+describe 'A user-generated tarball' do
   before :all do
     ENV['PKG_DIR'] = @temp_dir = Dir.mktmpdir
     basename = "#{PACKAGE_NAME}-#{VERSION}"
     @pkg_contents_dir = "#{@temp_dir}/#{basename}"
-    sh "rake package:tarball"
+    sh 'rake package:tarball'
     Dir.chdir(@temp_dir) do
       sh "#{TAR} -xzf #{basename}.tar.gz"
     end
@@ -146,22 +146,22 @@ describe "A user-generated tarball" do
     FileUtils.remove_entry_secure(@temp_dir)
   end
 
-  include_examples "a proper package"
-  include_examples "a user-generated package"
+  include_examples 'a proper package'
+  include_examples 'a user-generated package'
 end
 
-describe "An officially-generated gem" do
+describe 'An officially-generated gem' do
   before :all do
     ENV['PKG_DIR'] = @temp_dir = Dir.mktmpdir
     basename = "#{PACKAGE_NAME}-#{VERSION}"
     @pkg_contents_dir = "#{@temp_dir}/#{basename}"
     Dir.chdir(SOURCE_ROOT) do
-      sh "rake package:set_official package:gem SKIP_SIGNING=1"
+      sh 'rake package:set_official package:gem SKIP_SIGNING=1'
     end
     Dir.chdir(@temp_dir) do
       sh "#{TAR} -xf #{basename}.gem"
       sh "mkdir #{basename}"
-      sh "gunzip metadata.gz"
+      sh 'gunzip metadata.gz'
       Dir.chdir(basename) do
         sh "#{TAR} -xzf ../data.tar.gz"
       end
@@ -173,10 +173,10 @@ describe "An officially-generated gem" do
     FileUtils.remove_entry_secure(@temp_dir)
   end
 
-  include_examples "a proper package"
-  include_examples "an official package"
+  include_examples 'a proper package'
+  include_examples 'an official package'
 
-  it "invokes the binaries downloader upon gem installation" do
+  it 'invokes the binaries downloader upon gem installation' do
     spec = if Psych::VERSION >= '4.0'
       YAML.unsafe_load_file("#{@temp_dir}/metadata")
     else
@@ -186,12 +186,12 @@ describe "An officially-generated gem" do
   end
 end
 
-describe "An officially-generated tarball" do
+describe 'An officially-generated tarball' do
   before :all do
     ENV['PKG_DIR'] = @temp_dir = Dir.mktmpdir
     basename = "#{PACKAGE_NAME}-#{VERSION}"
     @pkg_contents_dir = "#{@temp_dir}/#{basename}"
-    sh "rake package:set_official package:tarball"
+    sh 'rake package:set_official package:tarball'
     Dir.chdir(@temp_dir) do
       sh "#{TAR} -xzf #{basename}.tar.gz"
     end
@@ -202,6 +202,6 @@ describe "An officially-generated tarball" do
     FileUtils.remove_entry_secure(@temp_dir)
   end
 
-  include_examples "a proper package"
-  include_examples "an official package"
+  include_examples 'a proper package'
+  include_examples 'an official package'
 end

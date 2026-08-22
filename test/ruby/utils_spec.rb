@@ -15,12 +15,12 @@ describe Utils do
   include Utils
   include Utils::NativeSupportUtils
 
-  specify "#split_by_null_into_hash works" do
-    expect(split_by_null_into_hash("")).to eq({})
-    expect(split_by_null_into_hash("foo\0bar\0")).to eq("foo" => "bar")
-    expect(split_by_null_into_hash("foo\0\0bar\0baz\0")).to eq("foo" => "", "bar" => "baz")
-    expect(split_by_null_into_hash("foo\0bar\0baz\0\0")).to eq("foo" => "bar", "baz" => "")
-    expect(split_by_null_into_hash("\0\0")).to eq("" => "")
+  specify '#split_by_null_into_hash works' do
+    expect(split_by_null_into_hash('')).to eq({})
+    expect(split_by_null_into_hash("foo\0bar\0")).to eq('foo' => 'bar')
+    expect(split_by_null_into_hash("foo\0\0bar\0baz\0")).to eq('foo' => '', 'bar' => 'baz')
+    expect(split_by_null_into_hash("foo\0bar\0baz\0\0")).to eq('foo' => 'bar', 'baz' => '')
+    expect(split_by_null_into_hash("\0\0")).to eq('' => '')
   end
 
   ######################

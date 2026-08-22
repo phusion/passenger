@@ -18,12 +18,12 @@ socket_filename = "/tmp/placebo-preloader.sock.#{Process.pid}"
 server = UNIXServer.new(socket_filename)
 File.open("#{work_dir}/response/properties.json", 'w') do |f|
   f.write(PhusionPassenger::Utils::JSON.generate(
-    :sockets => [
+    sockets: [
       {
-        :address => "unix:#{socket_filename}",
-        :protocol => 'preloader',
-        :concurrency => 1
-      }
+        address: "unix:#{socket_filename}",
+        protocol: 'preloader',
+        concurrency: 1,
+      },
     ]
   ))
 end
@@ -50,8 +50,8 @@ def process_client_command(server, client, data)
       exec(options['start_command'])
     else
       client.write(PhusionPassenger::Utils::JSON.generate(
-        :result => 'ok',
-        :pid => pid
+        result: 'ok',
+        pid: pid
       ))
       if defined?(NativeSupport)
         NativeSupport.detach_process(pid)
@@ -61,21 +61,21 @@ def process_client_command(server, client, data)
     end
   elsif doc['command'] == 'pid'
     client.write(PhusionPassenger::Utils::JSON.generate(
-      :result => 'ok',
-      :pid => Process.pid
+      result: 'ok',
+      pid: Process.pid
     ))
   else
     client.write(PhusionPassenger::Utils::JSON.generate(
-      :result => 'error',
-      :message => "Unknown command #{doc.inspect}"
+      result: 'error',
+      message: "Unknown command #{doc.inspect}"
     ))
   end
 end
 
 begin
-  exit if ARGV[0] == "exit-immediately"
+  exit if ARGV[0] == 'exit-immediately'
   while true
-    ios = select([server, STDIN])[0]
+    ios = select([ server, STDIN ])[0]
     if ios.include?(server)
       client = server.accept
       begin

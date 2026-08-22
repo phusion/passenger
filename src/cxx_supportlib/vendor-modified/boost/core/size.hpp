@@ -8,6 +8,18 @@ Distributed under the Boost Software License, Version 1.0.
 #ifndef BOOST_CORE_SIZE_HPP
 #define BOOST_CORE_SIZE_HPP
 
+#include <iterator>
+
+// Note: MSVC doesn't define __cpp_lib_nonmember_container_access but supports the feature even in C++14 mode
+#if (defined(__cpp_lib_nonmember_container_access) && (__cpp_lib_nonmember_container_access >= 201411l)) || \
+    (defined(_MSC_VER) && (_MSC_VER >= 1900))
+
+namespace boost {
+using std::size;
+} /* boost */
+
+#else // (defined(__cpp_lib_nonmember_container_access) ...
+
 #include <cstddef>
 
 namespace boost {
@@ -27,5 +39,7 @@ size(T(&)[N]) noexcept
 }
 
 } /* boost */
+
+#endif // (defined(__cpp_lib_nonmember_container_access) ...
 
 #endif

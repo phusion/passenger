@@ -8,6 +8,7 @@ require 'fileutils'
 require 'stringio'
 
 module PhusionPassenger
+
 module Standalone
 
 describe RuntimeInstaller do
@@ -23,7 +24,7 @@ describe RuntimeInstaller do
     FileUtils.remove_entry_secure(@temp_dir)
   end
 
-  let(:binaries_url_root) { "http://somewhere" }
+  let(:binaries_url_root) { 'http://somewhere' }
   let(:version) { PhusionPassenger::VERSION_STRING }
   let(:nginx_version) { PhusionPassenger::PREFERRED_NGINX_VERSION }
   let(:cxx_compat_id) { PlatformInfo.cxx_binary_compatibility_id }
@@ -33,60 +34,60 @@ describe RuntimeInstaller do
 
   def create_installer(options = {})
     options = {
-      :binaries_url_root => binaries_url_root,
-      :stdout => @logs,
-      :stderr => @logs
+      binaries_url_root: binaries_url_root,
+      stdout: @logs,
+      stderr: @logs,
     }.merge(options)
     @installer = RuntimeInstaller.new(options)
   end
 
   def create_tarball(filename, contents = nil)
-    Dir.mktmpdir("tarball-", @temp_dir) do |tarball_dir|
+    Dir.mktmpdir('tarball-', @temp_dir) do |tarball_dir|
       Dir.chdir(tarball_dir) do
         if block_given?
           yield
         else
           contents.each do |content_name|
-            File.open(content_name, "w").close
+            File.open(content_name, 'w').close
           end
         end
-        sh "tar", "-czf", filename, "."
+        sh 'tar', '-czf', filename, '.'
       end
     end
   end
 
   def create_dummy_support_binaries
-    Dir.mkdir("support-binaries")
-    File.open("support-binaries/#{AGENT_EXE}", "w") do |f|
-      f.puts "#!/usr/bin/env bash"
-      f.puts "echo PASS"
+    Dir.mkdir('support-binaries')
+    File.open("support-binaries/#{AGENT_EXE}", 'w') do |f|
+      f.puts '#!/usr/bin/env bash'
+      f.puts 'echo PASS'
     end
     File.chmod(0755, "support-binaries/#{AGENT_EXE}")
   end
 
   def create_dummy_nginx_binary
-    File.open("PassengerWebHelper", "w") do |f|
-      f.puts "#!/usr/bin/env bash"
-      f.puts "echo nginx version: 1.0.0"
+    File.open('PassengerWebHelper', 'w') do |f|
+      f.puts '#!/usr/bin/env bash'
+      f.puts 'echo nginx version: 1.0.0'
     end
-    File.chmod(0755, "PassengerWebHelper")
+    File.chmod(0755, 'PassengerWebHelper')
   end
 
   def create_dummy_nginx_source
     Dir.mkdir("nginx-#{nginx_version}")
-    File.open("nginx-#{nginx_version}/configure", "w") do |f|
-      f.puts %Q{echo "$@" > '#{@temp_dir}/configure.txt'}
+    File.open("nginx-#{nginx_version}/configure", 'w') do |f|
+      f.puts %Q(echo "$@" > '#{@temp_dir}/configure.txt')
     end
     File.chmod(0700, "nginx-#{nginx_version}/configure")
-    File.open("nginx-#{nginx_version}/Makefile", "w") do |f|
-      f.puts("all:")
-      f.puts("  mkdir objs")
-      f.puts("  echo ok > objs/nginx")
+    File.open("nginx-#{nginx_version}/Makefile", 'w') do |f|
+      f.puts('all:')
+      f.puts('  mkdir objs')
+      f.puts('  echo ok > objs/nginx')
     end
   end
 
   def create_file(filename)
-    File.open(filename, "w").close
+    File.open(filename, 'w').close
   end
 
   def sh(*command)
@@ -96,9 +97,9 @@ describe RuntimeInstaller do
   end
 
   def test_download_nginx_binary
-    create_installer(:targets => [:nginx],
-        :nginx_dir => "#{@temp_dir}/nginx",
-        :lib_dir => PhusionPassenger.lib_dir)
+    create_installer(targets: [ :nginx ],
+        nginx_dir: "#{@temp_dir}/nginx",
+        lib_dir: PhusionPassenger.lib_dir)
 
     @installer.should_receive(:download) do |url, output, options|
         url.should == nginx_binary_url
@@ -120,9 +121,9 @@ describe RuntimeInstaller do
   end
 
   def test_building_nginx_binary
-    create_installer(:targets => [:nginx],
-        :nginx_dir => "#{@temp_dir}/nginx",
-        :lib_dir   => PhusionPassenger.lib_dir)
+    create_installer(targets: [ :nginx ],
+        nginx_dir: "#{@temp_dir}/nginx",
+        lib_dir: PhusionPassenger.lib_dir)
 
     @installer.should_receive(:download).twice do |url, output|
       if url == nginx_binary_url
@@ -150,15 +151,15 @@ describe RuntimeInstaller do
       "--add-module=#{PhusionPassenger.nginx_module_source_dir}")
   end
 
-  context "when originally packaged" do
+  context 'when originally packaged' do
     before :each do
       PhusionPassenger.stub(:originally_packaged?).and_return(true)
       PhusionPassenger.stub(:natively_packaged?).and_return(false)
     end
 
-    it "downloads the support binaries from the Internet if :support_binaries is specified as target" do
-      create_installer(:targets => [:support_binaries],
-        :support_dir => "#{@temp_dir}/support")
+    it 'downloads the support binaries from the Internet if :support_binaries is specified as target' do
+      create_installer(targets: [ :support_binaries ],
+        support_dir: "#{@temp_dir}/support")
 
       @installer.should_receive(:download) do |url, output, options|
           url.should == "#{binaries_url_root}/#{version}/support-#{cxx_compat_id}.tar.gz"
@@ -179,15 +180,15 @@ describe RuntimeInstaller do
       File.exist?("#{@temp_dir}/support/support-binaries/#{AGENT_EXE}").should be_truthy
     end
 
-    it "downloads the Nginx binary from the Internet if :nginx is specified as target" do
+    it 'downloads the Nginx binary from the Internet if :nginx is specified as target' do
       test_download_nginx_binary
     end
 
-    it "downloads everything if :support_binaries and :nginx are both specified as target" do
-      create_installer(:targets => [:support_binaries, :nginx],
-        :support_dir => "#{@temp_dir}/support",
-        :nginx_dir => "#{@temp_dir}/nginx",
-        :lib_dir => PhusionPassenger.lib_dir)
+    it 'downloads everything if :support_binaries and :nginx are both specified as target' do
+      create_installer(targets: [ :support_binaries, :nginx ],
+        support_dir: "#{@temp_dir}/support",
+        nginx_dir: "#{@temp_dir}/nginx",
+        lib_dir: PhusionPassenger.lib_dir)
 
       @installer.should_receive(:download).
         twice do |url, output, options|
@@ -217,9 +218,9 @@ describe RuntimeInstaller do
       File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_truthy
     end
 
-    it "builds the support binaries if it cannot be downloaded" do
-      create_installer(:targets => [:support_binaries],
-        :support_dir => "#{@temp_dir}/support")
+    it 'builds the support binaries if it cannot be downloaded' do
+      create_installer(targets: [ :support_binaries ],
+        support_dir: "#{@temp_dir}/support")
       nginx_libs = COMMON_LIBRARY.
         only(*NGINX_LIBS_SELECTOR).
         set_output_dir("#{@temp_dir}/support/libpassenger_common").
@@ -249,17 +250,17 @@ describe RuntimeInstaller do
       `find '#{@temp_dir}/support'`.should == built_files
     end
 
-    it "builds the Nginx binary if it cannot be downloaded" do
+    it 'builds the Nginx binary if it cannot be downloaded' do
       test_building_nginx_binary
     end
 
-    it "aborts if the support binaries cannot be built" do
-      create_installer(:targets => [:support_binaries],
-        :support_dir => "#{@temp_dir}/support")
+    it 'aborts if the support binaries cannot be built' do
+      create_installer(targets: [ :support_binaries ],
+        support_dir: "#{@temp_dir}/support")
 
       @installer.should_receive(:run_rake_task!).with(
         "nginx_without_native_support CACHING=false OUTPUT_DIR='#{@temp_dir}/support'").
-        and_raise(RuntimeError, "Rake failed")
+        and_raise(RuntimeError, 'Rake failed')
 
       @installer.should_receive(:check_for_download_tool)
       @installer.should_receive(:download).and_return(false)
@@ -267,39 +268,39 @@ describe RuntimeInstaller do
       @installer.should_not_receive(:download_and_extract_nginx_sources)
       @installer.should_not_receive(:compile_nginx)
       lambda { @installer.run }.should raise_error(SystemExit)
-      @logs.string.should include("Rake failed")
+      @logs.string.should include('Rake failed')
     end
   end
 
-  context "when natively packaged" do
+  context 'when natively packaged' do
     before :each do
-      PhusionPassenger.stub(:source_root).and_return("/locations.ini")
+      PhusionPassenger.stub(:source_root).and_return('/locations.ini')
       PhusionPassenger.stub(:originally_packaged?).and_return(false)
       PhusionPassenger.stub(:natively_packaged?).and_return(true)
     end
 
-    it "refuses to accept :support_binaries as target" do
+    it 'refuses to accept :support_binaries as target' do
       block = lambda do
-        create_installer(:targets => [:support_binaries],
-          :support_dir => "#{@temp_dir}/support")
+        create_installer(targets: [ :support_binaries ],
+          support_dir: "#{@temp_dir}/support")
       end
       block.should raise_error(ArgumentError, /You cannot specify :support_binaries/)
     end
 
-    it "downloads the Nginx binary from the Internet if :nginx is specified as target" do
+    it 'downloads the Nginx binary from the Internet if :nginx is specified as target' do
       test_download_nginx_binary
     end
 
-    it "builds the Nginx binary if it cannot be downloaded" do
+    it 'builds the Nginx binary if it cannot be downloaded' do
       test_building_nginx_binary
     end
   end
 
   it "commits downloaded binaries after checking whether they're usable" do
-    create_installer(:targets => [:support_binaries, :nginx],
-        :support_dir => "#{@temp_dir}/support",
-        :nginx_dir => "#{@temp_dir}/nginx",
-        :lib_dir => PhusionPassenger.lib_dir)
+    create_installer(targets: [ :support_binaries, :nginx ],
+        support_dir: "#{@temp_dir}/support",
+        nginx_dir: "#{@temp_dir}/nginx",
+        lib_dir: PhusionPassenger.lib_dir)
 
     @installer.should_receive(:download).
       exactly(3).times do |url, output, options|
@@ -335,17 +336,17 @@ describe RuntimeInstaller do
     Dir["#{@temp_dir}/support/*"].should be_empty
   end
 
-  it "aborts if the Nginx source tarball cannot be extracted" do
-    create_installer(:targets => [:nginx],
-      :nginx_dir => "#{@temp_dir}/nginx",
-      :lib_dir   => PhusionPassenger.lib_dir)
+  it 'aborts if the Nginx source tarball cannot be extracted' do
+    create_installer(targets: [ :nginx ],
+      nginx_dir: "#{@temp_dir}/nginx",
+      lib_dir: PhusionPassenger.lib_dir)
 
     @installer.should_receive(:download).twice.and_return do |url, output, options|
       if url == nginx_binary_url
         false
       elsif url == nginx_source_url
-        File.open(output, "w") do |f|
-          f.write("garbage")
+        File.open(output, 'w') do |f|
+          f.write('garbage')
         end
         true
       else
@@ -360,10 +361,10 @@ describe RuntimeInstaller do
     @logs.string.should =~ %r{Unable to download or extract Nginx source tarball}
   end
 
-  it "aborts if the Nginx binary cannot be built" do
-    create_installer(:targets => [:nginx],
-      :nginx_dir => "#{@temp_dir}/nginx",
-      :lib_dir   => PhusionPassenger.lib_dir)
+  it 'aborts if the Nginx binary cannot be built' do
+    create_installer(targets: [ :nginx ],
+      nginx_dir: "#{@temp_dir}/nginx",
+      lib_dir: PhusionPassenger.lib_dir)
 
     @installer.should_receive(:download).twice.and_return do |url, output, options|
       if url == nginx_binary_url
@@ -371,10 +372,10 @@ describe RuntimeInstaller do
       elsif url == nginx_source_url
         create_tarball(output) do
           Dir.mkdir("nginx-#{nginx_version}")
-          File.open("nginx-#{nginx_version}/configure", "w") do |f|
-            f.puts("#!/usr/bin/env bash")
-            f.puts("echo error")
-            f.puts("exit 1")
+          File.open("nginx-#{nginx_version}/configure", 'w') do |f|
+            f.puts('#!/usr/bin/env bash')
+            f.puts('echo error')
+            f.puts('exit 1')
           end
           File.chmod(0700, "nginx-#{nginx_version}/configure")
         end
@@ -393,5 +394,6 @@ describe RuntimeInstaller do
 end
 
 end # module Standalone
+
 end # module PhusionPassenger
 end

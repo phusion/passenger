@@ -28,25 +28,26 @@ module PhusionPassenger
 
   # Core of the `passenger-config` command. Dispatches a subcommand to a specific class.
   module Config
+
     KNOWN_COMMANDS = [
-      ["detach-process", "DetachProcessCommand"],
-      ["restart-app", "RestartAppCommand"],
-      ["list-instances", "ListInstancesCommand"],
-      ["reopen-logs", "ReopenLogsCommand"],
-      ["api-call", "ApiCallCommand"],
-      ["validate-install", "ValidateInstallCommand"],
-      ["build-native-support", "BuildNativeSupportCommand"],
+      [ "detach-process", "DetachProcessCommand" ],
+      [ "restart-app", "RestartAppCommand" ],
+      [ "list-instances", "ListInstancesCommand" ],
+      [ "reopen-logs", "ReopenLogsCommand" ],
+      [ "api-call", "ApiCallCommand" ],
+      [ "validate-install", "ValidateInstallCommand" ],
+      [ "build-native-support", "BuildNativeSupportCommand" ],
 
-      ["install-agent", "InstallAgentCommand"],
-      ["install-standalone-runtime", "InstallStandaloneRuntimeCommand"],
-      ["download-agent", "DownloadAgentCommand"],
-      ["download-nginx-engine", "DownloadNginxEngineCommand"],
-      ["compile-agent", "CompileAgentCommand"],
-      ["compile-nginx-engine", "CompileNginxEngineCommand"],
+      [ "install-agent", "InstallAgentCommand" ],
+      [ "install-standalone-runtime", "InstallStandaloneRuntimeCommand" ],
+      [ "download-agent", "DownloadAgentCommand" ],
+      [ "download-nginx-engine", "DownloadNginxEngineCommand" ],
+      [ "compile-agent", "CompileAgentCommand" ],
+      [ "compile-nginx-engine", "CompileNginxEngineCommand" ],
 
-      ["system-metrics", "SystemMetricsCommand"],
-      ["system-properties", "SystemPropertiesCommand"],
-      ["about", "AboutCommand"]
+      [ "system-metrics", "SystemMetricsCommand" ],
+      [ "system-properties", "SystemPropertiesCommand" ],
+      [ "about", "AboutCommand" ],
     ]
 
     ABOUT_OPTIONS = [
@@ -65,7 +66,7 @@ module PhusionPassenger
       "ruby-libdir",
       "rubyext-compat-id",
       "cxx-compat-id",
-      "version"
+      "version",
     ]
 
     def self.run!(argv)
@@ -132,11 +133,11 @@ module PhusionPassenger
 
   private
     def self.help_requested?(argv)
-      return argv.size == 1 && (argv[0] == "--help" || argv[0] == "-h" || argv[0] == "help")
+      argv.size == 1 && (argv[0] == "--help" || argv[0] == "-h" || argv[0] == "help")
     end
 
     def self.help_all_requested?(argv)
-      return argv.size == 1 && (argv[0] == "--help-all" || argv[0] == "help-all")
+      argv.size == 1 && (argv[0] == "--help-all" || argv[0] == "help-all")
     end
 
     def self.lookup_command_class_by_argv(argv)
@@ -148,7 +149,7 @@ module PhusionPassenger
         name = argv[0].sub(/^--/, '')
         if ABOUT_OPTIONS.include?(name)
           command_class = lookup_command_class_by_class_name("AboutCommand")
-          return [command_class, argv]
+          return [ command_class, argv ]
         else
           return nil
         end
@@ -156,18 +157,18 @@ module PhusionPassenger
 
       # Convert "passenger-config help <COMMAND>" to "passenger-config <COMMAND> --help".
       if argv.size == 2 && argv[0] == "help"
-        argv = [argv[1], "--help"]
+        argv = [ argv[1], "--help" ]
       end
 
       KNOWN_COMMANDS.each do |props|
         if argv[0] == props[0]
           command_class = lookup_command_class_by_class_name(props[1])
           new_argv = argv[1 .. -1]
-          return [command_class, new_argv]
+          return [ command_class, new_argv ]
         end
       end
 
-      return nil
+      nil
     end
 
     def self.lookup_command_class_by_class_name(class_name)
@@ -177,8 +178,9 @@ module PhusionPassenger
       base_name.sub!(/^_/, '')
       base_name << ".rb"
       PhusionPassenger.require_passenger_lib("config/#{base_name}")
-      return PhusionPassenger::Config.const_get(class_name)
+      PhusionPassenger::Config.const_get(class_name)
     end
+
   end
 
 end # module PhusionPassenger

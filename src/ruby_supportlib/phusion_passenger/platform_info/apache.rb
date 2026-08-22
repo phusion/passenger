@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -43,6 +44,7 @@ module PhusionPassenger
   # Apache.
 
   module PlatformInfo
+
     ################ Programs ################
 
     # The absolute path to the 'apxs' or 'apxs2' executable, or nil if not found.
@@ -60,20 +62,20 @@ module PhusionPassenger
           return ENV["APXS2"]
         end
       end
-      ['apxs2', 'apxs'].each do |name|
+      [ 'apxs2', 'apxs' ].each do |name|
         command = find_command(name)
         if !command.nil?
           return command
         end
       end
-      return nil
+      nil
     end
     memoize :apxs2
 
     # The absolute path to the 'apachectl' or 'apache2ctl' binary, or nil if
     # not found.
     def self.apache2ctl(options = {})
-      return find_apache2_executable('apache2ctl', 'apachectl2', 'apachectl', options)
+      find_apache2_executable('apache2ctl', 'apachectl2', 'apachectl', options)
     end
     memoize :apache2ctl
 
@@ -82,17 +84,17 @@ module PhusionPassenger
     def self.httpd(options = {})
       apxs2 = options.fetch(:apxs2, self.apxs2)
       if env_defined?('HTTPD')
-        return ENV['HTTPD']
+        ENV['HTTPD']
       elsif apxs2.nil?
-        ["apache2", "httpd2", "apache", "httpd"].each do |name|
+        [ "apache2", "httpd2", "apache", "httpd" ].each do |name|
           command = find_command(name)
           if !command.nil?
             return command
           end
         end
-        return nil
+        nil
       else
-        return find_apache2_executable(`#{apxs2} -q TARGET`.strip, options)
+        find_apache2_executable(`#{apxs2} -q TARGET`.strip, options)
       end
     end
     memoize :httpd
@@ -106,9 +108,9 @@ module PhusionPassenger
       end
       if httpd
         `#{httpd} -v` =~ %r{Apache/([\d\.]+)}
-        return $1
+        $1
       else
-        return nil
+        nil
       end
     end
     memoize :httpd_version
@@ -203,9 +205,9 @@ module PhusionPassenger
       end
       if info
         info =~ / -D HTTPD_ROOT="(.+)"$/
-        return $1
+        $1
       else
-        return nil
+        nil
       end
     end
     memoize :httpd_default_root
@@ -221,17 +223,17 @@ module PhusionPassenger
         info =~ /-D SERVER_CONFIG_FILE="(.+)"$/
         filename = $1
         if filename =~ /\A\//
-          return filename
+          filename
         else
           # Not an absolute path. Infer from default root.
           if root = httpd_default_root(options)
-            return "#{root}/#{filename}"
+            "#{root}/#{filename}"
           else
-            return nil
+            nil
           end
         end
       else
-        return nil
+        nil
       end
     end
     memoize :httpd_default_config_file
@@ -245,14 +247,14 @@ module PhusionPassenger
     #                          to read.
     def self.httpd_included_config_files(config_file, options = nil)
       state = {
-        :files => { config_file => true },
-        :unreadable_files => [],
-        :root => httpd_default_root(options)
+        files: { config_file => true },
+        unreadable_files: [],
+        root: httpd_default_root(options),
       }
       scan_for_included_apache2_config_files(config_file, state, options)
-      return {
-        :files => state[:files].keys,
-        :unreadable_files => state[:unreadable_files]
+      {
+        files: state[:files].keys,
+        unreadable_files: state[:unreadable_files],
       }
     end
 
@@ -267,17 +269,17 @@ module PhusionPassenger
         info =~ /-D DEFAULT_ERRORLOG="(.+)"$/
         filename = $1
         if filename =~ /\A\//
-          return filename
+          filename
         else
           # Not an absolute path. Infer from default root.
           if root = httpd_default_root(options)
-            return "#{root}/#{filename}"
+            "#{root}/#{filename}"
           else
-            return nil
+            nil
           end
         end
       else
-        return nil
+        nil
       end
     end
     memoize :httpd_default_error_log
@@ -300,12 +302,12 @@ module PhusionPassenger
           if filename && filename !~ /\A\//
             # Not an absolute path. Infer from root.
             if root = httpd_default_root(options)
-              return "#{root}/#{filename}"
+              "#{root}/#{filename}"
             else
-              return nil
+              nil
             end
           else
-            return filename
+            filename
           end
         elsif contents =~ /ErrorLog/i
           # The user apparently has ErrorLog set somewhere but
@@ -313,13 +315,13 @@ module PhusionPassenger
           # as reported by `apache2ctl -V`, may be wrong (it is on OS X).
           # So to be safe, let's assume that we don't know.
           log "Unable to parse ErrorLog directive in Apache configuration file"
-          return nil
+          nil
         else
           log "No ErrorLog directive in Apache configuration file"
-          return httpd_default_error_log(options)
+          httpd_default_error_log(options)
         end
       else
-        return nil
+        nil
       end
     end
     memoize :httpd_actual_error_log
@@ -347,19 +349,19 @@ module PhusionPassenger
         return "#{conf_dir}/envvars"
       end
 
-      return nil
+      nil
     end
 
     def self.httpd_infer_envvar(varname, options = nil)
       if envfile = httpd_envvars_file(options)
         result = `. '#{envfile}' && echo $#{varname}`.strip
         if $? && $?.exitstatus == 0
-          return result
+          result
         else
-          return nil
+          nil
         end
       else
-        return nil
+        nil
       end
     end
 
@@ -376,12 +378,12 @@ module PhusionPassenger
       if config_dir == "/etc/httpd" || config_dir == "/etc/apache2"
         if File.exist?("#{config_dir}/mods-available") &&
            File.exist?("#{config_dir}/mods-enabled")
-          return "#{config_dir}/mods-available"
+          "#{config_dir}/mods-available"
         else
-          return nil
+          nil
         end
       else
-        return nil
+        nil
       end
     end
     memoize :httpd_mods_available_directory
@@ -399,12 +401,12 @@ module PhusionPassenger
       if config_dir == "/etc/httpd" || config_dir == "/etc/apache2"
         if File.exist?("#{config_dir}/mods-available") &&
            File.exist?("#{config_dir}/mods-enabled")
-          return "#{config_dir}/mods-enabled"
+          "#{config_dir}/mods-enabled"
         else
-          return nil
+          nil
         end
       else
-        return nil
+        nil
       end
     end
     memoize :httpd_mods_enabled_directory
@@ -419,9 +421,9 @@ module PhusionPassenger
       if dir == "/usr/bin" || dir == "/usr/sbin"
         if env_defined?('A2ENMOD')
           log "Using $A2ENMOD (= #{ENV['A2ENMOD']})"
-          return ENV['A2ENMOD']
+          ENV['A2ENMOD']
         else
-          return find_apache2_executable("a2enmod", options)
+          find_apache2_executable("a2enmod", options)
         end
       else
         log "Not applicable"
@@ -440,9 +442,9 @@ module PhusionPassenger
       if dir == "/usr/bin" || dir == "/usr/sbin"
         if env_defined?('A2DISMOD')
           log "Using $A2DISMOD (= #{ENV['A2DISMOD']})"
-          return ENV['A2DISMOD']
+          ENV['A2DISMOD']
         else
-          return find_apache2_executable("a2dismod", options)
+          find_apache2_executable("a2dismod", options)
         end
       else
         log "Not applicable"
@@ -455,23 +457,23 @@ module PhusionPassenger
     # or nil if not found.
     def self.apr_config
       if env_defined?('APR_CONFIG')
-        return ENV['APR_CONFIG']
+        ENV['APR_CONFIG']
       elsif apxs2.nil?
-        return nil
+        nil
       else
         filename = `#{apxs2} -q APR_CONFIG 2>/dev/null`.strip
         if filename.empty?
           apr_bindir = `#{apxs2} -q APR_BINDIR 2>/dev/null`.strip
           if apr_bindir.empty?
-            return nil
+            nil
           else
-            return select_executable(apr_bindir,
+            select_executable(apr_bindir,
               "apr-1-config", "apr-config")
           end
         elsif File.exist?(filename)
-          return filename
+          filename
         else
-          return nil
+          nil
         end
       end
     end
@@ -481,23 +483,23 @@ module PhusionPassenger
     # if not found.
     def self.apu_config
       if env_defined?('APU_CONFIG')
-        return ENV['APU_CONFIG']
+        ENV['APU_CONFIG']
       elsif apxs2.nil?
-        return nil
+        nil
       else
         filename = `#{apxs2} -q APU_CONFIG 2>/dev/null`.strip
         if filename.empty?
           apu_bindir = `#{apxs2} -q APU_BINDIR 2>/dev/null`.strip
           if apu_bindir.empty?
-            return nil
+            nil
           else
-            return select_executable(apu_bindir,
+            select_executable(apu_bindir,
               "apu-1-config", "apu-config")
           end
         elsif File.exist?(filename)
-          return filename
+          filename
         else
-          return nil
+          nil
         end
       end
     end
@@ -512,9 +514,9 @@ module PhusionPassenger
       end
 
       if options
-        dirs = options[:dirs] || [apache2_bindir(options), apache2_sbindir(options)]
+        dirs = options[:dirs] || [ apache2_bindir(options), apache2_sbindir(options) ]
       else
-        dirs = [apache2_bindir, apache2_sbindir]
+        dirs = [ apache2_bindir, apache2_sbindir ]
       end
 
       dirs.each do |bindir|
@@ -535,7 +537,7 @@ module PhusionPassenger
           end
         end
       end
-      return nil
+      nil
     end
 
 
@@ -548,13 +550,13 @@ module PhusionPassenger
         # macOS >= 10.13 High Sierra no longer ships apxs2, so we'll use
         # a hardcoded default.
         if os_name_simple == 'macosx' && os_version >= '10.13' \
-          && httpd(:apxs2 => apxs2) == '/usr/sbin/httpd'
+          && httpd(apxs2: apxs2) == '/usr/sbin/httpd'
           '/usr/bin'
         else
           nil
         end
       else
-        return `#{apxs2} -q BINDIR 2>/dev/null`.strip
+        `#{apxs2} -q BINDIR 2>/dev/null`.strip
       end
     end
     memoize :apache2_bindir
@@ -566,13 +568,13 @@ module PhusionPassenger
         # macOS >= 10.13 High Sierra no longer ships apxs2, so we'll use
         # a hardcoded default.
         if os_name_simple == 'macosx' && os_version >= '10.13' \
-          && httpd(:apxs2 => apxs2) == '/usr/sbin/httpd'
+          && httpd(apxs2: apxs2) == '/usr/sbin/httpd'
           '/usr/sbin'
         else
           nil
         end
       else
-        return `#{apxs2} -q SBINDIR`.strip
+        `#{apxs2} -q SBINDIR`.strip
       end
     end
     memoize :apache2_sbindir
@@ -583,7 +585,7 @@ module PhusionPassenger
         # macOS >= 10.13 High Sierra no longer ships apxs2, so we'll use
         # a hardcoded default.
         if os_name_simple == 'macosx' && os_version >= '10.13' \
-          && httpd(:apxs2 => apxs2) == '/usr/sbin/httpd'
+          && httpd(apxs2: apxs2) == '/usr/sbin/httpd'
           '/usr/libexec/apache2'
         else
           nil
@@ -598,19 +600,19 @@ module PhusionPassenger
     ################ Compiler and linker flags ################
 
     def self.apache2_module_cflags(with_apr_flags = true)
-      return apache2_module_c_or_cxxflags(:c, with_apr_flags)
+      apache2_module_c_or_cxxflags(:c, with_apr_flags)
     end
     memoize :apache2_module_cflags, true
 
     def self.apache2_module_cxxflags(with_apr_flags = true)
-      return apache2_module_c_or_cxxflags(:cxx, with_apr_flags)
+      apache2_module_c_or_cxxflags(:cxx, with_apr_flags)
     end
     memoize :apache2_module_cxxflags, true
 
     # The C compiler flags that are necessary to compile an Apache module.
     # Also includes APR and APU compiler flags if with_apr_flags is true.
     def self.apache2_module_c_or_cxxflags(language, with_apr_flags = true)
-      flags = [""]
+      flags = [ "" ]
       if (language == :c && cc_is_sun_studio?) || (language == :cxx && cxx_is_sun_studio?)
         flags << "-KPIC"
       else
@@ -701,7 +703,7 @@ module PhusionPassenger
         # (http://code.google.com/p/phusion-passenger/issues/detail?id=236)
         output = `file "#{httpd}"`.strip
         if output =~ /Mach-O fat file/ && output !~ /for architecture/
-          architectures = ["i386", "ppc", "x86_64", "ppc64", "arm64"]
+          architectures = [ "i386", "ppc", "x86_64", "ppc64", "arm64" ]
         else
           architectures = []
           output.split("\n").grep(/for architecture/).each do |line|
@@ -723,13 +725,13 @@ module PhusionPassenger
         end
         flags << architectures.compact.join(' ')
       end
-      return flags.compact.join(' ').strip
+      flags.compact.join(' ').strip
     end
 
     # Linker flags that are necessary for linking an Apache module.
     # Already includes APR and APU linker flags.
     def self.apache2_module_cxx_ldflags
-      flags = ""
+      flags = String.new
       if !apxs2.nil?
         flags << `#{apxs2} -q LDFLAGS`.strip
       end
@@ -840,13 +842,13 @@ module PhusionPassenger
             # files. On Hongli's and Camden's systems it's inside the Xcode directory,
             # while on https://github.com/phusion/passenger/issues/1986 it's inside
             # /Library/Developer/CommandLineTools.
-            ["-I#{`xcrun --show-sdk-path`.strip}/usr/include/apr-1",
-             '-lapr-1']
+            [ "-I#{`xcrun --show-sdk-path`.strip}/usr/include/apr-1",
+             '-lapr-1' ]
           else
-            ['-I/usr/include/apr-1', '-lapr-1']
+            [ '-I/usr/include/apr-1', '-lapr-1' ]
           end
         else
-          [nil, nil]
+          [ nil, nil ]
         end
       else
         flags = `#{apr_config} --cppflags --includes`.strip
@@ -863,7 +865,7 @@ module PhusionPassenger
         elsif os_name_simple == "aix"
           libs << " -Wl,-G -Wl,-brtl"
         end
-        [flags, libs]
+        [ flags, libs ]
       end
     end
     private_class_method :determine_apr_info
@@ -888,13 +890,13 @@ module PhusionPassenger
           if os_version >= '10.13'
             # On macOS >= 10.13 High Sierra /usr/include no longer
             # exists.
-            ["-I#{`xcrun --show-sdk-path`.strip}/usr/include/apr-1",
-             '-laprutil-1']
+            [ "-I#{`xcrun --show-sdk-path`.strip}/usr/include/apr-1",
+             '-laprutil-1' ]
           else
-            ['-I/usr/include/apr-1', '-laprutil-1']
+            [ '-I/usr/include/apr-1', '-laprutil-1' ]
           end
         else
-          [nil, nil]
+          [ nil, nil ]
         end
       else
         flags = `#{apu_config} --includes`.strip
@@ -909,7 +911,7 @@ module PhusionPassenger
             flags = flags.join(' ')
           end
         end
-        [flags, libs]
+        [ flags, libs ]
       end
     end
     private_class_method :determine_apu_info
@@ -977,7 +979,7 @@ module PhusionPassenger
       result.reject! do |filename|
         File.directory?(filename)
       end
-      return result
+      result
     end
     private_class_method :expand_apache2_glob
 
@@ -1001,16 +1003,16 @@ module PhusionPassenger
       end
       if value.include?("${")
         # We couldn't substitute everything.
-        return nil
+        nil
       else
-        return value
+        value
       end
     end
     private_class_method :unescape_apache_config_value
 
     def self.unescape_c_string(s)
       state = 0
-      res = ''
+      res = String.new
       backslash = "\\"
       s.each_char do |c|
         case state
@@ -1028,9 +1030,10 @@ module PhusionPassenger
           end
         end
       end
-      return res
+      res
     end
     private_class_method :unescape_c_string
+
   end
 
 end

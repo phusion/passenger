@@ -75,6 +75,9 @@ TEST_CXX_OBJECTS = {
     "test/cxx/ServerKit/ServerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/HttpServerTest.o" =>
     "test/cxx/ServerKit/HttpServerTest.cpp",
+
+  "#{TEST_OUTPUT_DIR}cxx/Watchdog/ApiServerTest.o" =>
+    "test/cxx/Watchdog/ApiServerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/CookieUtilsTest.o" =>
     "test/cxx/ServerKit/CookieUtilsTest.cpp",
 
@@ -135,7 +138,7 @@ TEST_CXX_OBJECTS = {
   "#{TEST_OUTPUT_DIR}cxx/StrIntTools/TemplateTest.o" =>
     "test/cxx/StrIntTools/TemplateTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Base64DecodingTest.o" =>
-    "test/cxx/Base64DecodingTest.cpp"
+    "test/cxx/Base64DecodingTest.cpp",
 }
 
 let(:basic_test_cxx_flags) do
@@ -144,7 +147,7 @@ let(:basic_test_cxx_flags) do
     libuv_cflags,
     PlatformInfo.crypto_extra_cflags,
     PlatformInfo.curl_flags,
-    TEST_COMMON_CFLAGS
+    TEST_COMMON_CFLAGS,
   ]
 end
 
@@ -153,7 +156,7 @@ let(:test_cxx_include_paths) do
     'test/cxx',
     'test/support',
     'src/agent',
-    *CXX_SUPPORTLIB_INCLUDE_PATHS
+    *CXX_SUPPORTLIB_INCLUDE_PATHS,
   ]
 end
 
@@ -161,11 +164,11 @@ let(:test_cxx_flags) do
   # Some flags are necessary to make precompiled headers play well with ccache (and possibly also sccache):
   # https://ccache.dev/manual/4.8.2.html#_precompiled_headers
   if PlatformInfo.cxx_is_gcc?
-    ['-include test/cxx/TestSupport.h', '-fpch-preprocess']
+    [ '-include test/cxx/TestSupport.h', '-fpch-preprocess' ]
   elsif PlatformInfo.cxx_is_clang?
-    ["-include-pch test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}", '-Xclang', '-fno-pch-timestamp']
+    [ "-include-pch test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}", '-Xclang', '-fno-pch-timestamp' ]
   else
-    ['-include test/cxx/TestSupport.h']
+    [ '-include test/cxx/TestSupport.h' ]
   end + basic_test_cxx_flags
 end
 
@@ -188,9 +191,9 @@ TEST_CXX_OBJECTS.each_pair do |object, source|
     object,
     source,
     lambda { {
-      :include_paths => test_cxx_include_paths,
-      :flags => test_cxx_flags,
-      :deps => "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}"
+      include_paths: test_cxx_include_paths,
+      flags: test_cxx_flags,
+      deps: "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}",
     } }
   )
 end
@@ -202,13 +205,13 @@ dependencies = [
   LIBUV_TARGET,
   TEST_BOOST_OXT_LIBRARY,
   TEST_COMMON_LIBRARY.link_objects,
-  AGENT_OBJECTS.keys - [AGENT_MAIN_OBJECT]
+  AGENT_OBJECTS.keys - [ AGENT_MAIN_OBJECT ],
 ].flatten.compact
 file(TEST_CXX_TARGET => dependencies) do
   create_cxx_executable(
     TEST_CXX_TARGET,
-    TEST_CXX_OBJECTS.keys + AGENT_OBJECTS.keys - [AGENT_MAIN_OBJECT],
-    :flags => test_cxx_ldflags
+    TEST_CXX_OBJECTS.keys + AGENT_OBJECTS.keys - [ AGENT_MAIN_OBJECT ],
+    flags: test_cxx_ldflags
   )
 end
 
@@ -216,13 +219,13 @@ cxx_test_dependencies = [
   TEST_CXX_TARGET,
   "#{TEST_OUTPUT_DIR}allocate_memory",
   NATIVE_SUPPORT_TARGET,
-  AGENT_TARGET
+  AGENT_TARGET,
 ].compact
 task 'test:cxx:build' => cxx_test_dependencies
 
 desc "Run unit tests for the C++ components"
 task 'test:cxx' => cxx_test_dependencies do
-  args = ENV['GROUPS'].to_s.split(";").map{ |name| "-g #{name}" }
+  args = ENV['GROUPS'].to_s.split(";").map { |name| "-g #{name}" }
 
   if level = string_option('LOG_LEVEL')
     args << '-l'
@@ -273,14 +276,14 @@ task 'test:cxx' => cxx_test_dependencies do
       puts
       puts "---------------------------------"
       puts "Saving log files:"
-      FileUtils.mkdir_p("#{OUTPUT_DIR}testlogs", :verbose => true)
+      FileUtils.mkdir_p("#{OUTPUT_DIR}testlogs", verbose: true)
       if boolean_option('SUDO')
         sh "sudo cp /tmp/passenger-error-*.html #{OUTPUT_DIR}testlogs/"
         sh "sudo chown $(whoami): #{OUTPUT_DIR}testlogs/passenger-error-*.html"
       else
         error_pages.each do |path|
           if File.readable?(path)
-            FileUtils.cp(path, "#{OUTPUT_DIR}testlogs/", :verbose => true)
+            FileUtils.cp(path, "#{OUTPUT_DIR}testlogs/", verbose: true)
           else
             puts "Skip copying #{path}: file not readable"
           end
@@ -294,11 +297,11 @@ file("test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" => ge
   compile_cxx(
     "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}",
     'test/cxx/TestSupport.h',
-    :include_paths => test_cxx_include_paths,
-    :flags => [
+    include_paths: test_cxx_include_paths,
+    flags: [
       "-x c++-header",
       PlatformInfo.cxx_is_clang? ? "-Xclang -emit-pch" : nil,
-      basic_test_cxx_flags
+      basic_test_cxx_flags,
     ].compact.flatten
   )
 end

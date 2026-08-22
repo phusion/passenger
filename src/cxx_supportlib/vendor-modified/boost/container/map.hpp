@@ -32,6 +32,7 @@
 #include <boost/container/detail/value_init.hpp>
 #include <boost/container/detail/pair.hpp>
 #include <boost/container/detail/pair_key_mapped_of_value.hpp>
+#include <boost/container/detail/algorithm.hpp>
 
 // move
 #include <boost/move/traits.hpp>
@@ -610,6 +611,31 @@ class map
    inline std::pair<iterator, bool> insert_or_assign(BOOST_RV_REF(key_type) k, BOOST_FWD_REF(M) obj)
    {  return this->base_t::insert_or_assign(const_iterator(), ::boost::move(k), ::boost::forward<M>(obj));  }
 
+   //! <b>Requires</b>: This overload is available only if key_compare::is_transparent exists.
+   //!
+   //! <b>Effects</b>: If a key equivalent to k already exists in the container, assigns forward<M>(obj)
+   //! to the mapped_type corresponding to the key k. If the key does not exist, inserts the new value
+   //! as if by insert, constructing it from value_type(k, move(obj)).
+   //! 
+   //! No iterators or references are invalidated. If the insertion is successful, pointers and references
+   //! to the element obtained while it is held in the node handle are invalidated, and pointers and
+   //! references obtained to that element before it was extracted become valid.
+   //!
+   //! <b>Returns</b>: The bool component is true if the insertion took place and false if the assignment
+   //!   took place. The iterator component is pointing at the element that was inserted or updated.
+   //!
+   //! <b>Complexity</b>: Logarithmic in the size of the container.
+   template <class K, class M>
+
+   BOOST_CONTAINER_DOC1ST
+      ( std::pair<iterator BOOST_MOVE_I bool>
+      , typename dtl::enable_if_transparent< key_compare
+                                             BOOST_MOVE_I K
+                                             BOOST_MOVE_I std::pair<iterator BOOST_MOVE_I bool>
+                                           >::type)  //transparent
+      insert_or_assign(BOOST_FWD_REF(K) k, BOOST_FWD_REF(M) obj)
+   {  return this->base_t::insert_or_assign(const_iterator(), ::boost::forward<K>(k), ::boost::forward<M>(obj));  }
+
    //! <b>Effects</b>: If a key equivalent to k already exists in the container, assigns forward<M>(obj)
    //! to the mapped_type corresponding to the key k. If the key does not exist, inserts the new value
    //! as if by insert, constructing it from value_type(k, forward<M>(obj)) and the new element
@@ -619,8 +645,7 @@ class map
    //! to the element obtained while it is held in the node handle are invalidated, and pointers and
    //! references obtained to that element before it was extracted become valid.
    //!
-   //! <b>Returns</b>: The bool component is true if the insertion took place and false if the assignment
-   //!   took place. The iterator component is pointing at the element that was inserted or updated.
+   //! <b>Returns</b>: The returned iterator points to the map element whose key is equivalent to k.
    //!
    //! <b>Complexity</b>: Logarithmic in the size of the container in general, but amortized constant if
    //! the new element is inserted just before hint.
@@ -637,14 +662,38 @@ class map
    //! to the element obtained while it is held in the node handle are invalidated, and pointers and
    //! references obtained to that element before it was extracted become valid.
    //!
-   //! <b>Returns</b>: The bool component is true if the insertion took place and false if the assignment
-   //!   took place. The iterator component is pointing at the element that was inserted or updated.
+   //! <b>Returns</b>: The returned iterator points to the map element whose key is equivalent to k.
    //!
    //! <b>Complexity</b>: Logarithmic in the size of the container in general, but amortized constant if
    //! the new element is inserted just before hint.
    template <class M>
    inline iterator insert_or_assign(const_iterator hint, BOOST_RV_REF(key_type) k, BOOST_FWD_REF(M) obj)
    {  return this->base_t::insert_or_assign(hint, ::boost::move(k), ::boost::forward<M>(obj)).first;  }
+
+   //! <b>Requires</b>: This overload is available only if key_compare::is_transparent exists.
+   //!
+   //! <b>Effects</b>: If a key equivalent to k already exists in the container, assigns forward<M>(obj)
+   //! to the mapped_type corresponding to the key k. If the key does not exist, inserts the new value
+   //! as if by insert, constructing it from value_type(k, move(obj)) and the new element
+   //! to the container as close as possible to the position just before hint.
+   //! 
+   //! No iterators or references are invalidated. If the insertion is successful, pointers and references
+   //! to the element obtained while it is held in the node handle are invalidated, and pointers and
+   //! references obtained to that element before it was extracted become valid.
+   //!
+   //! <b>Returns</b>: The returned iterator points to the map element whose key is equivalent to k.
+   //!
+   //! <b>Complexity</b>: Logarithmic in the size of the container in general, but amortized constant if
+   //! the new element is inserted just before hint.
+   template <class K, class M>
+   BOOST_CONTAINER_DOC1ST
+      ( iterator
+      , typename dtl::enable_if_transparent< key_compare
+                                             BOOST_MOVE_I K
+                                             BOOST_MOVE_I iterator
+                                           >::type)  //transparent
+      insert_or_assign(const_iterator hint, BOOST_FWD_REF(K) k, BOOST_FWD_REF(M) obj)
+   {  return this->base_t::insert_or_assign(hint, ::boost::forward<K>(k), ::boost::forward<M>(obj)).first;  }
 
    //! <b>Returns</b>: A reference to the element whose key is equivalent to x.
    //! Throws: An exception object of type out_of_range if no such element is present.
@@ -983,7 +1032,7 @@ class map
             !dtl::is_convertible<K BOOST_MOVE_I iterator>::value &&     //not convertible to iterator
             !dtl::is_convertible<K BOOST_MOVE_I const_iterator>::value  //not convertible to const_iterator
             BOOST_MOVE_I size_type>::type)
-      erase(const K& x)
+      erase(BOOST_FWD_REF(K) x)
       { return this->base_t::erase_unique(x); }
 
    #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
@@ -1317,6 +1366,15 @@ class map
    }
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class K, class M, class C, class A, class O, class Pred>
+inline typename map<K, M, C, A, O>::size_type erase_if(map<K, M, C, A, O>& c, Pred pred)
+{
+   return container_erase_if(c, pred);
+}
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
 
@@ -2241,6 +2299,15 @@ class multimap
 
    #endif   //#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 };
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class K, class M, class C, class A, class O, class Pred>
+inline typename multimap<K, M, C, A, O>::size_type erase_if(multimap<K, M, C, A, O>& c, Pred pred)
+{
+   return container_erase_if(c, pred);
+}
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
 

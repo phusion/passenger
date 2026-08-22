@@ -1,4 +1,5 @@
 # encoding: binary
+
 #
 # Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -26,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'vendor/crash_watch/base'
 PhusionPassenger.require_passenger_lib 'vendor/crash_watch/utils'
 
 module CrashWatch
+
   class GdbNotFound < Error
   end
 
@@ -63,10 +65,10 @@ module CrashWatch
       @in.puts(command_string)
       @in.puts("echo \\n#{END_OF_RESPONSE_MARKER}\\n")
       done = false
-      result = ""
+      result = String.new
       while !done
         begin
-          if select([@out], nil, nil, timeout)
+          if select([ @out ], nil, nil, timeout)
             line = @out.readline
             puts "gdb read #{line.inspect}" if @debug
             if line == "#{END_OF_RESPONSE_MARKER}\n"
@@ -249,7 +251,7 @@ module CrashWatch
         # Look for a newer one that's installed from ports.
         puts "#{result} is broken on FreeBSD. Looking for an alternative..."
         result = nil
-        ["/usr/local/bin/gdb76", "/usr/local/bin/gdb66"].each do |candidate|
+        [ "/usr/local/bin/gdb76", "/usr/local/bin/gdb66" ].each do |candidate|
           if File.executable?(candidate)
             result = candidate
             break
@@ -278,4 +280,5 @@ module CrashWatch
       end
     end
   end
+
 end

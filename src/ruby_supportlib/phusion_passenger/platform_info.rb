@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -30,9 +31,10 @@ module PhusionPassenger
   # This module autodetects various platform-specific information, and
   # provides that information through constants.
   module PlatformInfo
+
   private
     @@cache_dir = nil
-    @@verbose   = ['1', 'true', 'on', 'yes'].include?(ENV['VERBOSE'])
+    @@verbose   = [ '1', 'true', 'on', 'yes' ].include?(ENV['VERBOSE'])
     @@log_implementation = lambda do |message|
       message = reindent(message, 3)
       message.sub!(/^   /, '')
@@ -72,10 +74,10 @@ module PhusionPassenger
         metaclass.send(:alias_method, "_unmemoized_#{method}", method)
         variable_name = "@@memoized_#{method}".sub(/\?/, '')
         check_variable_name = "@@has_memoized_#{method}".sub(/\?/, '')
-        eval(%Q{
+        eval(%Q(
           #{variable_name} = nil
           #{check_variable_name} = false
-        })
+        ))
         line = __LINE__ + 1
         source = %Q{
           def self.#{method}(*args)                                           # def self.httpd(*args)
@@ -131,7 +133,7 @@ module PhusionPassenger
           return filename
         end
       end
-      return nil
+      nil
     end
     private_class_method :select_executable
 
@@ -139,16 +141,16 @@ module PhusionPassenger
       str = str.dup
       str.gsub!(/\A([\s\t]*\n)+/, '')
       str.gsub!(/[\s\t\n]+\Z/, '')
-      indent = str.split("\n").select{ |line| !line.strip.empty? }.map{ |line| line.index(/[^\s]/) }.compact.min || 0
+      indent = str.split("\n").select { |line| !line.strip.empty? }.map { |line| line.index(/[^\s]/) }.compact.min || 0
       str.gsub!(/^[[:blank:]]{#{indent}}/, '')
-      return str
+      str
     end
     private_class_method :unindent
 
     def self.reindent(str, level)
       str = unindent(str)
       str.gsub!(/^/, ' ' * level)
-      return str
+      str
     end
     private_class_method :reindent
 
@@ -186,7 +188,7 @@ module PhusionPassenger
     end
 
     def self.cache_dir
-      return @@cache_dir
+      @@cache_dir
     end
 
     def self.verbose=(val)
@@ -194,7 +196,7 @@ module PhusionPassenger
     end
 
     def self.verbose?
-      return @@verbose
+      @@verbose
     end
 
     def self.log_implementation=(impl)
@@ -202,29 +204,29 @@ module PhusionPassenger
     end
 
     def self.log_implementation
-      return @@log_implementation
+      @@log_implementation
     end
 
 
     def self.env_defined?(name)
-      return !ENV[name].nil? && !ENV[name].empty?
+      !ENV[name].nil? && !ENV[name].empty?
     end
 
     def self.string_env(name, default_value = nil)
       value = ENV[name]
       if value.nil? || value.empty?
-        return default_value
+        default_value
       else
-        return value
+        value
       end
     end
 
     def self.read_file(filename)
-      return File.open(filename, "rb") do |f|
+      File.open(filename, "rb") do |f|
         f.read
       end
     rescue
-      return ""
+      ""
     end
 
     # Clears all memoized values. However, the disk cache (if any is configured)
@@ -240,9 +242,9 @@ module PhusionPassenger
     def self.tmpdir
       result = ENV['TMPDIR']
       if result && !result.empty?
-        return result.sub(/\/+\Z/, '')
+        result.sub(/\/+\Z/, '')
       else
-        return '/tmp'
+        '/tmp'
       end
     end
     memoize :tmpdir
@@ -266,15 +268,15 @@ module PhusionPassenger
         if system(filename)
           return dir
         else
-          attempts << { :dir => dir,
-            :error => "This directory's filesystem is mounted with the 'noexec' option." }
+          attempts << { dir: dir,
+            error: "This directory's filesystem is mounted with the 'noexec' option." }
         end
       rescue Errno::ENOENT
-        attempts << { :dir => dir, :error => "This directory doesn't exist." }
+        attempts << { dir: dir, error: "This directory doesn't exist." }
       rescue Errno::EACCES
-        attempts << { :dir => dir, :error => "This program doesn't have permission to write to this directory." }
+        attempts << { dir: dir, error: "This program doesn't have permission to write to this directory." }
       rescue SystemCallError => e
-        attempts << { :dir => dir, :error => e.message }
+        attempts << { dir: dir, error: e.message }
       ensure
         File.unlink(filename) rescue nil
       end
@@ -289,15 +291,15 @@ module PhusionPassenger
         if system(filename)
           return dir
         else
-          attempts << { :dir => dir,
-            :error => "This directory's filesystem is mounted with the 'noexec' option." }
+          attempts << { dir: dir,
+            error: "This directory's filesystem is mounted with the 'noexec' option." }
         end
       rescue Errno::ENOENT
-        attempts << { :dir => dir, :error => "This directory doesn't exist." }
+        attempts << { dir: dir, error: "This directory doesn't exist." }
       rescue Errno::EACCES
-        attempts << { :dir => dir, :error => "This program doesn't have permission to write to this directory." }
+        attempts << { dir: dir, error: "This program doesn't have permission to write to this directory." }
       rescue SystemCallError => e
-        attempts << { :dir => dir, :error => e.message }
+        attempts << { dir: dir, error: e.message }
       ensure
         File.unlink(filename) rescue nil
       end
@@ -331,9 +333,9 @@ module PhusionPassenger
 
     def self.rb_config
       if defined?(::RbConfig)
-        return ::RbConfig::CONFIG
+        ::RbConfig::CONFIG
       else
-        return ::Config::CONFIG
+        ::Config::CONFIG
       end
     end
 
@@ -355,9 +357,9 @@ module PhusionPassenger
       end
       if name =~ /^\//
         if File.executable?(name)
-          return name
+          name
         else
-          return nil
+          nil
         end
       else
         ENV['PATH'].to_s.split(File::PATH_SEPARATOR).each do |directory|
@@ -367,14 +369,14 @@ module PhusionPassenger
             return path
           end
         end
-        return nil
+        nil
       end
     end
 
     def self.find_all_commands(name)
       search_dirs = ENV['PATH'].to_s.split(File::PATH_SEPARATOR)
-      search_dirs.concat(%w(/bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin))
-      ["/opt/*/bin", "/opt/*/sbin", "/usr/local/*/bin", "/usr/local/*/sbin"].each do |glob|
+      search_dirs.concat(%w[/bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin])
+      [ "/opt/*/bin", "/opt/*/sbin", "/usr/local/*/bin", "/usr/local/*/sbin" ].each do |glob|
         search_dirs.concat(Dir[glob])
       end
 
@@ -406,7 +408,7 @@ module PhusionPassenger
           result << path
         end
       end
-      return result
+      result
     end
 
     # Check whether the specified command is in $PATH or in
@@ -416,7 +418,7 @@ module PhusionPassenger
     def self.find_system_command(name)
       result = find_command(name)
       if result.nil?
-        ['/sbin', '/usr/sbin', '/usr/local/sbin'].each do |dir|
+        [ '/sbin', '/usr/sbin', '/usr/local/sbin' ].each do |dir|
           path = File.join(dir, name)
           if File.file?(path) && File.executable?(path)
             return path
@@ -425,6 +427,7 @@ module PhusionPassenger
       end
       result
     end
+
   end
 
 end # module PhusionPassenger

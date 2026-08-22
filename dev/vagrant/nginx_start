@@ -6,7 +6,7 @@
 ENV['PASSENGER_BEEP_ON_ABORT'] = '1'
 
 def run_in_bg(*command)
-  return fork do
+  fork do
     Process.setsid
     exec(*command)
   end

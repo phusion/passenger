@@ -36,11 +36,11 @@ def recursive_copy_files(files, destination_dir, preprocess = false, variables =
     if !File.directory?(filename)
       if preprocess && filename =~ /\.erb$/
         real_filename = filename.sub(/\.erb$/, '')
-        FileUtils.install(filename, "#{destination_dir}/#{real_filename}", :preserve => true)
+        FileUtils.install(filename, "#{destination_dir}/#{real_filename}", preserve: true)
         Preprocessor.new.start(filename, "#{destination_dir}/#{real_filename}",
           variables)
       else
-        FileUtils.install(filename, "#{destination_dir}/#{filename}", :preserve => true)
+        FileUtils.install(filename, "#{destination_dir}/#{filename}", preserve: true)
       end
     end
     if STDOUT.tty?
@@ -53,7 +53,7 @@ def recursive_copy_files(files, destination_dir, preprocess = false, variables =
   end
 end
 
-task :clobber => 'package:clean'
+task clobber: 'package:clean'
 
 task 'package:set_official' do
   ENV['OFFICIAL_RELEASE'] = '1'
@@ -117,7 +117,7 @@ def change_shebang(filename, value)
 end
 
 desc "Create a fakeroot, useful for building native packages"
-task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
+task fakeroot: [ :apache2, :nginx, 'nginx:as_dynamic_module', :doc ] do
   require 'rbconfig'
   include RbConfig
 
@@ -212,18 +212,18 @@ task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
   headers = []
   Dir["src/nginx_module/**/*.[ch]"].each do |filename|
     File.read(filename).split("\n").grep(%r{#include "cxx_supportlib/(.+)"}) do |match|
-      headers << ["src/cxx_supportlib/#{$1}", "cxx_supportlib/#{$1}"]
+      headers << [ "src/cxx_supportlib/#{$1}", "cxx_supportlib/#{$1}" ]
     end
   end
   # Manually add headers that could not be inferred through
   # the above code
   headers.concat([
-    ["src/cxx_supportlib/Exceptions.h", "cxx_supportlib/Exceptions.h"],
-    ["src/cxx_supportlib/AppTypeDetector/CBindings.h", "cxx_supportlib/AppTypeDetector/CBindings.h"],
-    ["src/cxx_supportlib/WrapperRegistry/CBindings.h", "cxx_supportlib/WrapperRegistry/CBindings.h"],
-    ["src/cxx_supportlib/JsonTools/CBindings.h", "cxx_supportlib/JsonTools/CBindings.h"],
-    ["src/cxx_supportlib/vendor-modified/modp_b64.h", "cxx_supportlib/vendor-modified/modp_b64.h"],
-    ["src/cxx_supportlib/vendor-modified/modp_b64_data.h", "cxx_supportlib/vendor-modified/modp_b64_data.h"]
+    [ "src/cxx_supportlib/Exceptions.h", "cxx_supportlib/Exceptions.h" ],
+    [ "src/cxx_supportlib/AppTypeDetector/CBindings.h", "cxx_supportlib/AppTypeDetector/CBindings.h" ],
+    [ "src/cxx_supportlib/WrapperRegistry/CBindings.h", "cxx_supportlib/WrapperRegistry/CBindings.h" ],
+    [ "src/cxx_supportlib/JsonTools/CBindings.h", "cxx_supportlib/JsonTools/CBindings.h" ],
+    [ "src/cxx_supportlib/vendor-modified/modp_b64.h", "cxx_supportlib/vendor-modified/modp_b64.h" ],
+    [ "src/cxx_supportlib/vendor-modified/modp_b64_data.h", "cxx_supportlib/vendor-modified/modp_b64_data.h" ],
   ])
   headers.each do |header|
     target = "#{fake_include_dir}/#{header[1]}"

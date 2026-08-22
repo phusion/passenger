@@ -94,7 +94,7 @@ struct intrusive_slist_type
       , dtl::bi::size_type
          <typename allocator_traits_type::size_type>
       >::type                                   container_type;
-   typedef container_type                       type ;
+   typedef container_type                       type;
 };
 
 }  //namespace dtl {
@@ -1629,8 +1629,8 @@ class slist
       Icont &icont_;
       typedef typename Icont::iterator       iiterator;
       typedef typename Icont::const_iterator iconst_iterator;
-      const iconst_iterator prev_;
-      iiterator   ret_;
+      iconst_iterator prev_;
+      iiterator ret_;
 
       public:
       insertion_functor(Icont &icont, typename Icont::const_iterator prev)
@@ -1639,11 +1639,16 @@ class slist
 
       void operator()(Node &n)
       {
-         ret_ = this->icont_.insert_after(prev_, n);
+         prev_ = this->icont_.insert_after(prev_, n);
+         if(!ret_)
+            ret_ = prev_.unconst();
       }
 
       iiterator inserted_first() const
-      {  return ret_;   }
+      {
+         iiterator f(ret_);
+         return ++f;
+      }
    };
 
    //Functors for member algorithm defaults
@@ -1652,6 +1657,28 @@ class slist
 
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+//! <b>Effects</b>: Erases all elements that compare equal to v from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, class A, class U>
+inline typename slist<T, A>::size_type erase(slist<T, A>& c, const U& v)
+{
+   typename slist<T, A>::size_type old_size = c.size();
+   c.remove_if(equal_to_value<U>(v));
+   return old_size - c.size();
+}
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, class A, class Pred>
+inline typename slist<T, A>::size_type erase_if(slist<T, A>& c, Pred pred)
+{
+   typename slist<T, A>::size_type old_size = c.size();
+   c.remove_if(pred);
+   return old_size - c.size();
+}
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
 

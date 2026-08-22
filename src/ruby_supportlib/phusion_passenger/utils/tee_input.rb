@@ -1,4 +1,5 @@
 # encoding: binary
+
 #
 # This file is taken from Unicorn. The following license applies to this file
 # (and this file only, not to the rest of Phusion Passenger):
@@ -57,6 +58,7 @@ require 'stringio'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
+
 module Utils
 
 # acts like tee(1) on an input input to provide a input-like stream
@@ -256,4 +258,5 @@ private
 end
 
 end # module Utils
+
 end # module PhusionPassenger

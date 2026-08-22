@@ -4,4 +4,4 @@ If you aren't familiar with the Passenger codebase then we encourage you to read
 
  * [Contributors Guide](https://github.com/phusion/passenger/blob/master/CONTRIBUTING.md)
  * [Design & Architecture](https://www.phusionpassenger.com/documentation/Design%20and%20Architecture.html)
- * [Code walkthrough](http://vimeo.com/phusionnl/review/98027409/03ba678684)
+ * [Code walkthrough](https://youtu.be/exugD98pqQc)

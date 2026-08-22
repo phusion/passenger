@@ -60,7 +60,7 @@ module PhusionPassenger
           last_result = callback.call(*args, &block)
         end
       end
-      return last_result
+      last_result
     end
 
     def self.register(name, klass)
@@ -76,7 +76,7 @@ module PhusionPassenger
           klass.new(*args, &block)
         end
       else
-        return nil
+        nil
       end
     end
 
@@ -89,7 +89,7 @@ module PhusionPassenger
           end
         end
       end
-      return last_result
+      last_result
     end
   end
 

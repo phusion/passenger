@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -24,6 +25,7 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   FILE_LOCATION = File.expand_path(__FILE__)
 
 
@@ -31,20 +33,20 @@ module PhusionPassenger
 
   PACKAGE_NAME = 'passenger'
   # Run 'rake src/cxx_supportlib/Constants.h configkit_schemas_inline_comments' after changing this number.
-  VERSION_STRING = '6.1.1'
+  VERSION_STRING = '6.2.1'
 
   # Tip: find the SHA-256 with ./dev/nginx_version_sha256 <VERSION>
-  PREFERRED_NGINX_VERSION = '1.28.0'
-  NGINX_SHA256_CHECKSUM = 'c6b5c6b086c0df9d3ca3ff5e084c1d0ef909e6038279c71c1c3e985f576ff76a'
+  PREFERRED_NGINX_VERSION = '1.30.4'
+  NGINX_SHA256_CHECKSUM = '4261dc90e9e47c1c4041276e9aaa3d48ebe2e664f728e14fa95ae6c67d57a08b'
 
   # Packaging may be locked to an older version due to the specific module configuration being
   # incompatible with the version we prefer (latest stable).
-  PACKAGING_PREFERRED_NGINX_VERSION = '1.28.0'
-  PACKAGING_NGINX_SHA256_CHECKSUM = 'c6b5c6b086c0df9d3ca3ff5e084c1d0ef909e6038279c71c1c3e985f576ff76a'
+  PACKAGING_PREFERRED_NGINX_VERSION = '1.30.4'
+  PACKAGING_NGINX_SHA256_CHECKSUM = '4261dc90e9e47c1c4041276e9aaa3d48ebe2e664f728e14fa95ae6c67d57a08b'
 
   # sha256sum of the .tar.gz
-  PREFERRED_PCRE_VERSION  = '10.46'
-  PCRE_SHA256_CHECKSUM = '8d28d7f2c3b970c3a4bf3776bcbb5adfc923183ce74bc8df1ebaad8c1985bd07'
+  PREFERRED_PCRE_VERSION  = '10.47'
+  PCRE_SHA256_CHECKSUM = 'c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16'
 
   STANDALONE_INTERFACE_VERSION  = 1
 
@@ -61,7 +63,7 @@ module PhusionPassenger
   PLUGIN_DIRS = [
     "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME_}/plugins",
     "/usr/local/share/#{GLOBAL_NAMESPACE_DIRNAME_}/plugins",
-    "~/#{USER_NAMESPACE_DIRNAME_}/plugins"
+    "~/#{USER_NAMESPACE_DIRNAME_}/plugins",
   ]
 
   REQUIRED_LOCATIONS_INI_FIELDS = [
@@ -88,14 +90,14 @@ module PhusionPassenger
     # Directory containing the source code of our Ruby extension
     :ruby_extension_source_dir,
     # Directory containing the source code of our Nginx module
-    :nginx_module_source_dir
+    :nginx_module_source_dir,
   ].freeze
   OPTIONAL_LOCATIONS_INI_FIELDS = [
     # Directory which contains the main Phusion Passenger Rakefile. Only
     # available when originally packaged,
     :build_system_dir,
     # Directory in which downloaded Phusion Passenger binaries are cached.
-    :download_cache_dir
+    :download_cache_dir,
   ].freeze
 
   # Follows the logic of src/cxx_supportlib/ResourceLocator.h, so don't forget to modify that too.
@@ -146,18 +148,18 @@ module PhusionPassenger
   # Returns whether this Phusion Passenger installation is in the 'originally packaged'
   # configuration (as opposed to the 'custom packaged' configuration.
   def self.originally_packaged?
-    return !@custom_packaged
+    !@custom_packaged
   end
 
   def self.custom_packaged?
-    return @custom_packaged
+    @custom_packaged
   end
 
   # If Phusion Passenger is custom packaged, returns which packaging
   # method was used. Can be 'deb', 'rpm', 'homebrew', 'test'
   # or 'unknown'.
   def self.packaging_method
-    return @packaging_method
+    @packaging_method
   end
 
   def self.packaging_method_description
@@ -183,28 +185,28 @@ module PhusionPassenger
 
   # The installation specification string, as passed to #locate_directories.
   def self.install_spec
-    return @install_spec
+    @install_spec
   end
 
   # Generate getters for the directory types in locations.ini.
-  getters_code = ""
+  getters_code = String.new
   (REQUIRED_LOCATIONS_INI_FIELDS + OPTIONAL_LOCATIONS_INI_FIELDS).each do |field|
-    getters_code << %Q{
+    getters_code << %Q(
       def self.#{field}
         return @#{field}
       end
-    }
+    )
   end
   eval(getters_code, binding, __FILE__, __LINE__)
 
   def self.user_support_binaries_dir
-    return "#{home_dir}/#{USER_NAMESPACE_DIRNAME_}/support-binaries/#{VERSION_STRING}"
+    "#{home_dir}/#{USER_NAMESPACE_DIRNAME_}/support-binaries/#{VERSION_STRING}"
   end
 
   def self.find_support_binary(name)
     all_support_binary_dirs = [
       support_binaries_dir,
-      user_support_binaries_dir
+      user_support_binaries_dir,
     ]
     all_support_binary_dirs.each do |dir|
       result = "#{dir}/#{name}"
@@ -212,7 +214,7 @@ module PhusionPassenger
         return result
       end
     end
-    return nil
+    nil
   end
 
 
@@ -220,9 +222,9 @@ module PhusionPassenger
 
   def self.binaries_sites
     [
-      { :url => "https://github.com/phusion/passenger/releases/download/release-{{VERSION}}".freeze },
-      { :url => "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release".freeze },
-      { :url => "https://s3.amazonaws.com/phusion-passenger/binaries/passenger/by_release".freeze }
+      { url: "https://github.com/phusion/passenger/releases/download/release-{{VERSION}}".freeze },
+      { url: "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release".freeze },
+      { url: "https://s3.amazonaws.com/phusion-passenger/binaries/passenger/by_release".freeze },
     ]
   end
 
@@ -281,7 +283,7 @@ module PhusionPassenger
     filename = "/etc/#{GLOBAL_NAMESPACE_DIRNAME_}/locations.ini"
     return filename if File.exist?(filename)
 
-    return nil
+    nil
   end
 
   def self.parse_ini_file(filename)
@@ -300,23 +302,23 @@ module PhusionPassenger
         end
       end
     end
-    return options
+    options
   end
 
   def self.get_option(filename, options, key, required = true)
     value = options[key]
     if value
-      return value
+      value
     elsif required
       raise "Option '#{key}' missing in file '#{filename}'"
     else
-      return nil
+      nil
     end
   end
 
   def self.get_bool_option(filename, options, key)
     value = get_option(filename, options, key)
-    return value == 'yes' || value == 'true' || value == 'on' || value == '1'
+    value == 'yes' || value == 'true' || value == 'on' || value == '1'
   end
 
   # The HOME environment variable is often unreliable, because for
@@ -335,6 +337,7 @@ module PhusionPassenger
         home = ENV['HOME']
       end
     end
-    return home
+    home
   end
+
 end if !defined?(PhusionPassenger::VERSION_STRING)

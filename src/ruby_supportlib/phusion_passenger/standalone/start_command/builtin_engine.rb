@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2014-2025 Asynchronous B.V.
 #
@@ -32,10 +33,12 @@ PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
-  module Standalone
-    class StartCommand
 
+  module Standalone
+
+    class StartCommand
       module BuiltinEngine
+
       private
         def start_engine_real
           Standalone::ControlUtils.require_daemon_controller
@@ -88,7 +91,7 @@ module PhusionPassenger
               File.stat(report_file_path).size > 0
           end
 
-          command = ""
+          command = String.new
 
           if !@options[:envvars].empty?
             command = "env "
@@ -97,7 +100,7 @@ module PhusionPassenger
             end
           end
 
-          command << "#{@agent_exe} watchdog";
+          command << "#{@agent_exe} watchdog"
           command << " --passenger-root #{Shellwords.escape PhusionPassenger.install_spec}"
           command << " --daemonize"
           command << " --no-user-switching"
@@ -195,27 +198,27 @@ module PhusionPassenger
           command << " --EC --BU"
           add_param(command, :core_file_descriptor_ulimit, "--core-file-descriptor-ulimit")
 
-          return {
-            :identifier    => "#{AGENT_EXE} watchdog",
-            :start_command => command,
-            :ping_command  => ping_spec,
-            :pid_file      => @options[:pid_file],
-            :log_file      => @options[:log_file],
-            :start_timeout => 25,
-            :stop_timeout  => @options[:stop_timeout]
+          {
+            identifier: "#{AGENT_EXE} watchdog",
+            start_command: command,
+            ping_command: ping_spec,
+            pid_file: @options[:pid_file],
+            log_file: @options[:log_file],
+            start_timeout: 25,
+            stop_timeout: @options[:stop_timeout],
           }
         end
 
         def listen_address(options = @options, for_ping_port = false)
           if options[:socket_file]
-            return "unix:#{options[:socket_file]}"
+            "unix:#{options[:socket_file]}"
           else
-            return "tcp://" + compose_ip_and_port(options[:address], options[:port])
+            "tcp://" + compose_ip_and_port(options[:address], options[:port])
           end
         end
 
         def prestart_urls_json
-          PhusionPassenger::Utils::JSON.generate([listen_url(@apps[0])])
+          PhusionPassenger::Utils::JSON.generate([ listen_url(@apps[0]) ])
         end
 
         def add_param(command, option_name, param_name)
@@ -273,8 +276,10 @@ module PhusionPassenger
         end
 
         #####################
-      end # module BuiltinEngine
 
+      end # module BuiltinEngine
     end # module StartCommand
+
   end # module Standalone
+
 end # module PhusionPassenger

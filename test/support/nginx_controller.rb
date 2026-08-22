@@ -4,7 +4,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
 class NginxController
   PlatformInfo = PhusionPassenger::PlatformInfo
-  TEMPLATE_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/nginx")
+  TEMPLATE_DIR = File.expand_path(File.dirname(__FILE__) + '/../stub/nginx')
   PORT = ENV.fetch('TEST_PORT_BASE', '64507').to_i
 
   PORT = 64507 if PORT > 64507
@@ -18,13 +18,13 @@ class NginxController
     @pid_file    = "#{root_dir}/nginx.pid"
     @log_file    = log_file
     @controller  = PhusionPassenger::DaemonController.new(
-      :identifier    => 'Nginx',
-      :start_command => "#{CONFIG['nginx']} -p #{root_dir} -c '#{@config_file}'",
-      :ping_command  => [:tcp, '127.0.0.1', PORT],
-      :pid_file      => @pid_file,
-      :log_file      => @log_file,
-      :start_timeout => 60,
-      :before_start  => method(:write_nginx_config_files)
+      identifier: 'Nginx',
+      start_command: "#{CONFIG['nginx']} -p #{root_dir} -c '#{@config_file}'",
+      ping_command: [ :tcp, '127.0.0.1', PORT ],
+      pid_file: @pid_file,
+      log_file: @log_file,
+      start_timeout: 60,
+      before_start: method(:write_nginx_config_files)
     )
 
     @servers = []
@@ -53,11 +53,11 @@ class NginxController
   end
 
   def running?
-    return @controller.running?
+    @controller.running?
   end
 
   def port
-    return @port
+    @port
   end
 
   def add_server
@@ -76,11 +76,11 @@ private
     attr_accessor :extra
 
     def initialize
-      @values = { :passenger_enabled => "on" }
+      @values = { passenger_enabled: 'on' }
     end
 
     def [](key)
-      return @values[key]
+      @values[key]
     end
 
     def []=(key, value)
@@ -98,6 +98,6 @@ private
   end
 
   def get_binding
-    return binding
+    binding
   end
 end

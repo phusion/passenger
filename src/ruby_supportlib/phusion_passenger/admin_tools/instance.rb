@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2014-2025 Asynchronous B.V.
 #
@@ -29,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
+
   module AdminTools
 
     class Instance
@@ -108,7 +110,7 @@ module PhusionPassenger
           sock.close
         end
 
-        return response
+        response
       end
 
       def watchdog_pid
@@ -229,14 +231,15 @@ module PhusionPassenger
       def process_is_alive?(pid)
         begin
           Process.kill(0, pid)
-          return true
+          true
         rescue Errno::ESRCH
-          return false
+          false
         rescue SystemCallError => e
-          return true
+          true
         end
       end
     end
 
   end # module AdminTools
+
 end # module PhusionPassenger

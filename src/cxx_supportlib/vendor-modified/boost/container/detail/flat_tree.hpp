@@ -1175,8 +1175,9 @@ class flat_tree
       !dtl::is_convertible<K, iterator>::value &&     //not convertible to iterator
       !dtl::is_convertible<K, const_iterator>::value  //not convertible to const_iterator
       , size_type>::type
-      erase(const K& k)
+      erase(BOOST_FWD_REF(K) key)
    {
+      const typename remove_cvref<K>::type & k = key;  //Support emulated rvalue references
       std::pair<iterator, iterator > itp = this->equal_range(k);
       size_type ret = static_cast<size_type>(itp.second - itp.first);
       if (ret) {

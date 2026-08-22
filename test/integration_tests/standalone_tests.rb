@@ -1,4 +1,4 @@
-source_root = File.expand_path("../..", File.dirname(__FILE__))
+source_root = File.expand_path('../..', File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
@@ -19,7 +19,7 @@ ENV['PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY']  = '0'
 
 module PhusionPassenger
 
-describe "Passenger Standalone" do
+describe 'Passenger Standalone' do
   let(:version) { PhusionPassenger::VERSION_STRING }
   let(:nginx_version) { PhusionPassenger::PREFERRED_NGINX_VERSION }
   let(:compat_id) { PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id }
@@ -32,9 +32,8 @@ describe "Passenger Standalone" do
 
   def capture_output(command)
     output = `#{command} 2>&1`.strip
-    if output.respond_to?(:force_encoding)
-      output.force_encoding('utf-8')
-    end
+    output.force_encoding(Encoding::UTF_8)
+
     if $?.exitstatus == 0
       output
     else
@@ -43,21 +42,21 @@ describe "Passenger Standalone" do
   end
 
   def start_server(document_root)
-    server = WEBrick::HTTPServer.new(:BindAddress => '127.0.0.1',
-      :Port => 0,
-      :DocumentRoot => document_root,
-      :Logger => WEBrick::Log.new("/dev/null"),
-      :AccessLog => [])
+    server = WEBrick::HTTPServer.new(BindAddress: '127.0.0.1',
+      Port: 0,
+      DocumentRoot: document_root,
+      Logger: WEBrick::Log.new('/dev/null'),
+      AccessLog: [])
     Thread.new do
       Thread.current.abort_on_exception = true
       server.start
     end
-    [server, "http://127.0.0.1:#{server.config[:Port]}"]
+    [ server, "http://127.0.0.1:#{server.config[:Port]}" ]
   end
 
   def create_tarball(filename, contents = nil)
     filename = File.expand_path(filename)
-    Dir.mktmpdir("tarball-") do |tarball_dir|
+    Dir.mktmpdir('tarball-') do |tarball_dir|
       Dir.chdir(tarball_dir) do
         if block_given?
           yield
@@ -66,86 +65,86 @@ describe "Passenger Standalone" do
             create_file(content_name)
           end
         end
-        sh "tar", "-czf", filename, "."
+        sh 'tar', '-czf', filename, '.'
       end
     end
   end
 
   def create_dummy_support_binaries
-    Dir.mkdir("support-binaries") if !File.exist?("support-binaries")
-    File.open("support-binaries/#{AGENT_EXE}", "w") do |f|
-      f.puts "#!/usr/bin/env bash"
-      f.puts "echo PASS"
+    Dir.mkdir('support-binaries') if !File.exist?('support-binaries')
+    File.open("support-binaries/#{AGENT_EXE}", 'w') do |f|
+      f.puts '#!/usr/bin/env bash'
+      f.puts 'echo PASS'
     end
     File.chmod(0755, "support-binaries/#{AGENT_EXE}")
   end
 
   def create_dummy_nginx_binary
-    File.open("PassengerWebHelper", "w") do |f|
-      f.puts "#!/usr/bin/env bash"
-      f.puts "echo nginx version: 1.0.0"
+    File.open('PassengerWebHelper', 'w') do |f|
+      f.puts '#!/usr/bin/env bash'
+      f.puts 'echo nginx version: 1.0.0'
     end
-    File.chmod(0755, "PassengerWebHelper")
+    File.chmod(0755, 'PassengerWebHelper')
   end
 
   def create_file(filename, contents = nil)
-    File.open(filename, "wb") do |f|
+    File.open(filename, 'wb') do |f|
       f.write(contents) if contents
     end
   end
 
   specify "invoking 'passenger' without an argument is equivalent to 'passenger help'" do
-    output = capture_output("passenger")
-    output.should == capture_output("passenger help")
+    output = capture_output('passenger')
+    output.should == capture_output('passenger help')
   end
 
   specify "'passenger --help' is equivalent to 'passenger help'" do
-    output = capture_output("passenger")
-    output.should == capture_output("passenger help")
+    output = capture_output('passenger')
+    output.should == capture_output('passenger help')
   end
 
   specify "'passenger --version' displays the version number" do
-    output = capture_output("passenger --version")
+    output = capture_output('passenger --version')
     output.should =~ /#{Regexp.escape PhusionPassenger::VERSION_STRING}$/
   end
 
-  describe "start command" do
+  describe 'start command' do
     AGENT_BINARY_DOWNLOAD_MESSAGE = "--> Downloading a #{PROGRAM_NAME} agent binary for your platform"
     AGENT_BINARY_COMPILE_MESSAGE  = "Compiling #{PROGRAM_NAME} agent"
-    NGINX_BINARY_INSTALL_MESSAGE  = "Installing Nginx"
+    NGINX_BINARY_INSTALL_MESSAGE  = 'Installing Nginx'
 
     def test_serving_application(passenger_command)
       Dir.mktmpdir do |tmpdir|
         Dir.chdir(tmpdir) do
-          File.open("config.ru", "w") do |f|
-            f.write(%Q{
+          File.open('config.ru', 'w') do |f|
+            f.write(%Q(
               app = lambda do |env|
                 [200, { "Content-Type" => "text/plain" }, ["ok"]]
               end
               run app
-            })
+            ))
           end
-          Dir.mkdir("public")
-          Dir.mkdir("tmp")
+          Dir.mkdir('public')
+          Dir.mkdir('tmp')
           capture_output("#{passenger_command} -p 4000 -d --disable-turbocaching --disable-security-update-check")
           begin
             if RUBY_VERSION >= '2.5'
-              URI.open("http://127.0.0.1:4000/") do |f|
-                f.read.should == "ok"
+              URI.open('http://127.0.0.1:4000/') do |f|
+                f.read.should == 'ok'
               end
             else
-              open("http://127.0.0.1:4000/") do |f|
-                f.read.should == "ok"
+              open('http://127.0.0.1:4000/') do |f|
+                f.read.should == 'ok'
               end
             end
           ensure
-            sh("passenger stop -p 4000")
+            sh('passenger stop -p 4000')
           end
         end
       end
     end
 
-    context "if the runtime is not installed" do
+    context 'if the runtime is not installed' do
       before :each do
         # Prevent concurrent usage of ~/.passenger
         lock_path = File.expand_path("~/#{USER_NAMESPACE_DIRNAME}.lock")
@@ -153,8 +152,8 @@ describe "Passenger Standalone" do
         @lock.flock(File::LOCK_EX)
 
         @user_dir = File.expand_path("~/#{USER_NAMESPACE_DIRNAME}")
-        if File.exist?("buildout.old")
-          raise "buildout.old exists. Please fix this first."
+        if File.exist?('buildout.old')
+          raise 'buildout.old exists. Please fix this first.'
         end
         if File.exist?("#{@user_dir}.old")
           raise "#{@user_dir}.old exists. Please fix this first."
@@ -183,25 +182,25 @@ describe "Passenger Standalone" do
         @lock.close if @lock
       end
 
-      context "when natively packaged" do
-        it "tries to install the runtime" do
-          command = "passenger start --no-install-runtime --runtime-check-only"
-          `#{command} 2>&1`.should include("Refusing to install")
+      context 'when natively packaged' do
+        it 'tries to install the runtime' do
+          command = 'passenger start --no-install-runtime --runtime-check-only'
+          `#{command} 2>&1`.should include('Refusing to install')
         end
 
-        it "starts a server which serves the application" do
+        it 'starts a server which serves the application' do
           FileUtils.mkdir_p '../buildout/testlogs'
-          output = capture_output("passenger start --runtime-check-only")
+          output = capture_output('passenger start --runtime-check-only')
           output.should include(AGENT_BINARY_DOWNLOAD_MESSAGE)
           output.should include(NGINX_BINARY_INSTALL_MESSAGE)
-          test_serving_application("passenger start")
+          test_serving_application('passenger start')
         end
       end
 
-      context "when custom packaged" do
+      context 'when custom packaged' do
         before :each do
           @tmpdir = Dir.mktmpdir
-          sh "passenger-config --make-locations-ini --for-packaging-method=deb " +
+          sh 'passenger-config --make-locations-ini --for-packaging-method=deb ' +
             "> '#{@tmpdir}/locations.ini'"
           ENV['PASSENGER_LOCATION_CONFIGURATION_FILE'] = "#{@tmpdir}/locations.ini"
         end
@@ -211,17 +210,17 @@ describe "Passenger Standalone" do
           FileUtils.remove_entry_secure(@tmpdir)
         end
 
-        it "tries to install the runtime" do
-          command = "passenger start --no-install-runtime --runtime-check-only"
-          `#{command} 2>&1`.should include("Refusing to install")
+        it 'tries to install the runtime' do
+          command = 'passenger start --no-install-runtime --runtime-check-only'
+          `#{command} 2>&1`.should include('Refusing to install')
         end
 
-        it "starts a server which serves the application" do
+        it 'starts a server which serves the application' do
           FileUtils.mkdir_p '../buildout/testlogs'
-          output = capture_output("passenger start --runtime-check-only")
+          output = capture_output('passenger start --runtime-check-only')
           output.should include(AGENT_BINARY_DOWNLOAD_MESSAGE)
           output.should include(NGINX_BINARY_INSTALL_MESSAGE)
-          test_serving_application("passenger start")
+          test_serving_application('passenger start')
         end
       end
 
@@ -373,27 +372,27 @@ describe "Passenger Standalone" do
       # end
     end
 
-    context "if the runtime is installed" do
+    context 'if the runtime is installed' do
       before :all do
-        capture_output("passenger-config compile-nginx-engine")
+        capture_output('passenger-config compile-nginx-engine')
       end
 
       it "doesn't download the runtime from the Internet" do
-        command = "passenger start --no-install-runtime --runtime-check-only"
+        command = 'passenger start --no-install-runtime --runtime-check-only'
         capture_output(command).should_not include(AGENT_BINARY_DOWNLOAD_MESSAGE)
       end
 
       it "doesn't build the runtime" do
-        command = "passenger start --no-install-runtime --runtime-check-only"
+        command = 'passenger start --no-install-runtime --runtime-check-only'
         capture_output(command).should_not include(AGENT_BINARY_COMPILE_MESSAGE)
       end
 
-      it "starts a server which serves the application" do
-        test_serving_application("passenger start")
+      it 'starts a server which serves the application' do
+        test_serving_application('passenger start')
       end
     end
 
-    it "daemonizes if -d is given" do
+    it 'daemonizes if -d is given' do
       # Earlier tests already test this. This empty test here
       # is merely to show the intent of the tests, and to
       # speed up the test suite by preventing an unnecessary
@@ -401,9 +400,9 @@ describe "Passenger Standalone" do
     end
   end
 
-  describe "help command" do
-    it "displays the available commands" do
-      capture_output("passenger help").should include("Available commands:")
+  describe 'help command' do
+    it 'displays the available commands' do
+      capture_output('passenger help').should include('Available commands:')
     end
   end
 end

@@ -22,7 +22,7 @@ define 'libcurl-dev' do
   website "http://curl.haxx.se/libcurl"
   define_checker do
     PhusionPassenger.require_passenger_lib 'platform_info/curl'
-    result = { :found => false }
+    result = { found: false }
 
     if !(curl_config = PlatformInfo.find_command('curl-config'))
       result[:error] = "Cannot find the `curl-config` command."

@@ -24,10 +24,10 @@ describe RequestHandler do
     @options ||= {}
     @thread_handler = Class.new(DummyThreadHandler)
     @options = {
-      "app_group_name" => "foobar",
-      "thread_handler" => @thread_handler,
-      "socket_dir"     => @temp_dir,
-      "keepalive"      => false
+      'app_group_name' => 'foobar',
+      'thread_handler' => @thread_handler,
+      'socket_dir'     => @temp_dir,
+      'keepalive'      => false,
     }.merge(@options)
     @request_handler = RequestHandler.new(@owner_pipe[1], @options)
   end
@@ -50,12 +50,12 @@ describe RequestHandler do
 
   def connect(socket_name = :main)
     address = @request_handler.server_sockets[socket_name][:address]
-    return Utils.connect_to_server(address)
+    Utils.connect_to_server(address)
   end
 
   def send_binary_request(socket, env)
     channel = MessageChannel.new(socket)
-    data = ""
+    data = ''
     env.each_pair do |key, value|
       data << key << "\0"
       data << value << "\0"
@@ -63,7 +63,7 @@ describe RequestHandler do
     channel.write_scalar(data)
   end
 
-  it "exits if the owner pipe is closed" do
+  it 'exits if the owner pipe is closed' do
     @request_handler.start_main_loop_thread
     @owner_pipe[0].close
     eventually do
@@ -71,14 +71,14 @@ describe RequestHandler do
     end
   end
 
-  it "creates a socket file in the Phusion Passenger temp folder, unless when using TCP sockets" do
-    if @request_handler.server_sockets[:main][1] == "unix"
+  it 'creates a socket file in the Phusion Passenger temp folder, unless when using TCP sockets' do
+    if @request_handler.server_sockets[:main][1] == 'unix'
       File.chmod(0700, "#{@temp_dir}/backends")
       Dir["#{@temp_dir}/backends/*"].should_not be_empty
     end
   end
 
-  specify "the main socket rejects headers that are too large" do
+  specify 'the main socket rejects headers that are too large' do
     stderr = StringIO.new
     DebugLogging.log_level = DEFAULT_LOG_LEVEL
     DebugLogging.stderr_evaluator = lambda { stderr }
@@ -88,7 +88,7 @@ describe RequestHandler do
       client.sync = true
       block = lambda do
         data = "REQUEST_METHOD\0/"
-        data << "x" * (RequestHandler::ThreadHandler::MAX_HEADER_SIZE * 2)
+        data << 'x' * (RequestHandler::ThreadHandler::MAX_HEADER_SIZE * 2)
         data << "\0"
         MessageChannel.new(client).write_scalar(data)
       end
@@ -99,14 +99,14 @@ describe RequestHandler do
     end
   end
 
-  specify "the main socket rejects unauthenticated connections, if a connect password is supplied" do
-    @request_handler.connect_password = "1234"
+  specify 'the main socket rejects unauthenticated connections, if a connect password is supplied' do
+    @request_handler.connect_password = '1234'
     @request_handler.start_main_loop_thread
     begin
       client = connect
       channel = MessageChannel.new(client)
       channel.write_scalar("REQUEST_METHOD\0PING\0")
-      client.read.should == ""
+      client.read.should == ''
     ensure
       client.close rescue nil
     end
@@ -114,38 +114,38 @@ describe RequestHandler do
       client = connect
       channel = MessageChannel.new(client)
       channel.write_scalar("REQUEST_METHOD\0PING\0PASSENGER_CONNECT_PASSWORD\0001234\0")
-      client.read.should == "pong"
+      client.read.should == 'pong'
     ensure
       client.close rescue nil
     end
   end
 
-  it "accepts pings on the main server socket" do
+  it 'accepts pings on the main server socket' do
     @request_handler.start_main_loop_thread
     client = connect
     begin
       channel = MessageChannel.new(client)
       channel.write_scalar("REQUEST_METHOD\0PING\0")
-      client.read.should == "pong"
+      client.read.should == 'pong'
     ensure
       client.close
     end
   end
 
-  it "accepts pings on the HTTP server socket" do
+  it 'accepts pings on the HTTP server socket' do
     @request_handler.start_main_loop_thread
     client = connect(:http)
     begin
       client.write("PING / HTTP/1.1\r\n")
       client.write("Host: foo.com\r\n\r\n")
       client.close_write
-      client.read.should == "pong"
+      client.read.should == 'pong'
     ensure
       client.close
     end
   end
 
-  specify "the HTTP socket rejects headers that are too large" do
+  specify 'the HTTP socket rejects headers that are too large' do
     stderr = StringIO.new
     DebugLogging.log_level = DEFAULT_LOG_LEVEL
     DebugLogging.stderr_evaluator = lambda { stderr }
@@ -154,10 +154,10 @@ describe RequestHandler do
       client = connect(:http)
       client.sync = true
       block = lambda do
-        client.write("GET /")
-        client.write("x" * RequestHandler::ThreadHandler::MAX_HEADER_SIZE)
+        client.write('GET /')
+        client.write('x' * RequestHandler::ThreadHandler::MAX_HEADER_SIZE)
         sleep 0.01 # Context switch
-        client.write("x" * RequestHandler::ThreadHandler::MAX_HEADER_SIZE)
+        client.write('x' * RequestHandler::ThreadHandler::MAX_HEADER_SIZE)
         sleep 0.01 # Context switch
         client.write(" HTTP/1.1\r\n")
       end
@@ -168,15 +168,15 @@ describe RequestHandler do
     end
   end
 
-  specify "the HTTP socket rejects unauthenticated connections, if a connect password is supplied" do
+  specify 'the HTTP socket rejects unauthenticated connections, if a connect password is supplied' do
     DebugLogging.log_level = LVL_ERROR
-    @request_handler.connect_password = "1234"
+    @request_handler.connect_password = '1234'
     @request_handler.start_main_loop_thread
     begin
       client = connect(:http)
       client.write("PING / HTTP/1.1\r\n")
       client.write("\r\n")
-      client.read.should == ""
+      client.read.should == ''
     ensure
       client.close rescue nil
     end
@@ -185,23 +185,23 @@ describe RequestHandler do
       client.write("PING / HTTP/1.1\r\n")
       client.write("X-Passenger-Connect-Password: 1234\r\n")
       client.write("\r\n")
-      client.read.should == "pong"
+      client.read.should == 'pong'
     ensure
       client.close rescue nil
     end
   end
 
-  it "catches exceptions generated by the Rack application object" do
-    @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+  it 'catches exceptions generated by the Rack application object' do
+    @options['thread_handler'] = Class.new(RequestHandler::ThreadHandler) do
       include Rack::ThreadHandlerExtension
     end
 
     lambda_called = false
 
     # Here we test that the exception is not propagated to outside the request handler.
-    @options["app"] = lambda do |env|
+    @options['app'] = lambda do |env|
       lambda_called = true
-      raise "an error"
+      raise 'an error'
     end
 
     @request_handler = RequestHandler.new(@owner_pipe[1], @options)
@@ -209,8 +209,8 @@ describe RequestHandler do
     client = connect
     begin
       send_binary_request(client,
-        "REQUEST_METHOD" => "GET",
-        "PATH_INFO" => "/")
+        'REQUEST_METHOD' => 'GET',
+        'PATH_INFO' => '/')
       client.read
     ensure
       client.close
@@ -219,21 +219,21 @@ describe RequestHandler do
     lambda_called.should == true
   end
 
-  it "catches exceptions generated by the Rack body object" do
-    @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+  it 'catches exceptions generated by the Rack body object' do
+    @options['thread_handler'] = Class.new(RequestHandler::ThreadHandler) do
       include Rack::ThreadHandlerExtension
     end
 
     lambda_called = false
 
     # Here we test that the exception is not propagated to outside the request handler.
-    @options["app"] = lambda do |env|
+    @options['app'] = lambda do |env|
       lambda_called = true
       body = Object.new
       def body.each
-        raise "an error"
+        raise 'an error'
       end
-      [200, { "Content-Type" => "text/plain" }, body]
+      [ 200, { 'Content-Type' => 'text/plain' }, body ]
     end
 
     @request_handler = RequestHandler.new(@owner_pipe[1], @options)
@@ -241,8 +241,8 @@ describe RequestHandler do
     client = connect
     begin
       send_binary_request(client,
-        "REQUEST_METHOD" => "GET",
-        "PATH_INFO" => "/")
+        'REQUEST_METHOD' => 'GET',
+        'PATH_INFO' => '/')
       client.read
     ensure
       client.close
@@ -251,14 +251,14 @@ describe RequestHandler do
     lambda_called.should == true
   end
 
-  it "allows the application to take over the socket completely through the full hijack API" do
-    @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+  it 'allows the application to take over the socket completely through the full hijack API' do
+    @options['thread_handler'] = Class.new(RequestHandler::ThreadHandler) do
       include Rack::ThreadHandlerExtension
     end
 
     lambda_called = false
 
-    @options["app"] = lambda do |env|
+    @options['app'] = lambda do |env|
       lambda_called = true
       env['rack.hijack?'].should be_truthy
       env['rack.hijack_io'].should be_nil
@@ -266,7 +266,7 @@ describe RequestHandler do
       Thread.new do
         Thread.current.abort_on_exception = true
         sleep 0.1
-        env['rack.hijack_io'].write("Hijacked response!")
+        env['rack.hijack_io'].write('Hijacked response!')
         env['rack.hijack_io'].close
       end
     end
@@ -276,11 +276,11 @@ describe RequestHandler do
     client = connect
     begin
       send_binary_request(client,
-        "REQUEST_METHOD" => "GET",
-        "PATH_INFO" => "/")
+        'REQUEST_METHOD' => 'GET',
+        'PATH_INFO' => '/')
       sleep 0.1 # Give it some time to handle the request.
       stop_request_handler
-      client.read.should == "Hijacked response!"
+      client.read.should == 'Hijacked response!'
     ensure
       client.close
     end
@@ -288,15 +288,15 @@ describe RequestHandler do
     lambda_called.should == true
   end
 
-  it "allows the application to take over the socket after sending headers through the partial hijack API" do
-    @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+  it 'allows the application to take over the socket after sending headers through the partial hijack API' do
+    @options['thread_handler'] = Class.new(RequestHandler::ThreadHandler) do
       include Rack::ThreadHandlerExtension
     end
 
     lambda_called = false
     hijack_callback_called = false
 
-    @options["app"] = lambda do |env|
+    @options['app'] = lambda do |env|
       lambda_called = true
       env['rack.hijack?'].should be_truthy
       env['rack.hijack_io'].should be_nil
@@ -304,10 +304,10 @@ describe RequestHandler do
         hijack_callback_called = true
         env['rack.hijack_io'].should_not be_nil
         env['rack.hijack_io'].should == socket
-        socket.write("Hijacked partial response!")
+        socket.write('Hijacked partial response!')
         socket.close
       end
-      [200, { 'Content-Type' => 'text/html', 'rack.hijack' => hijack_callback }]
+      [ 200, { 'Content-Type' => 'text/html', 'rack.hijack' => hijack_callback } ]
     end
 
     @request_handler = RequestHandler.new(@owner_pipe[1], @options)
@@ -315,14 +315,14 @@ describe RequestHandler do
     client = connect
     begin
       send_binary_request(client,
-        "REQUEST_METHOD" => "GET",
-        "PATH_INFO" => "/")
+        'REQUEST_METHOD' => 'GET',
+        'PATH_INFO' => '/')
       client.read.should ==
         "HTTP/1.1 200 Whatever\r\n" +
         "Content-Type: text/html\r\n" +
         "Connection: close\r\n" +
         "\r\n" +
-        "Hijacked partial response!"
+        'Hijacked partial response!'
     ensure
       client.close
     end
@@ -331,17 +331,17 @@ describe RequestHandler do
     hijack_callback_called.should == true
   end
 
-  specify "requests with Content-Length are assumed to have a request body" do
-    @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+  specify 'requests with Content-Length are assumed to have a request body' do
+    @options['thread_handler'] = Class.new(RequestHandler::ThreadHandler) do
       include Rack::ThreadHandlerExtension
     end
 
     lambda_called = false
 
-    @options["app"] = lambda do |env|
+    @options['app'] = lambda do |env|
       lambda_called = true
-      env['rack.input'].read(3).should == "abc"
-      [200, {}, ["ok"]]
+      env['rack.input'].read(3).should == 'abc'
+      [ 200, {}, [ 'ok' ] ]
     end
 
     @request_handler = RequestHandler.new(@owner_pipe[1], @options)
@@ -349,17 +349,17 @@ describe RequestHandler do
     client = connect
     begin
       send_binary_request(client,
-        "REQUEST_METHOD" => "GET",
-        "PATH_INFO" => "/",
-        "CONTENT_LENGTH" => "3")
-      client.write("abc")
+        'REQUEST_METHOD' => 'GET',
+        'PATH_INFO' => '/',
+        'CONTENT_LENGTH' => '3')
+      client.write('abc')
       client.close_write
       client.read.should ==
         "HTTP/1.1 200 Whatever\r\n" +
         "Content-Length: 2\r\n" +
         "Connection: close\r\n" +
         "\r\n" +
-        "ok"
+        'ok'
     ensure
       client.close
     end
@@ -367,20 +367,20 @@ describe RequestHandler do
     lambda_called.should be_truthy
   end
 
-  specify "requests with Transfer-Encoding chunked are assumed to have a request body" do
-    @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+  specify 'requests with Transfer-Encoding chunked are assumed to have a request body' do
+    @options['thread_handler'] = Class.new(RequestHandler::ThreadHandler) do
       include Rack::ThreadHandlerExtension
     end
 
     lambda_called = false
 
-    @options["app"] = lambda do |env|
+    @options['app'] = lambda do |env|
       lambda_called = true
       env['rack.input'].read(13).should ==
         "3\r\n" +
         "abc\r\n" +
         "0\r\n\r\n"
-      [200, {}, ["ok"]]
+      [ 200, {}, [ 'ok' ] ]
     end
 
     @request_handler = RequestHandler.new(@owner_pipe[1], @options)
@@ -388,9 +388,9 @@ describe RequestHandler do
     client = connect
     begin
       send_binary_request(client,
-        "REQUEST_METHOD" => "GET",
-        "PATH_INFO" => "/",
-        "HTTP_TRANSFER_ENCODING" => "chunked")
+        'REQUEST_METHOD' => 'GET',
+        'PATH_INFO' => '/',
+        'HTTP_TRANSFER_ENCODING' => 'chunked')
       client.write(
         "3\r\n" +
         "abc\r\n" +
@@ -401,7 +401,7 @@ describe RequestHandler do
         "Content-Length: 2\r\n" +
         "Connection: close\r\n" +
         "\r\n" +
-        "ok"
+        'ok'
     ensure
       client.close
     end
@@ -409,18 +409,18 @@ describe RequestHandler do
     lambda_called.should be_truthy
   end
 
-  specify "requests with neither Content-Length nor Transfer-Encoding are assumed to have no request body" do
-    @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+  specify 'requests with neither Content-Length nor Transfer-Encoding are assumed to have no request body' do
+    @options['thread_handler'] = Class.new(RequestHandler::ThreadHandler) do
       include Rack::ThreadHandlerExtension
     end
 
     lambda_called = false
 
-    @options["app"] = lambda do |env|
+    @options['app'] = lambda do |env|
       lambda_called = true
       env['rack.input'].read(1).should be_nil
       env['rack.input'].gets.should be_nil
-      [200, {}, ["ok"]]
+      [ 200, {}, [ 'ok' ] ]
     end
 
     @request_handler = RequestHandler.new(@owner_pipe[1], @options)
@@ -428,15 +428,15 @@ describe RequestHandler do
     client = connect
     begin
       send_binary_request(client,
-        "REQUEST_METHOD" => "POST",
-        "PATH_INFO" => "/")
+        'REQUEST_METHOD' => 'POST',
+        'PATH_INFO' => '/')
       client.close_write
       client.read.should ==
         "HTTP/1.1 200 Whatever\r\n" +
         "Content-Length: 2\r\n" +
         "Connection: close\r\n" +
         "\r\n" +
-        "ok"
+        'ok'
     ensure
       client.close
     end
@@ -444,9 +444,9 @@ describe RequestHandler do
     lambda_called.should be_truthy
   end
 
-  describe "on requests that are not supposed to have a body" do
+  describe 'on requests that are not supposed to have a body' do
     before :each do
-      @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+      @options['thread_handler'] = Class.new(RequestHandler::ThreadHandler) do
         include Rack::ThreadHandlerExtension
       end
     end
@@ -454,10 +454,10 @@ describe RequestHandler do
     it "doesn't allow reading from rack.input" do
       lambda_called = false
 
-      @options["app"] = lambda do |env|
+      @options['app'] = lambda do |env|
         lambda_called = true
         body = env['rack.input'].read.inspect
-        [200, { "Content-Type" => "text/plain" }, [body]]
+        [ 200, { 'Content-Type' => 'text/plain' }, [ body ] ]
       end
 
       @request_handler = RequestHandler.new(@owner_pipe[1], @options)
@@ -465,15 +465,15 @@ describe RequestHandler do
       client = connect
       begin
         send_binary_request(client,
-          "REQUEST_METHOD" => "GET",
-          "PATH_INFO" => "/")
+          'REQUEST_METHOD' => 'GET',
+          'PATH_INFO' => '/')
         client.read.should ==
           "HTTP/1.1 200 Whatever\r\n" +
           "Content-Type: text/plain\r\n" +
           "Content-Length: 2\r\n" +
           "Connection: close\r\n" +
           "\r\n" +
-          "\"\""
+          '""'
       ensure
         client.close
       end
@@ -481,16 +481,16 @@ describe RequestHandler do
       lambda_called.should be_truthy
     end
 
-    it "allows reading from the client socket once the socket has been fully hijacked" do
+    it 'allows reading from the client socket once the socket has been fully hijacked' do
       lambda_called = false
 
-      @options["app"] = lambda do |env|
+      @options['app'] = lambda do |env|
         lambda_called = true
         env['rack.hijack'].call
         io = env['rack.hijack_io']
         begin
-          io.read.should == "hi"
-          io.write("ok")
+          io.read.should == 'hi'
+          io.write('ok')
         ensure
           io.close
         end
@@ -501,11 +501,11 @@ describe RequestHandler do
       client = connect
       begin
         send_binary_request(client,
-          "REQUEST_METHOD" => "GET",
-          "PATH_INFO" => "/")
-        client.write("hi")
+          'REQUEST_METHOD' => 'GET',
+          'PATH_INFO' => '/')
+        client.write('hi')
         client.close_write
-        client.read.should == "ok"
+        client.read.should == 'ok'
       ensure
         client.close
       end
@@ -513,21 +513,21 @@ describe RequestHandler do
       lambda_called.should be_truthy
     end
 
-    it "allows reading from the client socket once the socket has been partially hijacked" do
+    it 'allows reading from the client socket once the socket has been partially hijacked' do
       lambda_called = false
 
-      @options["app"] = lambda do |env|
+      @options['app'] = lambda do |env|
         block = lambda do |io|
           lambda_called = true
           begin
-            io.read.should == "hi"
-            io.write("ok")
+            io.read.should == 'hi'
+            io.write('ok')
           ensure
             io.close
           end
         end
         headers = { 'rack.hijack' => block }
-        [200, headers, []]
+        [ 200, headers, [] ]
       end
 
       @request_handler = RequestHandler.new(@owner_pipe[1], @options)
@@ -535,15 +535,15 @@ describe RequestHandler do
       client = connect
       begin
         send_binary_request(client,
-          "REQUEST_METHOD" => "GET",
-          "PATH_INFO" => "/")
-        client.write("hi")
+          'REQUEST_METHOD' => 'GET',
+          'PATH_INFO' => '/')
+        client.write('hi')
         client.close_write
         client.read.should ==
           "HTTP/1.1 200 Whatever\r\n" +
           "Connection: close\r\n" +
           "\r\n" +
-          "ok"
+          'ok'
       ensure
         client.close
       end
@@ -552,13 +552,13 @@ describe RequestHandler do
     end
   end
 
-  describe "when processing Rack responses" do
+  describe 'when processing Rack responses' do
     def setup(&app)
-      @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+      @options['thread_handler'] = Class.new(RequestHandler::ThreadHandler) do
         include Rack::ThreadHandlerExtension
       end
-      @options["app"] = app
-      @options["keepalive"] = true
+      @options['app'] = app
+      @options['keepalive'] = true
 
       @request_handler = RequestHandler.new(@owner_pipe[1], @options)
       @request_handler.start_main_loop_thread
@@ -579,55 +579,55 @@ describe RequestHandler do
       end
     end
 
-    context "with Content-Length" do
-      context "and the response status code allows a body" do
-        context "and the request is HEAD" do
-          it "disallows Transfer-Encoding" do
+    context 'with Content-Length' do
+      context 'and the response status code allows a body' do
+        context 'and the request is HEAD' do
+          it 'disallows Transfer-Encoding' do
             setup do |env|
-                [200, { "Content-Length" => "2", "Transfer-Encoding" => "chunked" },
-                  ["ok"]]
+                [ 200, { 'Content-Length' => '2', 'Transfer-Encoding' => 'chunked' },
+                  [ 'ok' ] ]
               end
               send_binary_request(@client,
-                "REQUEST_METHOD" => "HEAD",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'HEAD',
+                'PATH_INFO' => '/')
               @client.close_write
-              @client.read.should == ""
+              @client.read.should == ''
           end
 
-          it "outputs Content-Length" do
+          it 'outputs Content-Length' do
             setup do |env|
-              [200, { "Content-Length" => "2" }, ["ok"]]
+              [ 200, { 'Content-Length' => '2' }, [ 'ok' ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "HEAD",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'HEAD',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 200 Whatever\r\n" \
               "Content-Length: 2\r\n\r\n"
           end
 
-          context "and the body is an Array" do
-            it "does not check whether the body size matches Content-Length" do
+          context 'and the body is an Array' do
+            it 'does not check whether the body size matches Content-Length' do
               setup do |env|
-                [200, { "Content-Length" => "2" }, ["okok"]]
+                [ 200, { 'Content-Length' => '2' }, [ 'okok' ] ]
               end
               send_binary_request(@client,
-                "REQUEST_METHOD" => "HEAD",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'HEAD',
+                'PATH_INFO' => '/')
               @client.close_write
               @client.read.should ==
                 "HTTP/1.1 200 Whatever\r\n" \
                 "Content-Length: 2\r\n\r\n"
             end
 
-            it "allows keepalive" do
+            it 'allows keepalive' do
               setup do |env|
-                [200, { "Content-Length" => "2" }, ["ok"]]
+                [ 200, { 'Content-Length' => '2' }, [ 'ok' ] ]
               end
               send_binary_request(@client,
-                "REQUEST_METHOD" => "HEAD",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'HEAD',
+                'PATH_INFO' => '/')
               @client.close_write
               @client.read.should ==
                 "HTTP/1.1 200 Whatever\r\n" \
@@ -635,14 +635,14 @@ describe RequestHandler do
             end
           end
 
-          context "and the body is not an Array" do
-            it "allows keep-alive" do
+          context 'and the body is not an Array' do
+            it 'allows keep-alive' do
               setup do |env|
-                [200, { "Content-Length" => "2" }, NonArrayBody.new(["ok"])]
+                [ 200, { 'Content-Length' => '2' }, NonArrayBody.new([ 'ok' ]) ]
               end
               send_binary_request(@client,
-                "REQUEST_METHOD" => "HEAD",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'HEAD',
+                'PATH_INFO' => '/')
               @client.close_write
               @client.read.should ==
                 "HTTP/1.1 200 Whatever\r\n" \
@@ -651,113 +651,113 @@ describe RequestHandler do
           end
         end
 
-        context "and the request is not HEAD" do
-          it "disallows Transfer-Encoding" do
+        context 'and the request is not HEAD' do
+          it 'disallows Transfer-Encoding' do
             setup do |env|
-                [200, { "Content-Length" => "2", "Transfer-Encoding" => "chunked" },
-                  ["ok"]]
+                [ 200, { 'Content-Length' => '2', 'Transfer-Encoding' => 'chunked' },
+                  [ 'ok' ] ]
               end
               send_binary_request(@client,
-                "REQUEST_METHOD" => "GET",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'GET',
+                'PATH_INFO' => '/')
               @client.close_write
-              @client.read.should == ""
+              @client.read.should == ''
           end
 
-          it "outputs Content-Length" do
+          it 'outputs Content-Length' do
             setup do |env|
-              [200, { "Content-Length" => "2" }, ["ok"]]
+              [ 200, { 'Content-Length' => '2' }, [ 'ok' ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "GET",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'GET',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 200 Whatever\r\n" \
               "Content-Length: 2\r\n\r\n" \
-              "ok"
+              'ok'
           end
 
-          context "and the body is an Array" do
-            it "checks whether the body size matches Content-Length" do
+          context 'and the body is an Array' do
+            it 'checks whether the body size matches Content-Length' do
               setup do |env|
-                [200, { "Content-Length" => "2" }, ["okok"]]
+                [ 200, { 'Content-Length' => '2' }, [ 'okok' ] ]
               end
               send_binary_request(@client,
-                "REQUEST_METHOD" => "GET",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'GET',
+                'PATH_INFO' => '/')
               @client.close_write
-              @client.read.should == ""
+              @client.read.should == ''
             end
 
-            it "allows keepalive" do
+            it 'allows keepalive' do
               setup do |env|
-                [200, { "Content-Length" => "2" }, ["ok"]]
+                [ 200, { 'Content-Length' => '2' }, [ 'ok' ] ]
               end
               send_binary_request(@client,
-                "REQUEST_METHOD" => "GET",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'GET',
+                'PATH_INFO' => '/')
               @client.close_write
               @client.read.should ==
                 "HTTP/1.1 200 Whatever\r\n" \
                 "Content-Length: 2\r\n\r\n" \
-                "ok"
+                'ok'
             end
           end
 
-          context "and the body is not an Array" do
-            it "does not allow keep-alive" do
+          context 'and the body is not an Array' do
+            it 'does not allow keep-alive' do
               setup do |env|
-                [200, { "Content-Length" => "2" }, NonArrayBody.new(["ok"])]
+                [ 200, { 'Content-Length' => '2' }, NonArrayBody.new([ 'ok' ]) ]
               end
               send_binary_request(@client,
-                "REQUEST_METHOD" => "GET",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'GET',
+                'PATH_INFO' => '/')
               @client.close_write
               @client.read.should ==
                 "HTTP/1.1 200 Whatever\r\n" \
                 "Content-Length: 2\r\n" \
                 "Connection: close\r\n\r\n" \
-                "ok"
+                'ok'
             end
           end
         end
       end
 
-      context "and the response status code does not allow a body" do
-        context "and the request is HEAD" do
-          it "disallows Transfer-Encoding" do
+      context 'and the response status code does not allow a body' do
+        context 'and the request is HEAD' do
+          it 'disallows Transfer-Encoding' do
             setup do |env|
-              [204, { "Content-Length" => "2", "Transfer-Encoding" => "chunked" },
-                ["ok"]]
+              [ 204, { 'Content-Length' => '2', 'Transfer-Encoding' => 'chunked' },
+                [ 'ok' ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "HEAD",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'HEAD',
+              'PATH_INFO' => '/')
             @client.close_write
-            @client.read.should == ""
+            @client.read.should == ''
           end
 
-          it "outputs Content-Length, ignores the body and allows keep-alive" do
+          it 'outputs Content-Length, ignores the body and allows keep-alive' do
             setup do |env|
-              [204, { "Content-Length" => "2" }, ["ok"]]
+              [ 204, { 'Content-Length' => '2' }, [ 'ok' ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "HEAD",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'HEAD',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 204 Whatever\r\n" \
               "Content-Length: 2\r\n\r\n"
           end
 
-          it "does not check whether the body size matches Content-Length" do
+          it 'does not check whether the body size matches Content-Length' do
             setup do |env|
-              [204, { "Content-Length" => "2" }, ["okok"]]
+              [ 204, { 'Content-Length' => '2' }, [ 'okok' ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "HEAD",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'HEAD',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 204 Whatever\r\n" \
@@ -765,39 +765,39 @@ describe RequestHandler do
           end
         end
 
-        context "and the request is not HEAD" do
-          it "disallows Transfer-Encoding" do
+        context 'and the request is not HEAD' do
+          it 'disallows Transfer-Encoding' do
             setup do |env|
-              [204, { "Content-Length" => "2", "Transfer-Encoding" => "chunked" },
-                ["ok"]]
+              [ 204, { 'Content-Length' => '2', 'Transfer-Encoding' => 'chunked' },
+                [ 'ok' ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "GET",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'GET',
+              'PATH_INFO' => '/')
             @client.close_write
-            @client.read.should == ""
+            @client.read.should == ''
           end
 
-          it "outputs Content-Length, ignores the body and allows keep-alive" do
+          it 'outputs Content-Length, ignores the body and allows keep-alive' do
             setup do |env|
-              [204, { "Content-Length" => "2" }, ["ok"]]
+              [ 204, { 'Content-Length' => '2' }, [ 'ok' ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "GET",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'GET',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 204 Whatever\r\n" \
               "Content-Length: 2\r\n\r\n"
           end
 
-          it "does not check whether the body size matches Content-Length" do
+          it 'does not check whether the body size matches Content-Length' do
             setup do |env|
-              [204, { "Content-Length" => "2" }, ["okok"]]
+              [ 204, { 'Content-Length' => '2' }, [ 'okok' ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "GET",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'GET',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 204 Whatever\r\n" \
@@ -806,79 +806,79 @@ describe RequestHandler do
         end
       end
 
-      context "with X-Sendfile" do
-        it "outputs the body and disallows keep-alive" do
+      context 'with X-Sendfile' do
+        it 'outputs the body and disallows keep-alive' do
           setup do |env|
-            [200, { "Content-Length" => "2", "X-Sendfile" => "/foo" }, ["ok"]]
+            [ 200, { 'Content-Length' => '2', 'X-Sendfile' => '/foo' }, [ 'ok' ] ]
           end
           send_binary_request(@client,
-            "REQUEST_METHOD" => "GET",
-            "PATH_INFO" => "/")
+            'REQUEST_METHOD' => 'GET',
+            'PATH_INFO' => '/')
           @client.close_write
           [
             "HTTP/1.1 200 Whatever\r\n" \
             "Content-Length: 2\r\n" \
             "X-Sendfile: /foo\r\n" \
             "Connection: close\r\n\r\n" \
-            "ok",
+            'ok',
 
             "HTTP/1.1 200 Whatever\r\n" \
             "X-Sendfile: /foo\r\n" \
             "Content-Length: 2\r\n" \
             "Connection: close\r\n\r\n" \
-            "ok"
+            'ok',
           ].should include(@client.read)
         end
       end
 
-      context "with X-Accel-Redirect" do
-        it "outputs the body and disallows keep-alive" do
+      context 'with X-Accel-Redirect' do
+        it 'outputs the body and disallows keep-alive' do
           setup do |env|
-            [200, { "Content-Length" => "2", "X-Accel-Redirect" => "/foo" }, ["ok"]]
+            [ 200, { 'Content-Length' => '2', 'X-Accel-Redirect' => '/foo' }, [ 'ok' ] ]
           end
           send_binary_request(@client,
-            "REQUEST_METHOD" => "GET",
-            "PATH_INFO" => "/")
+            'REQUEST_METHOD' => 'GET',
+            'PATH_INFO' => '/')
           @client.close_write
           [
             "HTTP/1.1 200 Whatever\r\n" \
             "Content-Length: 2\r\n" \
             "X-Accel-Redirect: /foo\r\n" \
             "Connection: close\r\n\r\n" \
-            "ok",
+            'ok',
 
             "HTTP/1.1 200 Whatever\r\n" \
             "X-Accel-Redirect: /foo\r\n" \
             "Content-Length: 2\r\n" \
             "Connection: close\r\n\r\n" \
-            "ok"
+            'ok',
           ].should include(@client.read)
         end
       end
     end
 
-    describe "with Transfer-Encoding" do
-      context "and the response status code allows a body" do
-        context "and the request is HEAD" do
-          it "disallows Content-Length" do
+    describe 'with Transfer-Encoding' do
+      context 'and the response status code allows a body' do
+        context 'and the request is HEAD' do
+          it 'disallows Content-Length' do
             setup do |env|
-              [200, { "Transfer-Encoding" => "chunked", "Content-Length" => "1" },
-                ["2\r\nok\r\n", "0\r\n\r\n"]]
+              [ 200, { 'Transfer-Encoding' => 'chunked', 'Content-Length' => '1' },
+                [ "2\r\nok\r\n", "0\r\n\r\n" ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "HEAD",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'HEAD',
+              'PATH_INFO' => '/')
             @client.close_write
-            @client.read.should == ""
+            @client.read.should == ''
           end
 
-          it "outputs Transfer-Encoding, ignores the body and allows keep-alive" do
+          it 'outputs Transfer-Encoding, ignores the body and allows keep-alive' do
             setup do |env|
-              [200, { "Transfer-Encoding" => "chunked" }, ["2\r\nok\r\n", "0\r\n\r\n"]]
+              [ 200, { 'Transfer-Encoding' => 'chunked' }, [ "2\r\nok\r\n", "0\r\n\r\n" ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "HEAD",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'HEAD',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 200 Whatever\r\n" \
@@ -886,26 +886,26 @@ describe RequestHandler do
           end
         end
 
-        context "and the request is not HEAD" do
-          it "disallows Content-Length" do
+        context 'and the request is not HEAD' do
+          it 'disallows Content-Length' do
             setup do |env|
-              [200, { "Transfer-Encoding" => "chunked", "Content-Length" => "1" },
-                ["2\r\nok\r\n", "0\r\n\r\n"]]
+              [ 200, { 'Transfer-Encoding' => 'chunked', 'Content-Length' => '1' },
+                [ "2\r\nok\r\n", "0\r\n\r\n" ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "GET",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'GET',
+              'PATH_INFO' => '/')
             @client.close_write
-            @client.read.should == ""
+            @client.read.should == ''
           end
 
-          it "outputs Transfer-Encoding, does not rechunk the body and disallows keep-alive" do
+          it 'outputs Transfer-Encoding, does not rechunk the body and disallows keep-alive' do
             setup do |env|
-              [200, { "Transfer-Encoding" => "chunked" }, ["2\r\nok\r\n", "0\r\n\r\n"]]
+              [ 200, { 'Transfer-Encoding' => 'chunked' }, [ "2\r\nok\r\n", "0\r\n\r\n" ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "GET",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'GET',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 200 Whatever\r\n" \
@@ -917,27 +917,27 @@ describe RequestHandler do
         end
       end
 
-      context "and the response status code does not allow a body" do
-        context "and the request is HEAD" do
-          it "disallows Content-Length" do
+      context 'and the response status code does not allow a body' do
+        context 'and the request is HEAD' do
+          it 'disallows Content-Length' do
             setup do |env|
-              [204, { "Transfer-Encoding" => "chunked", "Content-Length" => "1" },
-                ["2\r\nok\r\n", "0\r\n\r\n"]]
+              [ 204, { 'Transfer-Encoding' => 'chunked', 'Content-Length' => '1' },
+                [ "2\r\nok\r\n", "0\r\n\r\n" ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "HEAD",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'HEAD',
+              'PATH_INFO' => '/')
             @client.close_write
-            @client.read.should == ""
+            @client.read.should == ''
           end
 
-          it "outputs Transfer-Encoding, ignores the body and allows keep-alive" do
+          it 'outputs Transfer-Encoding, ignores the body and allows keep-alive' do
             setup do |env|
-              [204, { "Transfer-Encoding" => "chunked" }, ["2\r\nok\r\n", "0\r\n\r\n"]]
+              [ 204, { 'Transfer-Encoding' => 'chunked' }, [ "2\r\nok\r\n", "0\r\n\r\n" ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "HEAD",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'HEAD',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 204 Whatever\r\n" \
@@ -945,26 +945,26 @@ describe RequestHandler do
           end
         end
 
-        context "and the request is not HEAD" do
-          it "disallows Content-Length" do
+        context 'and the request is not HEAD' do
+          it 'disallows Content-Length' do
             setup do |env|
-              [204, { "Transfer-Encoding" => "chunked", "Content-Length" => "1" },
-                ["2\r\nok\r\n", "0\r\n\r\n"]]
+              [ 204, { 'Transfer-Encoding' => 'chunked', 'Content-Length' => '1' },
+                [ "2\r\nok\r\n", "0\r\n\r\n" ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "GET",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'GET',
+              'PATH_INFO' => '/')
             @client.close_write
-            @client.read.should == ""
+            @client.read.should == ''
           end
 
-          it "outputs Transfer-Encoding, ignores the body and allows keep-alive" do
+          it 'outputs Transfer-Encoding, ignores the body and allows keep-alive' do
             setup do |env|
-              [204, { "Transfer-Encoding" => "chunked" }, ["2\r\nok\r\n", "0\r\n\r\n"]]
+              [ 204, { 'Transfer-Encoding' => 'chunked' }, [ "2\r\nok\r\n", "0\r\n\r\n" ] ]
             end
             send_binary_request(@client,
-              "REQUEST_METHOD" => "GET",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'GET',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 204 Whatever\r\n" \
@@ -974,20 +974,20 @@ describe RequestHandler do
       end
     end
 
-    describe "with neither Content-Length nor Transfer-Encoding" do
-      context "and the response status code allows a body" do
-        context "and the request is HEAD" do
-          context "and the body is an Array" do
+    describe 'with neither Content-Length nor Transfer-Encoding' do
+      context 'and the response status code allows a body' do
+        context 'and the request is HEAD' do
+          context 'and the body is an Array' do
             before :each do
               setup do |env|
-                [200, {}, ["ok"]]
+                [ 200, {}, [ 'ok' ] ]
               end
             end
 
-            it "adds Content-Length, ignores the body and allows keep-alive" do
+            it 'adds Content-Length, ignores the body and allows keep-alive' do
               send_binary_request(@client,
-                "REQUEST_METHOD" => "HEAD",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'HEAD',
+                'PATH_INFO' => '/')
               @client.close_write
               @client.read.should ==
                 "HTTP/1.1 200 Whatever\r\n" \
@@ -995,17 +995,17 @@ describe RequestHandler do
             end
           end
 
-          context "and the body is not an Array" do
+          context 'and the body is not an Array' do
             before :each do
               setup do |env|
-                [200, {}, NonArrayBody.new(["ok"])]
+                [ 200, {}, NonArrayBody.new([ 'ok' ]) ]
               end
             end
 
-            it "adds Transfer-Encoding, ignores the body and allows keep-alive" do
+            it 'adds Transfer-Encoding, ignores the body and allows keep-alive' do
               send_binary_request(@client,
-                "REQUEST_METHOD" => "HEAD",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'HEAD',
+                'PATH_INFO' => '/')
               @client.close_write
               @client.read.should ==
                 "HTTP/1.1 200 Whatever\r\n" \
@@ -1014,37 +1014,37 @@ describe RequestHandler do
           end
         end
 
-        context "and the request is not HEAD" do
-          context "and the body is an Array" do
+        context 'and the request is not HEAD' do
+          context 'and the body is an Array' do
             before :each do
               setup do |env|
-                [200, {}, ["ok"]]
+                [ 200, {}, [ 'ok' ] ]
               end
             end
 
-            it "adds Content-Length and allows keep-alive" do
+            it 'adds Content-Length and allows keep-alive' do
               send_binary_request(@client,
-                "REQUEST_METHOD" => "GET",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'GET',
+                'PATH_INFO' => '/')
               @client.close_write
               @client.read.should ==
                 "HTTP/1.1 200 Whatever\r\n" \
                 "Content-Length: 2\r\n\r\n" \
-                "ok"
+                'ok'
             end
           end
 
-          context "and the body is not an Array" do
+          context 'and the body is not an Array' do
             before :each do
               setup do |env|
-                [200, {}, NonArrayBody.new(["ok"])]
+                [ 200, {}, NonArrayBody.new([ 'ok' ]) ]
               end
             end
 
-            it "adds Transfer-Encoding, chunk-encodes the body and allows keep-alive" do
+            it 'adds Transfer-Encoding, chunk-encodes the body and allows keep-alive' do
               send_binary_request(@client,
-                "REQUEST_METHOD" => "GET",
-                "PATH_INFO" => "/")
+                'REQUEST_METHOD' => 'GET',
+                'PATH_INFO' => '/')
               @client.close_write
               @client.read.should ==
                 "HTTP/1.1 200 Whatever\r\n" \
@@ -1056,29 +1056,29 @@ describe RequestHandler do
         end
       end
 
-      context "and the response status code does not allow a body" do
+      context 'and the response status code does not allow a body' do
         before :each do
           setup do |env|
-            [204, {}, ["ok"]]
+            [ 204, {}, [ 'ok' ] ]
           end
         end
 
-        context "and the request is HEAD" do
-          it "adds neither Content-Length nor Transfer-Encoding, ignores the body and allows keep-alive" do
+        context 'and the request is HEAD' do
+          it 'adds neither Content-Length nor Transfer-Encoding, ignores the body and allows keep-alive' do
             send_binary_request(@client,
-              "REQUEST_METHOD" => "HEAD",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'HEAD',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 204 Whatever\r\n\r\n"
           end
         end
 
-        context "and the request is not HEAD" do
-          it "adds neither Content-Length nor Transfer-Encoding, ignores the body and allows keep-alive" do
+        context 'and the request is not HEAD' do
+          it 'adds neither Content-Length nor Transfer-Encoding, ignores the body and allows keep-alive' do
             send_binary_request(@client,
-              "REQUEST_METHOD" => "GET",
-              "PATH_INFO" => "/")
+              'REQUEST_METHOD' => 'GET',
+              'PATH_INFO' => '/')
             @client.close_write
             @client.read.should ==
               "HTTP/1.1 204 Whatever\r\n\r\n"
@@ -1088,7 +1088,7 @@ describe RequestHandler do
     end
   end
 
-  describe "HTTP parsing" do
+  describe 'HTTP parsing' do
     before :each do
       @request_handler.start_main_loop_thread
       @client = connect(:http)
@@ -1099,20 +1099,20 @@ describe RequestHandler do
       @client.close if @client
     end
 
-    it "correctly parses HTTP requests without query string" do
+    it 'correctly parses HTTP requests without query string' do
       @thread_handler.any_instance.should_receive(:process_request) do |headers, connection, full_http_response|
-        headers["REQUEST_METHOD"].should == "POST"
-        headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
-        headers["HTTP_HOST"].should == "foo.com"
-        headers["HTTP_X_FOO_BAR"].should == "baz"
-        headers["PATH_INFO"].should == "/foo/bar"
-        headers["SCRIPT_NAME"].should == ""
-        headers["QUERY_STRING"].should == ""
-        headers["REQUEST_URI"].should == "/foo/bar"
-        headers["HTTP_CONTENT_LENGTH"].should be_nil
-        headers["HTTP_CONTENT_TYPE"].should be_nil
-        headers["CONTENT_LENGTH"].should == "10"
-        headers["CONTENT_TYPE"].should == "text/plain"
+        headers['REQUEST_METHOD'].should == 'POST'
+        headers['SERVER_PROTOCOL'].should == 'HTTP/1.1'
+        headers['HTTP_HOST'].should == 'foo.com'
+        headers['HTTP_X_FOO_BAR'].should == 'baz'
+        headers['PATH_INFO'].should == '/foo/bar'
+        headers['SCRIPT_NAME'].should == ''
+        headers['QUERY_STRING'].should == ''
+        headers['REQUEST_URI'].should == '/foo/bar'
+        headers['HTTP_CONTENT_LENGTH'].should be_nil
+        headers['HTTP_CONTENT_TYPE'].should be_nil
+        headers['CONTENT_LENGTH'].should == '10'
+        headers['CONTENT_TYPE'].should == 'text/plain'
       end
 
       @client.write("POST /foo/bar HTTP/1.1\r\n")
@@ -1125,20 +1125,20 @@ describe RequestHandler do
       @client.read
     end
 
-    it "correctly parses HTTP requests with query string" do
+    it 'correctly parses HTTP requests with query string' do
       @thread_handler.any_instance.should_receive(:process_request) do |headers, connection, full_http_response|
-        headers["REQUEST_METHOD"].should == "POST"
-        headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
-        headers["HTTP_HOST"].should == "foo.com"
-        headers["HTTP_X_FOO_BAR"].should == "baz"
-        headers["PATH_INFO"].should == "/foo/bar"
-        headers["SCRIPT_NAME"].should == ""
-        headers["QUERY_STRING"].should == "hello=world&a=b+c"
-        headers["REQUEST_URI"].should == "/foo/bar?hello=world&a=b+c"
-        headers["HTTP_CONTENT_LENGTH"].should be_nil
-        headers["HTTP_CONTENT_TYPE"].should be_nil
-        headers["CONTENT_LENGTH"].should == "10"
-        headers["CONTENT_TYPE"].should == "text/plain"
+        headers['REQUEST_METHOD'].should == 'POST'
+        headers['SERVER_PROTOCOL'].should == 'HTTP/1.1'
+        headers['HTTP_HOST'].should == 'foo.com'
+        headers['HTTP_X_FOO_BAR'].should == 'baz'
+        headers['PATH_INFO'].should == '/foo/bar'
+        headers['SCRIPT_NAME'].should == ''
+        headers['QUERY_STRING'].should == 'hello=world&a=b+c'
+        headers['REQUEST_URI'].should == '/foo/bar?hello=world&a=b+c'
+        headers['HTTP_CONTENT_LENGTH'].should be_nil
+        headers['HTTP_CONTENT_TYPE'].should be_nil
+        headers['CONTENT_LENGTH'].should == '10'
+        headers['CONTENT_TYPE'].should == 'text/plain'
       end
 
       @client.write("POST /foo/bar?hello=world&a=b+c HTTP/1.1\r\n")
@@ -1151,26 +1151,26 @@ describe RequestHandler do
       @client.read
     end
 
-    it "correct parses HTTP requests that come in arbitrary chunks" do
+    it 'correct parses HTTP requests that come in arbitrary chunks' do
       @thread_handler.any_instance.should_receive(:process_request) do |headers, connection, full_http_response|
-        headers["REQUEST_METHOD"].should == "POST"
-        headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
-        headers["HTTP_HOST"].should == "foo.com"
-        headers["HTTP_X_FOO_BAR"].should == "baz"
-        headers["PATH_INFO"].should == "/foo/bar"
-        headers["SCRIPT_NAME"].should == ""
-        headers["QUERY_STRING"].should == "hello=world&a=b+c"
-        headers["REQUEST_URI"].should == "/foo/bar?hello=world&a=b+c"
-        headers["HTTP_CONTENT_LENGTH"].should be_nil
-        headers["HTTP_CONTENT_TYPE"].should be_nil
-        headers["CONTENT_LENGTH"].should == "10"
-        headers["CONTENT_TYPE"].should == "text/plain"
-        headers["HTTP_PLUS_SOME"].should be_nil
+        headers['REQUEST_METHOD'].should == 'POST'
+        headers['SERVER_PROTOCOL'].should == 'HTTP/1.1'
+        headers['HTTP_HOST'].should == 'foo.com'
+        headers['HTTP_X_FOO_BAR'].should == 'baz'
+        headers['PATH_INFO'].should == '/foo/bar'
+        headers['SCRIPT_NAME'].should == ''
+        headers['QUERY_STRING'].should == 'hello=world&a=b+c'
+        headers['REQUEST_URI'].should == '/foo/bar?hello=world&a=b+c'
+        headers['HTTP_CONTENT_LENGTH'].should be_nil
+        headers['HTTP_CONTENT_TYPE'].should be_nil
+        headers['CONTENT_LENGTH'].should == '10'
+        headers['CONTENT_TYPE'].should == 'text/plain'
+        headers['HTTP_PLUS_SOME'].should be_nil
       end
 
-      @client.write("POST /fo")
+      @client.write('POST /fo')
       sleep 0.001
-      @client.write("o/bar?hello=world&a=b+c HT")
+      @client.write('o/bar?hello=world&a=b+c HT')
       sleep 0.001
       @client.write("TP/1.1\r")
       sleep 0.001
@@ -1180,7 +1180,7 @@ describe RequestHandler do
       sleep 0.001
       @client.write("X-Foo-Bar: baz\r\n")
       sleep 0.001
-      @client.write("Content-Len")
+      @client.write('Content-Len')
       sleep 0.001
       @client.write("gth: 10\r\nContent-Type: text/pla")
       sleep 0.001

@@ -1,28 +1,138 @@
-Release 6.1.1 (Not yet released)
+Release 6.2.1 (Not yet released)
 -------------
+ * Improve SELinux compatibility. Closes GH-2630 & GH-2670.
+ * Improve header parsing resilience. Closes GH-2646.
+ * [Ruby] Improve Frozen String compatibility. GH-2659.
+ * Make 503 error prettier on mobile.
+ * 
+
+
+Release 6.2.0
+-------------
+ * Fix some compatibility issues with FreeBSD. Closes GH-2668 & GH-2669.
+ * [Nginx] Upgrades preferred Nginx to 1.30.4 from 1.30.3.
+ * Fix a vulnerability that left the Passenger Watchdog API unauthenticated. This is a breaking change for some installations and scripts: an "empty watchdog_api_server_authorizations" now means no-auth-is-possible instead of auth-is-skipped. This regression was introduced in 5.2.0. CVE number pending.
+ * Fix a vulnerability that allowed unauthenticated users to use a Passenger Watchdog process to elevate privileges. This regression was introduced in 5.2.0. CVE number pending.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - cmake: 4.3.3 -> 4.4.2
+   - curl: 8.20.0 -> 8.21.0
+   - git: 2.54.0 -> 2.55.0
+   - gnupg: 2.5.20 -> 2.5.21
+   - libffi: 3.5.2 -> 3.8.0
+   - libpsl: 0.21.5 -> 0.23.3
+   - openssl: 3.6.2 -> 3.6.3
+   - pinentry: 1.3.2 -> 1.3.3
+   - rubygems: 4.0.12 -> 4.0.18
+   - rubies:
+      - 3.3.11 -> 3.3.12
+      - 3.4.9 -> 3.4.10
+      - 4.0.5 -> 4.0.6
+
+
+Release 6.1.8
+-------------
+ * [Nginx] Build Nginx dynamic modules against nginx-mod-devel sources on Enterprise Linux. Closes GH-2664.
+
+
+Release 6.1.7
+-------------
+ * [Nginx] Build Nginx dynamic modules against nginx-mod-devel sources on Enterprise Linux 9. Closes GH-2664.
+
+
+Release 6.1.6
+-------------
+ * [Nginx] Upgrades preferred Nginx to 1.30.3 from 1.30.2.
+ * [Nginx] Build Nginx dynamic modules against nginx-mod-devel sources on Enterprise Linux. Closes GH-2664.
+
+
+Release 6.1.5
+-------------
+ * [Ubuntu] Rebuild packages against broken Nginx packages that Ubuntu is shipping. Closes GH-2662.
+
+
+Release 6.1.4
+-------------
+ * [Nginx] Upgrades preferred Nginx to 1.30.2 from 1.30.1.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - ccache: 4.13.4 -> 4.13.6
+   - cmake: 4.3.2 -> 4.3.3
+   - gnupg: 2.5.19 -> 2.5.20
+   - libgpg_error: 1.60 -> 1.61
+   - libksba: 1.6.8 -> 1.8.0
+   - rubygems: 4.0.10 -> 4.0.12
+   - rubies:
+      - 4.0.3 -> 4.0.5
+
+
+Release 6.1.3
+-------------
+ * [Ubuntu] Add packages for Ubuntu 26.04 "resolute", remove packages for Ubuntu 25.10 "questing" and Ubuntu 20.04 "focal". Closes GH-2657.
+ * [Nginx] Build Nginx dynamic modules against nginx-dev sources on Ubuntu/Debian where available to fix Ubuntu's incompatibility with upstream.
+ * [Ruby] add support for `rack.response_finished`. Closes GH-2418.
+ * Fix crash when buffer creation fails.
+ * [Nginx] The preferred PCRE2 version is now 10.47 (previously 10.46).
+ * [Nginx] Upgrades preferred Nginx to 1.30.1 from 1.28.0.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - ccache: 4.12.2 -> 4.13.4
+   - cmake: 4.2.2 -> 4.3.2
+   - curl: 8.18.0 -> 8.20.0
+   - git: 2.52.0 -> 2.54.0
+   - gnupg: 2.5.16 -> 2.5.19
+   - libgcrypt: 1.11.2 -> 1.12.2
+   - libgpg_error: 1.58 -> 1.60
+   - libiconv: 1.18 -> 1.19
+   - libksba: 1.6.7 -> 1.6.8
+   - openssl: 3.6.0 -> 3.6.2
+   - rubygems: 4.0.4 -> 4.0.10
+   - zlib: 1.3.1 -> 1.3.2
+   - rubies:
+      - removed 3.2 for EOL
+      - 3.3.10 -> 3.3.11
+      - 3.4.8 -> 3.4.9
+      - 4.0.1 -> 4.0.3
+
+
+Release 6.1.2
+-------------
+ * [Ruby] logger is now a “bundled” but not “default” gem, so it must be added to gemspec. Closes GH-2642.
+ * [Ruby] Fix Ruby < 2.3 support. Closes GH-2641.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - cmake: 4.2.1 -> 4.2.2
+   - curl: 8.17.0 -> 8.18.0
+   - gnupg: 2.4.8 -> 2.5.16
+   - rubygems: 4.0.2 -> 4.0.4
+   - rubys:
+     - 3.2.9 -> 3.2.10
+     - added 4.0.1
+
+
+Release 6.1.1
+-------------
+ * [Ruby] Improve support for Ruby 4 and Frozen String Literals. Closes GH-2619.
  * [Ubuntu] Add packages for Ubuntu 25.10 "questing", remove packages for Ubuntu 25.04 "plucky".
- * Upgrade Boost from 1.87 -> 1.89.
+ * Upgrade Boost from 1.87 -> 1.90.
+ * [Nginx] Fixes bug with unbuffered uploads. Closes GH-2575.
  * [Nginx] Upgrades preferred Nginx to 1.28.0 from 1.26.3.
  * [Nginx] The preferred PCRE2 version is now 10.46 (previously 10.45).
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
-   - ccache: 4.11.2 -> 4.12.1
-   - cmake: 4.0.0 -> 4.2.0
+   - ccache: 4.11.2 -> 4.12.2
+   - cmake: 4.0.0 -> 4.2.1
    - curl: 8.12.1 -> 8.17.0
    - git: 2.49.0 -> 2.52.0
-   - gnupg:2.4.7 -> 2.4.8
-   - libffi:3.4.7 -> 3.5.2
-   - libgcrypt:1.11.0 -> 1.11.2
-   - libgpg_error:1.51 -> 1.56
-   - libreadline:8.2 -> 8.3
-   - openssl:3.4.1 -> 3.6.0
-   - pcre2:10.45 -> 10.47
-   - pinentry:1.3.1 -> 1.3.2
-   - rubygems: 3.6.6 -> 3.7.2
+   - gnupg: 2.4.7 -> 2.4.8
+   - libffi: 3.4.7 -> 3.5.2
+   - libgcrypt: 1.11.0 -> 1.11.2
+   - libgpg_error: 1.51 -> 1.58
+   - libreadline: 8.2 -> 8.3
+   - openssl: 3.4.1 -> 3.6.0
+   - pcre2: 10.45 -> 10.47
+   - pinentry: 1.3.1 -> 1.3.2
+   - rubygems: 3.6.6 -> 4.0.2
    - rubys:
      - dropped 3.1.7
      - 3.2.8 -> 3.2.9
      - 3.3.7 -> 3.3.10
-     - 3.4.2 -> 3.4.7
+     - 3.4.2 -> 3.4.8
 
 
 Release 6.1.0
@@ -617,7 +727,7 @@ Release 6.0.3
  * Fixed an incompatibility with sending requests to specific app instances, when using the rails web-console gem. Contributed by Mark R. James (@mrj).
  * Fixed a regression (introduced in 5.1.9) where some hooks were not called. Closes GH-2103. Contributed by Mark R. James (@mrj).
  * Fixes compilation with clang 8 (latest macOS update) by updating vendored boost library from 1.67 to 1.69.
- * Reverts a regression intruduced in 6.0.2 where Passenger would crash if it had to use the disk backed response cache. Closes GH-2189.
+ * Reverts a regression introduced in 6.0.2 where Passenger would crash if it had to use the disk backed response cache. Closes GH-2189.
  * [Nginx] Adds an option `passenger_buffer_upload` to allow buffering uploaded data in Passenger before forwarding it to the app. As a workaround for apps that cannot handle chunked data.
  * [Enterprise] When using deferred port binding, no longer binds port if all apps do not start up.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):

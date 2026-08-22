@@ -48,51 +48,51 @@ describe Utils::JSON do
 
   specify 'full test' do
     expect(PARSED).to eq(
-      "head" => {
-        "ref" => "master",
-        "repository" => {
-          "forks" => 0,
-          "integrate_branch" => "rails3",
-          "watchers" => 1,
-          "language" => "Ruby",
-          "description" => "Pagination library for \"Rails 3\", Sinatra, Merb, DataMapper, and more",
-          "has_downloads" => true,
-          "fork" => true,
-          "created_at" => "2011/10/24 03:20:48 -0700",
-          "homepage" => "http://github.com/mislav/will_paginate/wikis",
-          "size" => 124.3e2,
-          "private" => false,
-          "has_wiki" => true,
-          "name" => "will_paginate",
-          "owner" => "dbackeus",
-          "url" => "https://github.com/dbackeus/will_paginate",
-          "has_issues" => false,
-          "open_issues" => 0,
-          "pushed_at" => "2011/10/25 05:44:05 -0700"
+      'head' => {
+        'ref' => 'master',
+        'repository' => {
+          'forks' => 0,
+          'integrate_branch' => 'rails3',
+          'watchers' => 1,
+          'language' => 'Ruby',
+          'description' => 'Pagination library for "Rails 3", Sinatra, Merb, DataMapper, and more',
+          'has_downloads' => true,
+          'fork' => true,
+          'created_at' => '2011/10/24 03:20:48 -0700',
+          'homepage' => 'http://github.com/mislav/will_paginate/wikis',
+          'size' => 124.3e2,
+          'private' => false,
+          'has_wiki' => true,
+          'name' => 'will_paginate',
+          'owner' => 'dbackeus',
+          'url' => 'https://github.com/dbackeus/will_paginate',
+          'has_issues' => false,
+          'open_issues' => 0,
+          'pushed_at' => '2011/10/25 05:44:05 -0700',
         },
-        "label" => "dbackeus:master",
-        "sha" => ["4438f", { "a"  => "b" }],
-        "user" => {
-          "name" => "David Backeus",
-          "company" => nil,
-          "gravatar_id" => "ebe96524f5db9e92188f0542dc9d1d1a",
-          "location" => "Stockholm (Sweden)",
-          "type" => "User",
-          "login" => "dbackeus"
-        }
+        'label' => 'dbackeus:master',
+        'sha' => [ '4438f', { 'a'  => 'b' } ],
+        'user' => {
+          'name' => 'David Backeus',
+          'company' => nil,
+          'gravatar_id' => 'ebe96524f5db9e92188f0542dc9d1d1a',
+          'location' => 'Stockholm (Sweden)',
+          'type' => 'User',
+          'login' => 'dbackeus',
+        },
       }
     )
   end
 
   specify 'string' do
-    expect(PARSED['head']['repository']['description']).to eq("Pagination library for \"Rails 3\", Sinatra, Merb, DataMapper, and more")
+    expect(PARSED['head']['repository']['description']).to eq('Pagination library for "Rails 3", Sinatra, Merb, DataMapper, and more')
   end
 
   specify 'string specials' do
     expect(parse_string('\r\n\t\f\b')).to eq("\r\n\t\f\b")
-    expect(parse_string('\u0061\u0041')).to eq("aA")
+    expect(parse_string('\u0061\u0041')).to eq('aA')
     expect(parse_string('\u001B')).to eq("\e")
-    expect(parse_string('\x\y\z')).to eq("xyz")
+    expect(parse_string('\x\y\z')).to eq('xyz')
     expect(parse_string('\"\\\\\\/')).to eq('"\\/')
     expect(parse_string('no #{interpolation}')).to eq('no #{interpolation}')
   end
@@ -115,7 +115,7 @@ describe Utils::JSON do
   end
 
   specify 'array' do
-    expect(PARSED['head']['sha']).to eq(["4438f", {"a" => "b"}])
+    expect(PARSED['head']['sha']).to eq([ '4438f', { 'a' => 'b' } ])
   end
 
   specify 'invalid' do
@@ -193,58 +193,58 @@ describe Utils::JSON::Generator do
   end
 
   specify 'array' do
-    expect(generate([1, 2, 3])).to eq(%([1, 2, 3]))
+    expect(generate([ 1, 2, 3 ])).to eq(%([1, 2, 3]))
   end
 
   specify 'bool' do
-    expect(generate([true, false])). to eq(%([true, false]))
+    expect(generate([ true, false ])). to eq(%([true, false]))
   end
 
   specify 'null' do
-    expect(generate([nil])).to eq(%([null]))
+    expect(generate([ nil ])).to eq(%([null]))
   end
 
   specify 'string' do
-    expect(generate(["abc\n123"])).to eq(%(["abc\\n123"]))
+    expect(generate([ "abc\n123" ])).to eq(%(["abc\\n123"]))
   end
 
   specify 'string_unicode' do
-    expect(generate(["ć\"č\nž\tš\\đ"])).to eq(%(["ć\\"č\\nž\\tš\\\\đ"]))
+    expect(generate([ "ć\"č\nž\tš\\đ" ])).to eq(%(["ć\\"č\\nž\\tš\\\\đ"]))
   end
 
   specify 'time' do
     time = Time.utc(2012, 04, 19, 1, 2, 3)
-    expect(generate([time])).to eq(%(["2012-04-19 01:02:03 UTC"]))
+    expect(generate([ time ])).to eq(%(["2012-04-19 01:02:03 UTC"]))
   end
 
   specify 'date' do
     time = Date.new(2012, 04, 19)
-    expect(generate([time])).to eq(%(["2012-04-19"]))
+    expect(generate([ time ])).to eq(%(["2012-04-19"]))
   end
 
   specify 'symbol' do
-    expect(generate([:abc])).to eq(%(["abc"]))
+    expect(generate([ :abc ])).to eq(%(["abc"]))
   end
 
   specify 'hash' do
     json = generate(:abc => 123, 123 => 'abc')
     expect(json).to match(/^\{/)
     expect(json).to match(/\}$/)
-    expect(json[1...-1].split(', ').sort).to eq([%("123": "abc"), %("abc": 123)])
+    expect(json[1...-1].split(', ').sort).to eq([ %("123": "abc"), %("abc": 123) ])
   end
 
   specify 'nested_structure' do
-    json = generate(:hash => {1=>2}, :array => [1,2])
+    json = generate(hash: { 1=>2 }, array: [ 1, 2 ])
     expect(json).to include(%("hash": {"1": 2}))
     expect(json).to include(%("array": [1, 2]))
   end
 
   specify 'invalid_json' do
-    expect { generate("abc") }.to raise_error(ArgumentError)
+    expect { generate('abc') }.to raise_error(ArgumentError)
   end
 
   specify 'invalid_object' do
-    expect { generate("a" => Object.new) }.to raise_error(ArgumentError, /can't serialize Object/)
+    expect { generate('a' => Object.new) }.to raise_error(ArgumentError, /can't serialize Object/)
   end
 end
 

@@ -26,14 +26,16 @@ PhusionPassenger.require_passenger_lib 'standalone/command'
 PhusionPassenger.require_passenger_lib 'config/about_command'
 
 module PhusionPassenger
+
   module Standalone
 
     class VersionCommand < Command
       def run
-        command = PhusionPassenger::Config::AboutCommand.new(['version'])
+        command = PhusionPassenger::Config::AboutCommand.new([ 'version' ])
         command.run
       end
     end
 
   end
+
 end

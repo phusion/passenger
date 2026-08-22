@@ -848,8 +848,7 @@ class flat_map
    //! to the element obtained while it is held in the node handle are invalidated, and pointers and
    //! references obtained to that element before it was extracted become valid.
    //!
-   //! Returns: The bool component is true if the insertion took place and false if the assignment
-   //!   took place. The iterator component is pointing at the element that was inserted or updated.
+   //! <b>Returns</b>: The returned iterator points to the map element whose key is equivalent to k.
    //!
    //! Complexity: Logarithmic in the size of the container in general, but amortized constant if
    //! the new element is inserted just before hint.
@@ -872,8 +871,7 @@ class flat_map
    //! to the element obtained while it is held in the node handle are invalidated, and pointers and
    //! references obtained to that element before it was extracted become valid.
    //!
-   //! Returns: The bool component is true if the insertion took place and false if the assignment
-   //!   took place. The iterator component is pointing at the element that was inserted or updated.
+   //! <b>Returns</b>: The returned iterator points to the map element whose key is equivalent to k.
    //!
    //! Complexity: Logarithmic in the size of the container in general, but amortized constant if
    //! the new element is inserted just before hint.
@@ -943,7 +941,7 @@ class flat_map
 
    #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 
-   //! <b>Effects</b>: Inserts an object x of type T constructed with
+   //! <b>Effects</b>: Inserts an object x of type value_type constructed with
    //!   std::forward<Args>(args)... if and only if there is no element in the container
    //!   with key equivalent to the key of x.
    //!
@@ -959,7 +957,7 @@ class flat_map
    inline std::pair<iterator,bool> emplace(BOOST_FWD_REF(Args)... args)
    {  return dtl::force_copy< std::pair<iterator, bool> >(m_flat_tree.emplace_unique(boost::forward<Args>(args)...)); }
 
-   //! <b>Effects</b>: Inserts an object of type T constructed with
+   //! <b>Effects</b>: Inserts an object of type value_type constructed with
    //!   std::forward<Args>(args)... in the container if and only if there is
    //!   no element in the container with key equivalent to the key of x.
    //!   p is a hint pointing to where the insert should start to search.
@@ -1335,7 +1333,7 @@ class flat_map
       !dtl::is_convertible<K BOOST_MOVE_I iterator>::value &&     //not convertible to iterator
       !dtl::is_convertible<K BOOST_MOVE_I const_iterator>::value  //not convertible to const_iterator
       BOOST_MOVE_I size_type>::type)
-      erase(const K& x)
+      erase(BOOST_FWD_REF(K) x)
    {  return m_flat_tree.erase_unique(x); }
 
    //! <b>Effects</b>: Erases all the elements in the range [first, last).
@@ -1716,6 +1714,15 @@ class flat_map
    }
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class K, class M, class C, class A, class Pred>
+inline typename flat_map<K, M, C, A>::size_type erase_if(flat_map<K, M, C, A>& c, Pred pred)
+{
+   return container_erase_if(c, pred);
+}
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
 
@@ -2478,7 +2485,7 @@ class flat_multimap
 
    #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 
-   //! <b>Effects</b>: Inserts an object of type T constructed with
+   //! <b>Effects</b>: Inserts an object of type value_type constructed with
    //!   std::forward<Args>(args)... and returns the iterator pointing to the
    //!   newly inserted element.
    //!
@@ -2491,7 +2498,7 @@ class flat_multimap
    iterator emplace(BOOST_FWD_REF(Args)... args)
    {  return dtl::force_copy<iterator>(m_flat_tree.emplace_equal(boost::forward<Args>(args)...)); }
 
-   //! <b>Effects</b>: Inserts an object of type T constructed with
+   //! <b>Effects</b>: Inserts an object of type value_type constructed with
    //!   std::forward<Args>(args)... in the container.
    //!   p is a hint pointing to where the insert should start to search.
    //!
@@ -3073,6 +3080,15 @@ class flat_multimap
 #if defined(BOOST_GCC) && (BOOST_GCC >= 100000) && !defined(BOOST_CONTAINER_STD_PAIR_IS_MOVABLE)
 #pragma GCC pop_options
 #endif
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class K, class M, class C, class A, class Pred>
+inline typename flat_multimap<K, M, C, A>::size_type erase_if(flat_multimap<K, M, C, A>& c, Pred pred)
+{
+   return container_erase_if(c, pred);
+}
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
 

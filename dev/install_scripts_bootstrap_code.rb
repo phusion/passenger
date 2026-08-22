@@ -15,19 +15,19 @@ type = ARGV.shift
 
 if type == "--ruby"
   ruby_libdir = ARGV.shift
-  BOOTSTRAP_CODE = %Q{
+  BOOTSTRAP_CODE = %Q(
     ENV["PASSENGER_LOCATION_CONFIGURATION_FILE"] = "#{ruby_libdir}/phusion_passenger/locations.ini"
     begin
       require 'rubygems'
     rescue LoadError
     end
     require '#{ruby_libdir}/phusion_passenger'
-  }
+  )
 elsif type == "--nginx-module-config"
   bindir = ARGV.shift
-  BOOTSTRAP_CODE = %Q{
+  BOOTSTRAP_CODE = %Q(
     PASSENGER_CONFIG=#{bindir}/passenger-config
-  }
+  )
 else
   abort "Invalid type"
 end

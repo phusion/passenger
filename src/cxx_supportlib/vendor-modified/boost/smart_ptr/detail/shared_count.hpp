@@ -28,7 +28,7 @@
 #include <boost/core/addressof.hpp>
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
-#include <boost/cstdint.hpp>
+#include <cstdint>
 #include <memory>            // std::auto_ptr
 #include <functional>        // std::less
 #include <cstddef>           // std::size_t
@@ -54,13 +54,6 @@ template< class T, class D > class unique_ptr;
 
 namespace detail
 {
-
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-
-int const shared_count_id = 0x2C35F101;
-int const   weak_count_id = 0x298C38A4;
-
-#endif
 
 struct sp_nothrow_tag {};
 
@@ -98,7 +91,7 @@ template< class D > struct sp_convert_reference< D& >
 
 template<class T> std::size_t sp_hash_pointer( T* p ) noexcept
 {
-    boost::uintptr_t v = reinterpret_cast<boost::uintptr_t>( p );
+    std::uintptr_t v = reinterpret_cast<std::uintptr_t>( p );
 
     // match boost::hash<T*>
     return static_cast<std::size_t>( v + ( v >> 3 ) );
@@ -112,32 +105,19 @@ private:
 
     sp_counted_base * pi_;
 
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-    int id_;
-#endif
-
     friend class weak_count;
 
 public:
 
     constexpr shared_count() noexcept: pi_(0)
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
     }
 
     constexpr explicit shared_count( sp_counted_base * pi ) noexcept: pi_( pi )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
     }
 
     template<class Y> explicit shared_count( Y * p ): pi_( 0 )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
 #ifndef BOOST_NO_EXCEPTIONS
 
@@ -165,9 +145,6 @@ public:
     }
 
     template<class P, class D> shared_count( P p, D d ): pi_(0)
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
 #ifndef BOOST_NO_EXCEPTIONS
 
@@ -195,9 +172,6 @@ public:
     }
 
     template< class P, class D > shared_count( P p, sp_inplace_tag<D> ): pi_( 0 )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
 #ifndef BOOST_NO_EXCEPTIONS
 
@@ -225,9 +199,6 @@ public:
     }
 
     template<class P, class D, class A> shared_count( P p, D d, A a ): pi_( 0 )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
         typedef sp_counted_impl_pda<P, D, A> impl_type;
 
@@ -272,9 +243,6 @@ public:
     }
 
     template< class P, class D, class A > shared_count( P p, sp_inplace_tag< D >, A a ): pi_( 0 )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
         typedef sp_counted_impl_pda< P, D, A > impl_type;
 
@@ -324,9 +292,6 @@ public:
 
     template<class Y>
     explicit shared_count( std::auto_ptr<Y> & r ): pi_( new sp_counted_impl_p<Y>( r.get() ) )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
 #ifdef BOOST_NO_EXCEPTIONS
 
@@ -344,9 +309,6 @@ public:
 
     template<class Y, class D>
     explicit shared_count( std::unique_ptr<Y, D> & r ): pi_( 0 )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
         typedef typename sp_convert_reference<D>::type D2;
 
@@ -367,9 +329,6 @@ public:
 
     template<class Y, class D>
     explicit shared_count( boost::movelib::unique_ptr<Y, D> & r ): pi_( 0 )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
         typedef typename sp_convert_reference<D>::type D2;
 
@@ -391,23 +350,14 @@ public:
     ~shared_count() /*noexcept*/
     {
         if( pi_ != 0 ) pi_->release();
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        id_ = 0;
-#endif
     }
 
     shared_count(shared_count const & r) noexcept: pi_(r.pi_)
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
         if( pi_ != 0 ) pi_->add_ref_copy();
     }
 
     shared_count(shared_count && r) noexcept: pi_(r.pi_)
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
     {
         r.pi_ = 0;
     }
@@ -493,33 +443,20 @@ private:
 
     sp_counted_base * pi_;
 
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-    int id_;
-#endif
-
     friend class shared_count;
 
 public:
 
     constexpr weak_count() noexcept: pi_(0)
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(weak_count_id)
-#endif
     {
     }
 
     weak_count(shared_count const & r) noexcept: pi_(r.pi_)
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(weak_count_id)
-#endif
     {
         if(pi_ != 0) pi_->weak_add_ref();
     }
 
     weak_count(weak_count const & r) noexcept: pi_(r.pi_)
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(weak_count_id)
-#endif
     {
         if(pi_ != 0) pi_->weak_add_ref();
     }
@@ -527,9 +464,6 @@ public:
 // Move support
 
     weak_count(weak_count && r) noexcept: pi_(r.pi_)
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(weak_count_id)
-#endif
     {
         r.pi_ = 0;
     }
@@ -537,9 +471,6 @@ public:
     ~weak_count() /*noexcept*/
     {
         if(pi_ != 0) pi_->weak_release();
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        id_ = 0;
-#endif
     }
 
     weak_count & operator= (shared_count const & r) noexcept
@@ -614,9 +545,6 @@ public:
 };
 
 inline shared_count::shared_count( weak_count const & r ): pi_( r.pi_ )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
 {
     if( pi_ == 0 || !pi_->add_ref_lock() )
     {
@@ -625,9 +553,6 @@ inline shared_count::shared_count( weak_count const & r ): pi_( r.pi_ )
 }
 
 inline shared_count::shared_count( weak_count const & r, sp_nothrow_tag ) noexcept: pi_( r.pi_ )
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        , id_(shared_count_id)
-#endif
 {
     if( pi_ != 0 && !pi_->add_ref_lock() )
     {

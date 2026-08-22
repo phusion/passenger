@@ -23,6 +23,7 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   module Utils
 
     class Lock
@@ -60,4 +61,5 @@ module PhusionPassenger
     end
 
   end # module Utils
+
 end # module PhusionPassenger

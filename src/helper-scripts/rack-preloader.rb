@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2013-2025 Asynchronous B.V.
 #
@@ -27,7 +28,9 @@
 GC.copy_on_write_friendly = true if GC.respond_to?(:copy_on_write_friendly=)
 
 module PhusionPassenger
+
   module App
+
     def self.options
       @@options
     end
@@ -132,7 +135,7 @@ module PhusionPassenger
       server.close_on_exec!
       File.chmod(0600, socket_filename)
 
-      [server, socket_filename]
+      [ server, socket_filename ]
     end
 
     def self.reinitialize_std_channels(work_dir)
@@ -215,4 +218,5 @@ module PhusionPassenger
     end
 
   end # module App
+
 end # module PhusionPassenger

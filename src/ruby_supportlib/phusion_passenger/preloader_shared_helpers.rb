@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2011-2025 Asynchronous B.V.
 #
@@ -32,6 +33,7 @@ module PhusionPassenger
 
   # Provides shared functions for preloader apps.
   module PreloaderSharedHelpers
+
     extend self
 
     def init(main_app)
@@ -69,8 +71,8 @@ module PhusionPassenger
         doc = Utils::JSON.parse(line)
       rescue RuntimeError => e
         client.write(Utils::JSON.generate(
-          :result => 'error',
-          :message => "JSON parse error: #{e}"
+          result: 'error',
+          message: "JSON parse error: #{e}"
         ))
       end
 
@@ -78,8 +80,8 @@ module PhusionPassenger
         handle_spawn_command(client, doc, options)
       else
         client.write(Utils::JSON.generate(
-          :result => 'error',
-          :message => "Unknown command #{doc['command'].inspect}"
+          result: 'error',
+          message: "Unknown command #{doc['command'].inspect}"
         ))
         nil
       end
@@ -119,13 +121,13 @@ module PhusionPassenger
             'STEP_PERFORMED', work_dir)
           LoaderSharedHelpers.run_block_and_record_step_progress('PRELOADER_SEND_RESPONSE', work_dir) do
             client.write(Utils::JSON.generate(
-              :result => 'ok',
-              :pid => Process.pid
+              result: 'ok',
+              pid: Process.pid
             ))
           end
           LoaderSharedHelpers.record_journey_step_end('PRELOADER_FINISH',
             'STEP_PERFORMED', work_dir)
-          [:forked, work_dir]
+          [ :forked, work_dir ]
         rescue Exception => e
           STDERR.puts("Error: #{e}\n#{e.backtrace.join("\n")}")
           exit!(1)
@@ -139,14 +141,14 @@ module PhusionPassenger
 
     def advertise_sockets(_options, server)
       json = {
-        :sockets => [
+        sockets: [
           {
-            :name => 'main',
-            :address => "unix:#{server[1]}",
-            :protocol => 'preloader',
-            :concurrency => 1
-          }
-        ]
+            name: 'main',
+            address: "unix:#{server[1]}",
+            protocol: 'preloader',
+            concurrency: 1,
+          },
+        ],
       }
 
       File.open(ENV['PASSENGER_SPAWN_WORK_DIR'] + '/response/properties.json', 'w') do |f|
@@ -162,7 +164,7 @@ module PhusionPassenger
         # We call ::select just in case someone overwrites the global select()
         # function by including ActionView::Helpers in the wrong place.
         # https://code.google.com/p/phusion-passenger/issues/detail?id=915
-        ios = Kernel.select([server_socket, STDIN])[0]
+        ios = Kernel.select([ server_socket, STDIN ])[0]
         if ios.include?(server_socket)
           result, subprocess_work_dir = accept_and_process_next_client(server_socket, options)
           if result == :forked

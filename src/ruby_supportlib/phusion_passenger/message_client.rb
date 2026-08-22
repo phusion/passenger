@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -84,13 +85,13 @@ module PhusionPassenger
     end
 
     def connected?
-      return !!@channel
+      !!@channel
     end
 
     ### Low level I/O methods ###
 
     def read
-      return @channel.read
+      @channel.read
     rescue
       auto_disconnect
       raise
@@ -111,14 +112,14 @@ module PhusionPassenger
     end
 
     def read_scalar
-      return @channel.read_scalar
+      @channel.read_scalar
     rescue
       auto_disconnect
       raise
     end
 
     def recv_io(klass = IO, negotiate = true)
-      return @channel.recv_io(klass, negotiate)
+      @channel.recv_io(klass, negotiate)
     rescue
       auto_disconnect
       raise

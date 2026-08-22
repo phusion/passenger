@@ -3,7 +3,7 @@ name: Passenger CI tests
 env:
   FORCE_COLOR: 1
   RUST_LOG_STYLE: always
-  DEFAULT_RUBY_VERSION: 3.1
+  DEFAULT_RUBY_VERSION: 3.3
   BUNDLE_CLEAN: true
   USE_ASAN: true
 
@@ -21,12 +21,12 @@ jobs:
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_KEY_PREFIX: sccache/cxx-ubuntu
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -55,7 +55,7 @@ jobs:
           cp test/config.json.github-ci-linux test/config.json
 
       - name: Build C++ tests
-        run: bundle exec drake -j4 test:cxx:build
+        run: bundle exec rake -m -j4 test:cxx:build
         timeout-minutes: 5
 
       - name: Run C++ tests
@@ -78,7 +78,7 @@ jobs:
         working-directory: test
 
       - name: Archive logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: cxx-test-logs-linux
           path: 'buildout/testlogs/*'
@@ -100,12 +100,12 @@ jobs:
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_KEY_PREFIX: sccache/cxx-ubuntu-valgrind
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -134,7 +134,7 @@ jobs:
           cp test/config.json.github-ci-linux test/config.json
 
       - name: Build C++ tests
-        run: bundle exec drake -j4 test:cxx:build
+        run: bundle exec rake -m -j4 test:cxx:build
         timeout-minutes: 5
 
       - name: Run C++ tests
@@ -188,7 +188,7 @@ jobs:
         if: '!cancelled()'
 
       - name: Archive logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: cxx-test-logs-valgrind
           path: 'buildout/testlogs/*'
@@ -209,12 +209,12 @@ jobs:
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_KEY_PREFIX: sccache/cxx-macos-14-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -240,7 +240,7 @@ jobs:
           sed "s|_USER_|$(whoami)|" test/config.json.github-ci-macos > test/config.json
 
       - name: Build C++ tests
-        run: bundle exec drake -j4 test:cxx:build
+        run: bundle exec rake -m -j4 test:cxx:build
         timeout-minutes: 5
 
       - name: Run C++ tests
@@ -262,7 +262,7 @@ jobs:
         working-directory: test
 
       - name: Archive logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: cxx-test-logs-macos
           path: 'buildout/testlogs/*'
@@ -282,6 +282,7 @@ jobs:
           - name: Linux
             os: ubuntu-24.04
             config_file: test/config.json.github-ci-linux
+            rake_concurrency: 4
             extra_cflags: '-fdiagnostics-color'
             address_sanitizer: true
             sccache_arch_and_os: x86_64-unknown-linux-musl
@@ -289,6 +290,7 @@ jobs:
           - name: macOS
             os: macos-14
             config_file: test/config.json.github-ci-macos
+            rake_concurrency: 4
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
             # Using AddressSanitizer on dynamically loaded modules (like Apache modules)
             # requires loading Apache with the AddressSanitizer runtime using DYLD_INSERT_LIBRARIES.
@@ -306,18 +308,18 @@ jobs:
       SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
       SCCACHE_CACHE_MULTIARCH: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
           bundler-cache: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         timeout-minutes: 1
         with:
           node-version: 18
@@ -397,7 +399,7 @@ jobs:
           SCCACHE_AZURE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
 
       - name: Test module installation as normal user
-        run: ./bin/passenger-install-apache2-module --auto --force-colors --rake-command 'bundle exec drake -j4'
+        run: ./bin/passenger-install-apache2-module --auto --force-colors --rake-command 'bundle exec rake -m -j${{ matrix.rake_concurrency }}'
         timeout-minutes: 5
 
       - name: Teardown sccache
@@ -429,7 +431,7 @@ jobs:
         timeout-minutes: 2
 
       - name: Archive logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: apache-test-logs-${{ matrix.os }}
           path: 'buildout/testlogs/*'
@@ -445,12 +447,14 @@ jobs:
           - name: Linux
             os: ubuntu-24.04
             config_file: test/config.json.github-ci-linux
+            rake_concurrency: 4
             extra_cflags: '-fdiagnostics-color'
             sccache_arch_and_os: x86_64-unknown-linux-musl
             sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
           - name: macOS
             os: macos-14
             config_file: test/config.json.github-ci-macos
+            rake_concurrency: 4
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
             sccache_arch_and_os: aarch64-apple-darwin
             sccache_azure_key_prefix: sccache/cxx-macos-14-arm
@@ -461,18 +465,18 @@ jobs:
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
           bundler-cache: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         timeout-minutes: 1
         with:
           node-version: 18
@@ -517,8 +521,8 @@ jobs:
           --force-colors
           --prefix=/tmp/nginx
           --auto-download
-          --rake-command 'bundle exec drake -j4'
-          --make-concurrency 4
+          --rake-command 'bundle exec rake -m -j${{ matrix.rake_concurrency }}'
+          --make-concurrency ${{ matrix.rake_concurrency }}
         timeout-minutes: 5
 
       - name: Integration tests
@@ -526,7 +530,7 @@ jobs:
         timeout-minutes: 2
 
       - name: Archive logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: nginx-test-logs-${{ matrix.os }}
           path: 'buildout/testlogs/*'
@@ -560,12 +564,12 @@ jobs:
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -596,7 +600,7 @@ jobs:
           echo "NGINX_ADDON_DIR=$NGINX_ADDON_DIR" >> "$GITHUB_ENV"
 
       - name: Compile module
-        run: bundle exec drake -j4 nginx:as_dynamic_module
+        run: bundle exec rake -m -j6 nginx:as_dynamic_module
         timeout-minutes: 5
 
       - name: Download Nginx source
@@ -613,7 +617,7 @@ jobs:
         working-directory: "nginx-${{ env.TEST_DYNAMIC_WITH_NGINX_VERSION }}"
 
       - name: Compile Nginx with dynamic module
-        run: make -j4
+        run: make -j6
         timeout-minutes: 2
         working-directory: "nginx-${{ env.TEST_DYNAMIC_WITH_NGINX_VERSION }}"
 
@@ -629,11 +633,13 @@ jobs:
         include:
           - name: Linux
             os: ubuntu-24.04
+            rake_concurrency: 4
             extra_cflags: '-fdiagnostics-color'
             sccache_arch_and_os: x86_64-unknown-linux-musl
             sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
           - name: macOS
             os: macos-14
+            rake_concurrency: 4
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
             sccache_arch_and_os: aarch64-apple-darwin
             sccache_azure_key_prefix: sccache/cxx-macos-14-arm
@@ -645,12 +651,12 @@ jobs:
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -674,11 +680,11 @@ jobs:
         timeout-minutes: 2
 
       - name: Compile prerequisites
-        run: bundle exec drake -j4 nginx
+        run: bundle exec rake -m -j${{ matrix.rake_concurrency }} nginx
         timeout-minutes: 5
 
       - name: Integration test
-        run: bundle exec drake -j4 test:integration:standalone
+        run: bundle exec rake -m -j${{ matrix.rake_concurrency }} test:integration:standalone
         timeout-minutes: 8
 
       - name: Teardown sccache
@@ -694,12 +700,14 @@ jobs:
           - name: Linux
             os: ubuntu-24.04
             config_file: test/config.json.github-ci-linux
+            rake_concurrency: 4
             extra_cflags: '-fdiagnostics-color'
             sccache_arch_and_os: x86_64-unknown-linux-musl
             sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
           - name: macOS
             os: macos-14
             config_file: test/config.json.github-ci-macos
+            rake_concurrency: 4
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
             sccache_arch_and_os: aarch64-apple-darwin
             sccache_azure_key_prefix: sccache/cxx-macos-14-arm
@@ -711,12 +719,12 @@ jobs:
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
       SCCACHE_AZURE_KEY_PREFIX: ${{ matrix.sccache_azure_key_prefix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -745,7 +753,7 @@ jobs:
         timeout-minutes: 2
 
       - name: Compile
-        run: bundle exec drake -j4 agent
+        run: bundle exec rake -m -j${{ matrix.rake_concurrency }}  agent
         timeout-minutes: 5
 
       - name: Test
@@ -768,18 +776,18 @@ jobs:
             os: macos-14
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
           bundler-cache: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         timeout-minutes: 1
         with:
           node-version: 18
@@ -800,12 +808,12 @@ jobs:
     runs-on: macos-14
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}
@@ -821,8 +829,8 @@ jobs:
       - name: Check whether formula is up-to-date
         run: >
           ./packaging/homebrew/verify-oss-formula-uptodate
-          -c homebrew-core.git
-          -r upstream
+          -c /opt/homebrew/Library/Taps/homebrew/homebrew-core
+          -r origin
         timeout-minutes: 5
 
       - name: Modify formula
@@ -840,19 +848,19 @@ jobs:
           -p .
           -f pkg/passenger.rb
           -t pkg/*.tar.gz
-        timeout-minutes: 6
+        timeout-minutes: 7
 
   source_packaging:
     name: Source packaging tests
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
 
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
         timeout-minutes: 2
         with:
           ruby-version: ${{ env.DEFAULT_RUBY_VERSION }}

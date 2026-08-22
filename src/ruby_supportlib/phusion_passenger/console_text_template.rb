@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -55,11 +56,11 @@ module PhusionPassenger
 
     def []=(name, value)
       instance_variable_set("@#{name}".to_sym, value)
-      return self
+      self
     end
 
     def result
-      return @template.result(binding)
+      @template.result(binding)
     end
   end
 

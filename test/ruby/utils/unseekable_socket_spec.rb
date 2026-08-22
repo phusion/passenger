@@ -25,33 +25,33 @@ describe Utils::UnseekableSocket do
 
   def catch_exception
     yield
-    return nil
+    nil
   rescue MyException => e
-    return e
+    e
   end
 
-  it "delegates method calls to the wrapped socket" do
-    @socket.should_receive(:write).with("some data")
+  it 'delegates method calls to the wrapped socket' do
+    @socket.should_receive(:write).with('some data')
     @socket.should_receive(:gets)
-    @wrapper.write("some data")
+    @wrapper.write('some data')
     @wrapper.gets
   end
 
-  it "annotates exceptions so that we can identify its source" do
-    @wrapper.source_of_exception?(MyException.new("foo")).should be_falsey
+  it 'annotates exceptions so that we can identify its source' do
+    @wrapper.source_of_exception?(MyException.new('foo')).should be_falsey
 
-    @socket.should_receive(:write).at_least(:once).and_raise(MyException.new("an error"))
+    @socket.should_receive(:write).at_least(:once).and_raise(MyException.new('an error'))
     @wrapper2 = Utils::UnseekableSocket.wrap(@socket)
-    e1 = catch_exception { @wrapper.write("hello") }
+    e1 = catch_exception { @wrapper.write('hello') }
 
     @wrapper.source_of_exception?(e1).should be_truthy
     @wrapper2.source_of_exception?(e1).should be_truthy
 
     @socket2 = MySocket.new
-    @socket2.should_receive(:write).at_least(:once).and_raise(MyException.new("an error"))
+    @socket2.should_receive(:write).at_least(:once).and_raise(MyException.new('an error'))
     @wrapper.wrap(@socket2)
     @wrapper2.wrap(@socket2)
-    e2 = catch_exception { @wrapper.write("hello") }
+    e2 = catch_exception { @wrapper.write('hello') }
 
     @wrapper.source_of_exception?(e1).should be_falsey
     @wrapper2.source_of_exception?(e1).should be_falsey

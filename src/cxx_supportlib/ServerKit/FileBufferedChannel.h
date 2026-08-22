@@ -1224,8 +1224,10 @@ private:
 		case RS_WAITING_FOR_CHANNEL_IDLE:
 			break;
 		case RS_READING_FROM_FILE:
-			inFileMode->readRequest->cancel();
-			inFileMode->readRequest = NULL;
+			if (inFileMode->readRequest) {
+				inFileMode->readRequest->cancel();
+				inFileMode->readRequest = NULL;
+			}
 			break;
 		case RS_INACTIVE:
 		case RS_TERMINATED:
@@ -1241,8 +1243,10 @@ private:
 			break;
 		case WS_CREATING_FILE:
 		case WS_MOVING:
-			inFileMode->writerRequest->cancel();
-			inFileMode->writerRequest = NULL;
+			if (inFileMode->writerRequest) {
+				inFileMode->writerRequest->cancel();
+				inFileMode->writerRequest = NULL;
+			}
 			break;
 		case WS_TERMINATED:
 			return;

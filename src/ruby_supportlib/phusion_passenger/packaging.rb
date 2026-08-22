@@ -25,21 +25,22 @@
 module PhusionPassenger
 
   module Packaging
+
     # Files that must be generated before packaging.
     PREGENERATED_FILES = [
-      'src/cxx_supportlib/Constants.h'
+      'src/cxx_supportlib/Constants.h',
     ]
 
     USER_EXECUTABLES = [
       'passenger',
       'passenger-install-apache2-module',
       'passenger-install-nginx-module',
-      'passenger-config'
+      'passenger-config',
     ]
 
     SUPER_USER_EXECUTABLES = [
       'passenger-status',
-      'passenger-memory-stats'
+      'passenger-memory-stats',
     ]
 
     # Used during native packaging. Specifies executables for
@@ -50,7 +51,7 @@ module PhusionPassenger
       'passenger',
       'passenger-config',
       'passenger-install-apache2-module',
-      'passenger-install-nginx-module'
+      'passenger-install-nginx-module',
     ]
 
     # A list of globs which match all files that should be packaged
@@ -76,7 +77,7 @@ module PhusionPassenger
       'dev/*',
       'src/**/*',
       'resources/**/*',
-      'resources/templates/error_renderer/.editorconfig'
+      'resources/templates/error_renderer/.editorconfig',
     ]
 
     # Files that should be excluded from the gem or tarball. Overrides GLOB.
@@ -94,6 +95,7 @@ module PhusionPassenger
       '.settings/**/*',
       '.vscode/**/*',
       '.cproject',
+      '.rubocop.yml',
       'compile_commands.json',
       '.gitattributes',
       '.gitignore',
@@ -114,7 +116,7 @@ module PhusionPassenger
       'src/ruby_supportlib/phusion_passenger/vendor/*/hacking/**/*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/spec/**/*',
       'src/cxx_supportlib/vendor-copy/*/.*',
-      'test/**/*'
+      'test/**/*',
     ]
 
     def self.files
@@ -122,6 +124,7 @@ module PhusionPassenger
       result.reject! { |path| path =~ %r{/\.\.?$} }
       result
     end
+
   end
 
 end # module PhusionPassenger

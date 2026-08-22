@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -27,6 +28,7 @@ module PhusionPassenger
 
   # Utility functions.
   module Utils
+
     extend self    # Make methods available as class methods.
 
     def self.included(klass)
@@ -49,9 +51,9 @@ module PhusionPassenger
         data.gsub!("+", '')
         data.gsub!("/", '')
         data.gsub!(/==$/, '')
-        return data
+        data
       when :hex
-        return data.unpack('H*')[0]
+        data.unpack('H*')[0]
       else
         raise ArgumentError, "Invalid method #{method.inspect}"
       end
@@ -121,22 +123,22 @@ module PhusionPassenger
 
     def get_socket_address_type(address)
       if address =~ %r{^unix:.}
-        return :unix
+        :unix
       elsif address =~ %r{^tcp://.}
-        return :tcp
+        :tcp
       else
-        return :unknown
+        :unknown
       end
     end
 
     def connect_to_server(address)
       case get_socket_address_type(address)
       when :unix
-        return UNIXSocket.new(address.sub(/^unix:/, ''))
+        UNIXSocket.new(address.sub(/^unix:/, ''))
       when :tcp
         host, port = address.sub(%r{^tcp://}, '').split(':', 2)
         port = port.to_i
-        return TCPSocket.new(host, port)
+        TCPSocket.new(host, port)
       else
         raise ArgumentError, "Unknown socket address type for '#{address}'."
       end
@@ -145,10 +147,10 @@ module PhusionPassenger
     def local_socket_address?(address)
       case get_socket_address_type(address)
       when :unix
-        return true
+        true
       when :tcp
         host, port = address.sub(%r{^tcp://}, '').split(':', 2)
-        return host == "127.0.0.1" || host == "::1" || host == "localhost"
+        host == "127.0.0.1" || host == "::1" || host == "localhost"
       else
         raise ArgumentError, "Unknown socket address type for '#{address}'."
       end
@@ -158,17 +160,17 @@ module PhusionPassenger
     def process_is_alive?(pid)
       begin
         Process.kill(0, pid)
-        return true
+        true
       rescue Errno::ESRCH
-        return false
+        false
       rescue SystemCallError => e
-        return true
+        true
       end
     end
 
     def require_option(hash, key)
       if hash.has_key?(key)
-        return hash[key]
+        hash[key]
       else
         raise ArgumentError, "Option #{key.inspect} required"
       end
@@ -184,7 +186,7 @@ module PhusionPassenger
     # Like Base64.strict_encode64, but without a dependency on the
     # 'base64' library/gem.
     def base64(data)
-      [data].pack("m0")
+      [ data ].pack("m0")
     end
 
     # Returns a string which reports the backtraces for all threads,
@@ -205,7 +207,7 @@ module PhusionPassenger
           if thread_name = thread[:name]
             thread_name = "(#{thread_name})"
           end
-          stack ||= ["(empty)"]
+          stack ||= [ "(empty)" ]
           output << ("-" * 60) << "\n"
           output << "# Thread: #{thread.inspect}#{thread_name}, "
           if thread == Thread.main
@@ -225,10 +227,11 @@ module PhusionPassenger
         output << ("-" * 60) << "\n"
         output << "    " << caller.join("\n    ")
       end
-      return output
+      output
     end
 
     ####################################
+
   end
 
 end # module PhusionPassenger

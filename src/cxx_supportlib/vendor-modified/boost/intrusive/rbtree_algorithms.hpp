@@ -508,6 +508,7 @@ class rbtree_algorithms
          else {
             // same as above, with right_ <-> left_.
             node_ptr w = x_parent_left;
+            BOOST_INTRUSIVE_INVARIANT_ASSERT(w);
             if(NodeTraits::get_color(w) == NodeTraits::red()){
                NodeTraits::set_color(w, NodeTraits::black());
                NodeTraits::set_color(x_parent, NodeTraits::red());

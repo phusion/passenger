@@ -4,15 +4,15 @@ require 'ruby/shared/ruby_loader_sharedspec'
 
 module PhusionPassenger
 
-describe "Rack preloader" do
+describe 'Rack preloader' do
   include LoaderSpecHelper
 
   before :each do
-    @stub = register_stub(RackStub.new("rack"))
+    @stub = register_stub(RackStub.new('rack'))
   end
 
   def start(options = {})
-    @preloader = Preloader.new(["ruby", "#{PhusionPassenger.helper_scripts_dir}/rack-preloader.rb"], @stub.app_root)
+    @preloader = Preloader.new([ 'ruby', "#{PhusionPassenger.helper_scripts_dir}/rack-preloader.rb" ], @stub.app_root)
     begin
       @preloader.start(options)
     rescue SpawnError => e
@@ -22,10 +22,10 @@ describe "Rack preloader" do
     end
   end
 
-  include_examples "a loader"
-  include_examples "a Ruby loader"
+  include_examples 'a loader'
+  include_examples 'a Ruby loader'
 
-  it "calls the starting_worker_process event with forked=true" do
+  it 'calls the starting_worker_process event with forked=true' do
     File.prepend(@stub.startup_file, %q{
       history_file = "history.txt"
       PhusionPassenger.on_event(:starting_worker_process) do |forked|

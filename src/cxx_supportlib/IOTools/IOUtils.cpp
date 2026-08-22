@@ -66,6 +66,7 @@
 
 #include <Exceptions.h>
 #include <Constants.h>
+#include <Utils/Socket.h>
 #include <Utils/Timer.h>
 #include <IOTools/IOUtils.h>
 #include <StrIntTools/StrIntUtils.h>
@@ -1301,29 +1302,13 @@ writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout) {
 
 void
 readPeerCredentials(int sock, uid_t *uid, gid_t *gid) {
-	union {
-		struct sockaddr genericAddress;
-		struct sockaddr_un unixAddress;
-		struct sockaddr_in inetAddress;
-		struct sockaddr_in6 inetAddress6;
-	} addr;
-	socklen_t len = sizeof(addr);
-	int ret;
-
 	/*
 	 * The functions for receiving the peer credentials are not guaranteed to
 	 * fail if the socket is not a Unix domain socket. For example, OS X getpeereid()
 	 * just returns garbage when invoked on a TCP socket. So we check here
 	 * whether 'sock' is a Unix domain socket.
 	 */
-	do {
-		ret = getsockname(sock, &addr.genericAddress, &len);
-	} while (ret == -1 && errno == EINTR);
-	if (ret == -1) {
-		int e = errno;
-		throw SystemException("Unable to autodetect socket type (getsockname() failed)", e);
-	}
-	if (addr.genericAddress.sa_family != AF_LOCAL) {
+	if (!fdIsUnixDomainSocket(sock)) {
 		throw SystemException("Cannot receive process credentials: the connection is not a Unix domain socket",
 			EPROTONOSUPPORT);
 	}

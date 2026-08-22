@@ -10,7 +10,7 @@ include PhusionPassenger::Utils::AnsiColors
 
 def extract_category_name(occurrence)
   occurrence =~ / (.+) /
-  return $1
+  $1
 end
 
 def extract_test_name(occurrence)
@@ -18,7 +18,7 @@ def extract_test_name(occurrence)
   occurrence.gsub!(/"\n[ \t]*"/m, '')
   occurrence.sub!(/\A"/, '')
   occurrence.sub!(/"\Z/, '')
-  return occurrence
+  occurrence
 end
 
 def start(filename)

@@ -29,6 +29,7 @@ def ruby2_keywords(*)
 end if RUBY_VERSION < "2.7"
 
 module PhusionPassenger
+
   module Utils
 
     # Some frameworks (e.g. Merb) call `seek` and `rewind` on the input stream
@@ -47,7 +48,7 @@ module PhusionPassenger
     # from the wrapped socket by calling #source_of_exception?
     class UnseekableSocket
       def self.wrap(socket)
-        return new.wrap(socket)
+        new.wrap(socket)
       end
 
       def wrap(socket)
@@ -77,7 +78,7 @@ module PhusionPassenger
 
         @socket = socket
 
-        return self
+        self
       end
 
       # Don't allow disabling of sync.
@@ -180,9 +181,9 @@ module PhusionPassenger
         if @simulate_eof
           length, buffer = args
           if buffer
-            buffer.replace(binary_string(""))
+            buffer.replace("".b)
           else
-            buffer = binary_string("")
+            buffer = "".b
           end
           if length
             return nil
@@ -276,33 +277,24 @@ module PhusionPassenger
       end
 
       def source_of_exception?(exception)
-        return exception.instance_variable_get(:"@from_unseekable_socket") == @socket.object_id
+        exception.instance_variable_get(:"@from_unseekable_socket") == @socket.object_id
       end
 
       def to_hash
-        { :socket => "Not JSON Encodable", :eof => @simulate_eof }
+        { socket: "Not JSON Encodable", eof: @simulate_eof }
       end
 
     private
       def annotate(exception)
         exception.instance_variable_set(:"@from_unseekable_socket", @socket.object_id)
-        return exception
+        exception
       end
 
       def raise_error_because_activity_disallowed!
         raise IOError, "It is not possible to read or write from the client socket because the current."
       end
-
-      if ''.respond_to?(:force_encoding)
-        def binary_string(str)
-          return ''.force_encoding('binary')
-        end
-      else
-        def binary_string(str)
-          return ''
-        end
-      end
     end
 
   end # module Utils
+
 end # module PhusionPassenger

@@ -23,9 +23,11 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   module Standalone
 
     module ControlUtils
+
       extend self    # Make methods available as class methods.
 
       def self.included(klass)
@@ -62,7 +64,9 @@ module PhusionPassenger
         STDERR.puts " * The instance that you want to stop has stored its PID file in a non-standard"
         STDERR.puts "   location. In this case please specify the right PID file with --pid-file."
       end
+
     end
 
   end
+
 end

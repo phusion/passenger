@@ -63,7 +63,7 @@ ruby_compat_id = PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibil
 
 ABORT_ON_ERROR = ARGV[0] == "--abort-on-error"
 if url_root = ENV['BINARIES_URL_ROOT']
-  SITES = [{ :url => url_root }]
+  SITES = [ { url: url_root } ]
 else
   SITES = PhusionPassenger.binaries_sites
 end
@@ -91,7 +91,7 @@ def download(name, options = {})
     end
   end
   abort "Cannot download #{name}, aborting" if ABORT_ON_ERROR
-  return false
+  false
 end
 
 def really_download(site, name, logger, options)
@@ -104,8 +104,8 @@ def really_download(site, name, logger, options)
   File.unlink("#{name}.tmp") rescue nil
 
   options = {
-    :cacert => site[:cert],
-    :logger => logger
+    cacert: site[:cert],
+    logger: logger,
   }.merge(options)
   result = PhusionPassenger::Utils::Download.download(url, "#{name}.tmp", options)
   if result
@@ -113,9 +113,9 @@ def really_download(site, name, logger, options)
   else
     File.unlink("#{name}.tmp") rescue nil
   end
-  return result
+  result
 end
 
-download "rubyext-#{ruby_compat_id}.tar.gz", :total_timeout => 10
-download "nginx-#{PhusionPassenger::PREFERRED_NGINX_VERSION}-#{cxx_compat_id}.tar.gz", :total_timeout => 120
-download "agent-#{cxx_compat_id}.tar.gz", :total_timeout => 900
+download "rubyext-#{ruby_compat_id}.tar.gz", total_timeout: 10
+download "nginx-#{PhusionPassenger::PREFERRED_NGINX_VERSION}-#{cxx_compat_id}.tar.gz", total_timeout: 120
+download "agent-#{cxx_compat_id}.tar.gz", total_timeout: 900

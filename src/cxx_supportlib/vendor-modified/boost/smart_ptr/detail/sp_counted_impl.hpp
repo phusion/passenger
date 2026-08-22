@@ -18,32 +18,17 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#if defined(BOOST_SP_USE_STD_ALLOCATOR) && defined(BOOST_SP_USE_QUICK_ALLOCATOR)
-# error BOOST_SP_USE_STD_ALLOCATOR and BOOST_SP_USE_QUICK_ALLOCATOR are incompatible.
-#endif
-
 #include <boost/smart_ptr/detail/sp_counted_base.hpp>
 #include <boost/smart_ptr/detail/deprecated_macros.hpp>
 #include <boost/core/checked_delete.hpp>
 #include <boost/core/addressof.hpp>
 #include <boost/config.hpp>
 
-#if defined(BOOST_SP_USE_QUICK_ALLOCATOR)
-#include <boost/smart_ptr/detail/quick_allocator.hpp>
-#endif
-
 #include <memory>           // std::allocator, std::allocator_traits
 #include <cstddef>          // std::size_t
 
 namespace boost
 {
-
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-
-void sp_scalar_constructor_hook( void * px, std::size_t size, void * pn );
-void sp_scalar_destructor_hook( void * px, std::size_t size, void * pn );
-
-#endif
 
 namespace detail
 {
@@ -76,16 +61,10 @@ public:
 
     explicit sp_counted_impl_p( X * px ): px_( px )
     {
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        boost::sp_scalar_constructor_hook( px, sizeof(X), this );
-#endif
     }
 
     void dispose() noexcept override
     {
-#if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
-        boost::sp_scalar_destructor_hook( px_, sizeof(X), this );
-#endif
         boost::checked_delete( px_ );
     }
 
@@ -103,34 +82,6 @@ public:
     {
         return 0;
     }
-
-#if defined(BOOST_SP_USE_STD_ALLOCATOR)
-
-    void * operator new( std::size_t )
-    {
-        return std::allocator<this_type>().allocate( 1, static_cast<this_type *>(0) );
-    }
-
-    void operator delete( void * p )
-    {
-        std::allocator<this_type>().deallocate( static_cast<this_type *>(p), 1 );
-    }
-
-#endif
-
-#if defined(BOOST_SP_USE_QUICK_ALLOCATOR)
-
-    void * operator new( std::size_t )
-    {
-        return quick_allocator<this_type>::alloc();
-    }
-
-    void operator delete( void * p )
-    {
-        quick_allocator<this_type>::dealloc( p );
-    }
-
-#endif
 };
 
 template<class P, class D> class BOOST_SYMBOL_VISIBLE sp_counted_impl_pd: public sp_counted_base
@@ -176,34 +127,6 @@ public:
     {
         return &reinterpret_cast<char&>( del );
     }
-
-#if defined(BOOST_SP_USE_STD_ALLOCATOR)
-
-    void * operator new( std::size_t )
-    {
-        return std::allocator<this_type>().allocate( 1, static_cast<this_type *>(0) );
-    }
-
-    void operator delete( void * p )
-    {
-        std::allocator<this_type>().deallocate( static_cast<this_type *>(p), 1 );
-    }
-
-#endif
-
-#if defined(BOOST_SP_USE_QUICK_ALLOCATOR)
-
-    void * operator new( std::size_t )
-    {
-        return quick_allocator<this_type>::alloc();
-    }
-
-    void operator delete( void * p )
-    {
-        quick_allocator<this_type>::dealloc( p );
-    }
-
-#endif
 };
 
 template<class P, class D, class A> class BOOST_SYMBOL_VISIBLE sp_counted_impl_pda: public sp_counted_base

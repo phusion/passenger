@@ -13,15 +13,17 @@ Gem::Specification.new do |s|
   s.version = PhusionPassenger::VERSION_STRING
   s.author = "Phusion - http://www.phusion.nl/"
   s.email = "software-signing@phusion.nl"
-  s.require_paths = ["src/ruby_supportlib"]
+  s.require_paths = [ "src/ruby_supportlib" ]
+  s.required_ruby_version = ">= 2.5.9"
   s.metadata = {
+    "rubygems_mfa_required" => "true",
     "bug_tracker_uri"   => "https://github.com/phusion/passenger/issues",
-    "changelog_uri"     => "https://github.com/phusion/passenger/blob/stable-#{PhusionPassenger::VERSION_STRING.split('.').slice(0,2).join('.')}/CHANGELOG",
+    "changelog_uri"     => "https://github.com/phusion/passenger/blob/stable-#{PhusionPassenger::VERSION_STRING.split('.').slice(0, 2).join('.')}/CHANGELOG",
     "documentation_uri" => "https://www.phusionpassenger.com/docs/",
     "homepage_uri"      => "https://www.phusionpassenger.com/",
     "source_code_uri"   => "https://github.com/phusion/passenger",
     "mailing_list_uri"  => "https://www.phusionpassenger.com/contact",
-    "wiki_uri"          => "https://github.com/phusion/passenger/wiki"
+    "wiki_uri"          => "https://github.com/phusion/passenger/wiki",
   }
 
   # Limit dependencies only to those available through OS package repositories.
@@ -29,6 +31,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'rake', '>= 12.3.3'
   s.add_dependency 'rack', '>= 1.6.13'
   s.add_dependency 'rackup', '>= 1.0.1'
+  s.add_dependency 'logger', '>= 1.7.0'
 
   s.files = Dir[*PhusionPassenger::Packaging::GLOB] -
     Dir[*PhusionPassenger::Packaging::EXCLUDE_GLOB]
@@ -38,6 +41,6 @@ Gem::Specification.new do |s|
     "optimized for performance, low memory usage and ease of use."
 
   if ENV['OFFICIAL_RELEASE']
-    s.extensions = ["src/helper-scripts/download_binaries/extconf.rb"]
+    s.extensions = [ "src/helper-scripts/download_binaries/extconf.rb" ]
   end
 end

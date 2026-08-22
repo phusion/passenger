@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2013-2025 Asynchronous B.V.
 #
@@ -28,9 +29,11 @@ PhusionPassenger.require_passenger_lib 'utils/shellwords'
 require 'fileutils'
 
 module PhusionPassenger
+
   module Utils
 
     module Download
+
       extend self    # Make methods available as class methods.
 
       def self.included(klass)
@@ -63,8 +66,8 @@ module PhusionPassenger
       #                  Set to nil to disable this timeout. Default: nil.
       def download(url, output, options = {})
         options = {
-          :connect_timeout => 4,
-          :idle_timeout    => 5
+          connect_timeout: 4,
+          idle_timeout: 5,
         }.merge(options)
         logger = options[:logger] || Logger.new(STDERR)
 
@@ -78,22 +81,22 @@ module PhusionPassenger
         end
 
         if PlatformInfo.find_command("curl")
-          return download_with_curl(logger, url, output, options)
+          download_with_curl(logger, url, output, options)
         elsif PlatformInfo.find_command("wget")
-          return download_with_wget(logger, url, output, options)
+          download_with_wget(logger, url, output, options)
         else
           logger.error "Could not download #{url}: no download tool found (curl or wget required)"
-          return false
+          false
         end
       end
 
     private
       def basename_from_url(url)
-        return url.sub(/.*\//, '')
+        url.sub(/.*\//, '')
       end
 
       def download_with_curl(logger, url, output, options)
-        command = ["curl", "-f", "-L", "-o", output]
+        command = [ "curl", "-f", "-L", "-o", output ]
         if options[:show_progress]
           command << "-#"
         else
@@ -167,15 +170,15 @@ module PhusionPassenger
           end
         end
 
-        return result
+        result
       end
 
       def remove_curl_output_prefix(line)
-        return line.gsub(/^curl: (\([0-9]+\) )?/, '')
+        line.gsub(/^curl: (\([0-9]+\) )?/, '')
       end
 
       def download_with_wget(logger, url, output, options)
-        command = ["wget", "--tries=1", "-O", output]
+        command = [ "wget", "--tries=1", "-O", output ]
         if !options[:show_progress]
           command << "-nv"
         end
@@ -219,9 +222,11 @@ module PhusionPassenger
           end
         end
 
-        return result
+        result
       end
+
     end
 
   end # module Utils
+
 end # module PhusionPassenger

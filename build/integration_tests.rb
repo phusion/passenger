@@ -26,14 +26,14 @@
 
 def integration_test_dependencies(runtime_target_name)
   if string_option('PASSENGER_LOCATION_CONFIGURATION_FILE')
-    return []
+    []
   else
-    return [runtime_target_name, NATIVE_SUPPORT_TARGET].compact
+    [ runtime_target_name, NATIVE_SUPPORT_TARGET ].compact
   end
 end
 
 desc "Run all integration tests"
-task 'test:integration' => ['test:integration:apache2', 'test:integration:nginx'] do
+task 'test:integration' => [ 'test:integration:apache2', 'test:integration:nginx' ] do
 end
 
 dependencies = integration_test_dependencies(:_apache2)

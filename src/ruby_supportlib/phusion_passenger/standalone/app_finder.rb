@@ -27,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'standalone/config_utils'
 PhusionPassenger.require_passenger_lib 'utils/file_system_watcher'
 
 module PhusionPassenger
+
   module Standalone
 
     class AppFinder
@@ -34,10 +35,10 @@ module PhusionPassenger
         "config.ru",
         "passenger_wsgi.py",
         "app.js",
-        ".meteor"
+        ".meteor",
       ]
       WATCH_ENTRIES = [
-        "config", "Passengerfile.json", "passenger-standalone.json"
+        "config", "Passengerfile.json", "passenger-standalone.json",
       ]
 
       attr_accessor :dirs
@@ -61,8 +62,8 @@ module PhusionPassenger
         if single_mode?
           app_root = find_app_root
           apps << {
-            :server_names => ["_"],
-            :root => app_root
+            server_names: [ "_" ],
+            root: app_root,
           }
           watchlist << app_root
           WATCH_ENTRIES.each do |entry|
@@ -78,7 +79,7 @@ module PhusionPassenger
 
         @apps = apps
         @watchlist = watchlist
-        return apps
+        apps
       end
 
       def monitor(termination_pipe)
@@ -120,14 +121,14 @@ module PhusionPassenger
       end
 
       def single_mode?
-        return @mode == :single
+        @mode == :single
       end
 
       def multi_mode?
-        return !single_mode?
+        !single_mode?
       end
 
-      ##################
+    ##################
 
     private
       class ConfigLoadError < StandardError
@@ -135,9 +136,9 @@ module PhusionPassenger
 
       def find_app_root
         if @dirs.empty?
-          return File.absolute_logical_path(".")
+          File.absolute_logical_path(".")
         else
-          return File.absolute_logical_path(@dirs[0])
+          File.absolute_logical_path(@dirs[0])
         end
       end
 
@@ -158,18 +159,18 @@ module PhusionPassenger
 
       def filename_to_server_names(filename)
         basename = File.basename(filename)
-        names = [basename]
+        names = [ basename ]
         if basename !~ /^www\.$/i
           names << "www.#{basename}"
         end
-        return names
+        names
       end
 
       # Wait until the given IO becomes readable, or until the timeout has
       # been reached. Returns true if the IO became readable, false if the
       # timeout has been reached.
       def wait_on_io(io, timeout)
-        return !!select([io], nil, nil, timeout)
+        !!select([ io ], nil, nil, timeout)
       end
 
       def determine_mode_and_execution_root(options, local_options)
@@ -187,4 +188,5 @@ module PhusionPassenger
     end
 
   end # module Standalone
+
 end # module PhusionPassenger

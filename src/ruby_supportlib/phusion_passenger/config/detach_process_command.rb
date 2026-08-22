@@ -32,6 +32,7 @@ PhusionPassenger.require_passenger_lib 'config/utils'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
+
   module Config
 
     class DetachProcessCommand < Command
@@ -92,7 +93,7 @@ module PhusionPassenger
         request = Net::HTTP::Post.new("/pool/detach_process.json")
         try_performing_full_admin_basic_auth(request, @instance)
         request.content_type = "application/json"
-        request.body = PhusionPassenger::Utils::JSON.generate(:pid => @pid)
+        request.body = PhusionPassenger::Utils::JSON.generate(pid: @pid)
         response = @instance.http_request("agents.s/core_api", request)
         if response.code.to_i / 100 == 2
           body = PhusionPassenger::Utils::JSON.parse(response.body)
@@ -115,4 +116,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

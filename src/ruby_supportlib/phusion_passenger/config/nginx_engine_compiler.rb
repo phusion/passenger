@@ -1,4 +1,5 @@
 #  encoding: utf-8
+
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
@@ -39,6 +40,7 @@ PhusionPassenger.require_passenger_lib 'utils/progress_bar'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
+
   module Config
 
     class NginxEngineCompiler < AbstractInstaller
@@ -80,7 +82,7 @@ module PhusionPassenger
           'depcheck_specs/compiler_toolchain',
           'depcheck_specs/ruby',
           'depcheck_specs/libs',
-          'depcheck_specs/utilities'
+          'depcheck_specs/utilities',
         ]
         ids = [
           'cc',
@@ -89,9 +91,9 @@ module PhusionPassenger
           'rake',
           'openssl-dev',
           'zlib-dev',
-          'pcre2-dev'
+          'pcre2-dev',
         ].compact
-        return [specs, ids]
+        [ specs, ids ]
       end
 
       def install_doc_url
@@ -232,7 +234,7 @@ module PhusionPassenger
           tarball  = "#{@working_dir}/#{basename}"
 
           options = {
-            :show_progress => @stdout.tty?
+            show_progress: @stdout.tty?,
           }
           if @connect_timeout && @connect_timeout != 0
             options[:connect_timeout] = @connect_timeout
@@ -355,7 +357,7 @@ module PhusionPassenger
       end
 
       def compile_nginx
-        backlog = ""
+        backlog = String.new
         e_nginx_source_dir = Shellwords.escape("#{@working_dir}/nginx-#{@nginx_version}")
 
         # Capture and index the `make --dry-run` output for
@@ -390,7 +392,7 @@ module PhusionPassenger
       end
 
       def run_command_yield_activity(command)
-        backlog = ""
+        backlog = String.new
         IO.popen("#{command} 2>&1", "rb") do |io|
           while !io.eof?
             backlog << io.readline
@@ -407,4 +409,5 @@ module PhusionPassenger
     end
 
   end # module Standalone
+
 end # module PhusionPassenger

@@ -116,7 +116,7 @@ class allocator
    allocator& operator=(const allocator<T2, Version2, AllocationDisableMask2>&);
 
    BOOST_STATIC_CONSTEXPR unsigned int ForbiddenMask =
-      BOOST_CONTAINER_ALLOCATE_NEW | BOOST_CONTAINER_EXPAND_BWD | BOOST_CONTAINER_EXPAND_FWD ;
+      BOOST_CONTAINER_ALLOCATE_NEW | BOOST_CONTAINER_EXPAND_BWD | BOOST_CONTAINER_EXPAND_FWD;
 
    //The mask can't disable all the allocation types
    BOOST_CONTAINER_STATIC_ASSERT((  (AllocationDisableMask & ForbiddenMask) != ForbiddenMask  ));

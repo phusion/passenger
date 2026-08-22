@@ -63,8 +63,19 @@ class static_storage_allocator
    inline static_storage_allocator & operator=(const static_storage_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return *this;  }
 
-   inline T* internal_storage() const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return move_detail::launder_cast<T*>(&storage);  }
+   //GCC in C++03 regressions fails, due to a bug in strict-aliasing optimizations
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 120000) && (BOOST_CXX_VERSION < 201103L)
+   #pragma GCC push_options
+   #pragma GCC optimize("no-strict-aliasing")
+   #endif
+
+   BOOST_CONTAINER_FORCEINLINE T* internal_storage() const BOOST_NOEXCEPT_OR_NOTHROW
+   //Avoiding launder due to performance regressions, see https://github.com/boostorg/container/issues/309
+   {  return const_cast<T*>(static_cast<const T*>(static_cast<const void*>(storage.data)));  }
+
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 120000) && (BOOST_CXX_VERSION < 201103L)
+   #pragma GCC pop_options
+   #endif
 
    BOOST_STATIC_CONSTEXPR std::size_t internal_capacity = N;
 
@@ -819,7 +830,8 @@ public:
     //!   Nothing.
     //!
     //! @par Complexity
-    //!   Constant O(1).
+    //!   @li If \c is_trivially_destructible<T>::value is \c true Constant O(1).
+    //!   @li If \c is_trivially_destructible<T>::value is \c false Linear O(N).
     void clear()  BOOST_NOEXCEPT_OR_NOTHROW;
 
     //! @pre <tt>i < size()</tt>
@@ -1226,8 +1238,6 @@ public:
 
 //! @brief Checks if contents of two static_vectors are equal.
 //!
-//! @ingroup static_vector_non_member
-//!
 //! @param x    The first static_vector.
 //! @param y    The second static_vector.
 //!
@@ -1239,8 +1249,6 @@ template<typename V, std::size_t C1, std::size_t C2, class O1, class O2>
 bool operator== (static_vector<V, C1, O1> const& x, static_vector<V, C2, O2> const& y);
 
 //! @brief Checks if contents of two static_vectors are not equal.
-//!
-//! @ingroup static_vector_non_member
 //!
 //! @param x    The first static_vector.
 //! @param y    The second static_vector.
@@ -1254,8 +1262,6 @@ bool operator!= (static_vector<V, C1, O1> const& x, static_vector<V, C2, O2> con
 
 //! @brief Lexicographically compares static_vectors.
 //!
-//! @ingroup static_vector_non_member
-//!
 //! @param x    The first static_vector.
 //! @param y    The second static_vector.
 //!
@@ -1267,8 +1273,6 @@ template<typename V, std::size_t C1, std::size_t C2, class O1, class O2>
 bool operator< (static_vector<V, C1, O1> const& x, static_vector<V, C2, O2> const& y);
 
 //! @brief Lexicographically compares static_vectors.
-//!
-//! @ingroup static_vector_non_member
 //!
 //! @param x    The first static_vector.
 //! @param y    The second static_vector.
@@ -1282,8 +1286,6 @@ bool operator> (static_vector<V, C1, O1> const& x, static_vector<V, C2, O2> cons
 
 //! @brief Lexicographically compares static_vectors.
 //!
-//! @ingroup static_vector_non_member
-//!
 //! @param x    The first static_vector.
 //! @param y    The second static_vector.
 //!
@@ -1295,8 +1297,6 @@ template<typename V, std::size_t C1, std::size_t C2, class O1, class O2>
 bool operator<= (static_vector<V, C1, O1> const& x, static_vector<V, C2, O2> const& y);
 
 //! @brief Lexicographically compares static_vectors.
-//!
-//! @ingroup static_vector_non_member
 //!
 //! @param x    The first static_vector.
 //! @param y    The second static_vector.
@@ -1311,8 +1311,6 @@ bool operator>= (static_vector<V, C1, O1> const& x, static_vector<V, C2, O2> con
 //! @brief Swaps contents of two static_vectors.
 //!
 //! This function calls static_vector::swap().
-//!
-//! @ingroup static_vector_non_member
 //!
 //! @param x    The first static_vector.
 //! @param y    The second static_vector.
@@ -1334,6 +1332,28 @@ inline void swap(static_vector<V, C1, O1> & x, static_vector<V, C2, O2> & y
 }
 
 #endif // BOOST_CONTAINER_DOXYGEN_INVOKED
+
+//! <b>Effects</b>: Erases all elements that compare equal to v from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, std::size_t N, class O, class U>
+inline typename static_vector<T, N, O>::size_type erase(static_vector<T, N, O>& c, const U& v)
+{
+   typename static_vector<T, N, O>::size_type old_size = c.size();
+   c.erase(boost::container::remove(c.begin(), c.end(), v), c.end());
+   return old_size - c.size();
+}
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, std::size_t N, class O, class Pred>
+inline typename static_vector<T, N, O>::size_type erase_if(static_vector<T, N, O>& c, Pred pred)
+{
+   typename static_vector<T, N, O>::size_type old_size = c.size();
+   c.erase(boost::container::remove_if(c.begin(), c.end(), pred), c.end());
+   return old_size - c.size();
+}
 
 }} // namespace boost::container
 

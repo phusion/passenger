@@ -14,7 +14,7 @@ jobs:
     outputs:
       distros: ${{ steps.distros.outputs.distros }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
@@ -39,7 +39,7 @@ jobs:
     runs-on: ${{ matrix.arch.runner }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
         with:
           submodules: true
@@ -98,6 +98,7 @@ jobs:
       - name: Update cache
         run: ./dev/ci/update-cache-az-blob-storage
         timeout-minutes: 3
+        continue-on-error: true
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
           CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
@@ -105,7 +106,7 @@ jobs:
           CACHE_PATH: packaging/rpm/cache
           SUDO: true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         timeout-minutes: 1
         with:
           name: rpm-${{ matrix.distro }}-${{ matrix.arch.rpm_arch }}

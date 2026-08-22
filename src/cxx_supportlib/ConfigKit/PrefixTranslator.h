@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2017-2025 Asynchronous B.V.
+ *  Copyright (c) 2017-2026 Asynchronous B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Asynchronous B.V.
@@ -38,8 +38,8 @@ using namespace std;
 /**
  * A translator that translates keys by adding a prefix.
  *
- * You can learn more about translators in the ConfigKit README, section
- * "The special problem of overlapping configuration names and translation".
+ * You can learn more about translators in the ConfigKit IN_PRACTICE.md, section
+ * "The special problem of conflicting overlapping configuration names and translation".
  */
 class PrefixTranslator: public Translator {
 private:

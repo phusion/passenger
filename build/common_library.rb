@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -40,7 +41,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
   if OPTIMIZE
     optimize = "-O2"
     if LTO
-      optimize << " -flto"
+      optimize += " -flto"
     end
   end
 
@@ -56,8 +57,8 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
       object_file,
       source_file,
       lambda { {
-        :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
-        :flags => [optimize, maybe_eval_lambda(extra_compiler_flags)]
+        include_paths: CXX_SUPPORTLIB_INCLUDE_PATHS,
+        flags: [ optimize, maybe_eval_lambda(extra_compiler_flags) ],
       } }
     )
   end
@@ -74,8 +75,8 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
       object_file,
       source_file,
       lambda { {
-        :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
-        :flags => [optimize, maybe_eval_lambda(extra_compiler_flags)]
+        include_paths: CXX_SUPPORTLIB_INCLUDE_PATHS,
+        flags: [ optimize, maybe_eval_lambda(extra_compiler_flags) ],
       } }
     )
   end
@@ -93,9 +94,9 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
   if OPTIMIZE && LTO
     # Clang -flto does not support static libraries containing
     # .o files that are compiled with -flto themselves.
-    [output_file, [output_file, boost_object_files, oxt_object_files].flatten.join(" ")]
+    [ output_file, [ output_file, boost_object_files, oxt_object_files ].flatten.join(" ") ]
   else
-    [output_file, output_file]
+    [ output_file, output_file ]
   end
 end
 
@@ -109,8 +110,8 @@ if USE_VENDORED_LIBEV
   let(:libev_cflags) do
     result = '-Isrc/cxx_supportlib/vendor-modified/libev'
     # Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
-    result << ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
-    result << ' -DUSE_VENDORED_LIBEV'
+    result += ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
+    result += ' -DUSE_VENDORED_LIBEV'
     result
   end
 
@@ -122,12 +123,12 @@ if USE_VENDORED_LIBEV
     "#{LIBEV_OUTPUT_DIR}.libs/libev.a #{$1}".strip
   end
 
-  task :libev => LIBEV_TARGET
+  task libev: LIBEV_TARGET
 
   dependencies = [
     "src/cxx_supportlib/vendor-modified/libev/configure",
     "src/cxx_supportlib/vendor-modified/libev/config.h.in",
-    "src/cxx_supportlib/vendor-modified/libev/Makefile.am"
+    "src/cxx_supportlib/vendor-modified/libev/Makefile.am",
   ]
   file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
     cc_command = cc
@@ -147,27 +148,27 @@ if USE_VENDORED_LIBEV
   end
 
   libev_sources = Dir["src/cxx_supportlib/vendor-modified/libev/{*.c,*.h}"].sort
-  file LIBEV_OUTPUT_DIR + ".libs/libev.a" => [LIBEV_OUTPUT_DIR + "Makefile"] + libev_sources do
+  file LIBEV_OUTPUT_DIR + ".libs/libev.a" => [ LIBEV_OUTPUT_DIR + "Makefile" ] + libev_sources do
     sh "rm -f #{LIBEV_OUTPUT_DIR}libev.la"
     sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la V=1"
   end
 
   task 'libev:clean' do
-    patterns = %w(Makefile config.h config.log config.status libtool
-      stamp-h1 *.o *.lo *.la .libs .deps)
+    patterns = %w[Makefile config.h config.log config.status libtool
+      stamp-h1 *.o *.lo *.la .libs .deps]
     patterns.each do |pattern|
       sh "rm -rf #{LIBEV_OUTPUT_DIR}#{pattern}"
     end
   end
 
-  task :clean => 'libev:clean'
+  task clean: 'libev:clean'
 else
   LIBEV_TARGET = nil
 
   let(:libev_cflags) do
     result = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
     # Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
-    result << ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
+    result += ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
     result
   end
 
@@ -193,11 +194,11 @@ if USE_VENDORED_LIBUV
     "#{LIBUV_OUTPUT_DIR}.libs/libuv.a #{$1}".strip
   end
 
-  task :libuv => LIBUV_TARGET
+  task libuv: LIBUV_TARGET
 
   dependencies = [
     "src/cxx_supportlib/vendor-copy/libuv/configure",
-    "src/cxx_supportlib/vendor-copy/libuv/Makefile.am"
+    "src/cxx_supportlib/vendor-copy/libuv/Makefile.am",
   ]
   file LIBUV_OUTPUT_DIR + "Makefile" => dependencies do
     cc_command = cc
@@ -220,20 +221,20 @@ if USE_VENDORED_LIBUV
   end
 
   libuv_sources = Dir["src/cxx_supportlib/vendor-copy/libuv/**/{*.c,*.h}"].sort
-  file LIBUV_OUTPUT_DIR + ".libs/libuv.a" => [LIBUV_OUTPUT_DIR + "Makefile"] + libuv_sources do
+  file LIBUV_OUTPUT_DIR + ".libs/libuv.a" => [ LIBUV_OUTPUT_DIR + "Makefile" ] + libuv_sources do
     sh "rm -f #{LIBUV_OUTPUT_DIR}/libuv.la"
     sh "cd #{LIBUV_OUTPUT_DIR} && make -j2 libuv.la V=1"
   end
 
   task 'libuv:clean' do
-    patterns = %w(Makefile config.h config.log config.status libtool
-      stamp-h1 src test *.o *.lo *.la *.pc .libs .deps)
+    patterns = %w[Makefile config.h config.log config.status libtool
+      stamp-h1 src test *.o *.lo *.la *.pc .libs .deps]
     patterns.each do |pattern|
       sh "rm -rf #{LIBUV_OUTPUT_DIR}#{pattern}"
     end
   end
 
-  task :clean => 'libuv:clean'
+  task clean: 'libuv:clean'
 else
   LIBUV_TARGET = nil
 
@@ -252,9 +253,9 @@ end
 # If you add a new shared definition file, don't forget to update
 # src/ruby_supportlib/phusion_passenger/packaging.rb!
 
-dependencies = ['src/cxx_supportlib/Constants.h.cxxcodebuilder',
+dependencies = [ 'src/cxx_supportlib/Constants.h.cxxcodebuilder',
   'src/ruby_supportlib/phusion_passenger.rb',
-  'src/ruby_supportlib/phusion_passenger/constants.rb']
+  'src/ruby_supportlib/phusion_passenger/constants.rb' ]
 file 'src/cxx_supportlib/Constants.h' => dependencies do
   PhusionPassenger.require_passenger_lib 'constants'
   template = CxxCodeTemplateRenderer.new('src/cxx_supportlib/Constants.h.cxxcodebuilder')

@@ -32,13 +32,14 @@ PhusionPassenger.require_passenger_lib 'config/utils'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
+
   module Config
 
     class ApiCallCommand < Command
       include PhusionPassenger::Config::Utils
 
       def self.create_default_options
-        { :agent_name => "core_api" }
+        { agent_name: "core_api" }
       end
 
       def run
@@ -216,4 +217,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

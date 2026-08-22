@@ -28,11 +28,12 @@ module PhusionPassenger
 
   # Core of the `passenger` command (Passenger Standalone). Dispatches a subcommand to a specific class.
   module Standalone
+
     KNOWN_COMMANDS = [
-      ["start", "StartCommand"],
-      ["stop", "StopCommand"],
-      ["status", "StatusCommand"],
-      ["version", "VersionCommand"]
+      [ "start", "StartCommand" ],
+      [ "stop", "StopCommand" ],
+      [ "status", "StatusCommand" ],
+      [ "version", "VersionCommand" ],
     ]
 
     def self.run!(argv)
@@ -69,15 +70,15 @@ module PhusionPassenger
 
   private
     def self.help_requested?(argv)
-      return argv.size == 1 && (argv[0] == "--help" || argv[0] == "-h" || argv[0] == "help")
+      argv.size == 1 && (argv[0] == "--help" || argv[0] == "-h" || argv[0] == "help")
     end
 
     def self.version_requested?(argv)
-      return argv.size == 1 && (argv[0] == "--version" || argv[0] == "-v")
+      argv.size == 1 && (argv[0] == "--version" || argv[0] == "-v")
     end
 
     def self.show_version
-      command_class, new_argv = lookup_command_class_by_argv(["version"])
+      command_class, new_argv = lookup_command_class_by_argv([ "version" ])
       command_class.new(new_argv).run
     end
 
@@ -86,18 +87,18 @@ module PhusionPassenger
 
       # Convert "passenger help <COMMAND>" to "passenger <COMMAND> --help".
       if argv.size == 2 && argv[0] == "help"
-        argv = [argv[1], "--help"]
+        argv = [ argv[1], "--help" ]
       end
 
       KNOWN_COMMANDS.each do |props|
         if argv[0] == props[0]
           command_class = lookup_command_class_by_class_name(props[1])
           new_argv = argv[1 .. -1]
-          return [command_class, new_argv]
+          return [ command_class, new_argv ]
         end
       end
 
-      return nil
+      nil
     end
 
     def self.lookup_command_class_by_class_name(class_name)
@@ -107,8 +108,9 @@ module PhusionPassenger
       base_name.sub!(/^_/, '')
       base_name << ".rb"
       PhusionPassenger.require_passenger_lib("standalone/#{base_name}")
-      return PhusionPassenger::Standalone.const_get(class_name)
+      PhusionPassenger::Standalone.const_get(class_name)
     end
+
   end
 
 end # module PhusionPassenger

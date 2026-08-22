@@ -42,12 +42,12 @@ class AppProcess
   def connect_and_send_request(headers)
     socket = Utils.connect_to_server(find_socket_accepting_http_requests['address'])
     channel = MessageChannel.new(socket)
-    data = ""
-    headers["REQUEST_METHOD"] ||= "GET"
-    headers["REQUEST_URI"] ||= headers["PATH_INFO"]
-    headers["QUERY_STRING"] ||= ""
-    headers["SCRIPT_NAME"] ||= ""
-    headers["CONTENT_LENGTH"] ||= "0"
+    data = ''
+    headers['REQUEST_METHOD'] ||= 'GET'
+    headers['REQUEST_URI'] ||= headers['PATH_INFO']
+    headers['QUERY_STRING'] ||= ''
+    headers['SCRIPT_NAME'] ||= ''
+    headers['CONTENT_LENGTH'] ||= '0'
     headers.each_pair do |key, value|
       data << "#{key}\0#{value}\0"
     end
@@ -135,7 +135,7 @@ private
     Dir.mkdir("#{work_dir}/response/steps/preloader_send_response")
     Dir.mkdir("#{work_dir}/response/steps/preloader_finish")
     Dir.mkdir("#{work_dir}/response/steps/subprocess_prepare_after_forking_from_preloader")
-    if !system("mkfifo", "#{work_dir}/response/finish")
+    if !system('mkfifo', "#{work_dir}/response/finish")
       raise "'mkfifo #{work_dir}/response/finish' failed"
     end
   end
@@ -156,15 +156,15 @@ private
       exec(*command)
     end
     a.close
-    [pid, b]
+    [ pid, b ]
   end
 
   def write_startup_arguments(work_dir, options)
     real_options = {
-      :passenger_root => PhusionPassenger.install_spec,
-      :ruby_libdir => PhusionPassenger.ruby_libdir,
-      :app_root => File.expand_path(@app_root),
-      :app_group_name => @app_root
+      passenger_root: PhusionPassenger.install_spec,
+      ruby_libdir: PhusionPassenger.ruby_libdir,
+      app_root: File.expand_path(@app_root),
+      app_group_name: @app_root,
     }
     real_options[:log_level] = 7 if DEBUG
     real_options.merge!(options)
@@ -191,7 +191,7 @@ private
       end
       mutex.synchronize do
         if result.nil?
-          result = { :finish_signal => content }
+          result = { finish_signal: content }
           cond.signal
         end
       end
@@ -221,7 +221,7 @@ private
       end
       mutex.synchronize do
         if result.nil?
-          result = { :process_exited => true }
+          result = { process_exited: true }
           cond.signal
         end
       end
@@ -258,7 +258,7 @@ private
 
   def read_errors(work_dir)
     {
-      :summary => File.read("#{work_dir}/response/error/summary")
+      summary: File.read("#{work_dir}/response/error/summary"),
     }
   end
 end
@@ -298,7 +298,7 @@ class Preloader < Loader
       @preloader_process.find_socket_with_protocol('preloader')['address'])
     work_dir = create_work_dir
     begin
-      if !system("mkfifo", "#{work_dir}/stdin")
+      if !system('mkfifo', "#{work_dir}/stdin")
         raise "'mkfifo #{work_dir}/stdin' failed"
       end
 
@@ -330,8 +330,8 @@ class Preloader < Loader
 private
   def write_spawn_request(socket, work_dir)
     socket.puts(PhusionPassenger::Utils::JSON.generate(
-      :command => 'spawn',
-      :work_dir => work_dir
+      command: 'spawn',
+      work_dir: work_dir
     ))
   end
 
@@ -345,12 +345,12 @@ private
 
   def open_std_channels_async(work_dir)
     state = {
-      :mutex => Mutex.new,
-      :cond  => ConditionVariable.new,
-      :stdin => nil,
-      :stdout_and_err => nil,
-      :stdin_open_thread => nil,
-      :stdout_and_err_open_thread => nil
+      mutex: Mutex.new,
+      cond: ConditionVariable.new,
+      stdin: nil,
+      stdout_and_err: nil,
+      stdin_open_thread: nil,
+      stdout_and_err_open_thread: nil,
     }
 
     state[:stdin_open_thread] = Thread.new do
@@ -390,6 +390,7 @@ private
 end
 
 module LoaderSpecHelper
+
   def self.included(klass)
     klass.before(:each) do
       @stubs = []
@@ -419,12 +420,12 @@ module LoaderSpecHelper
     @stubs << stub
     File.prepend(stub.startup_file, "#{@before_start}\n")
     File.append(stub.startup_file, "\n#{@after_start}")
-    return stub
+    stub
   end
 
   def register_app(app)
     @apps << app
-    return app
+    app
   end
 
   def start!(options = {})
@@ -438,7 +439,7 @@ module LoaderSpecHelper
     socket = @process.connect_and_send_request(headers)
     headers = {}
     line = socket.readline
-    headers["Status"] = line.split(" ")[1]
+    headers['Status'] = line.split(' ')[1]
     while line != "\r\n"
       key, value = line.strip.split(/ *: */, 2)
       headers[key] = value
@@ -446,8 +447,9 @@ module LoaderSpecHelper
     end
     body = socket.read
     socket.close
-    return [headers, body]
+    [ headers, body ]
   end
+
 end
 
 RSpec.shared_examples_for 'a loader' do
@@ -455,8 +457,8 @@ RSpec.shared_examples_for 'a loader' do
     start
     expect(@process).to be_an_instance_of(AppProcess)
     headers, body = perform_request(
-      "REQUEST_METHOD" => "GET",
-      "PATH_INFO" => "/"
+      'REQUEST_METHOD' => 'GET',
+      'PATH_INFO' => '/'
     )
     expect(headers['Status']).to eq('200')
     expect(body).to eq('front page')

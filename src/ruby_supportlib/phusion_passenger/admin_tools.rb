@@ -25,25 +25,27 @@
 module PhusionPassenger
 
   module AdminTools
+
     def self.tmpdir
-      ["PASSENGER_INSTANCE_REGISTRY_DIR", "TMPDIR"].each do |name|
+      [ "PASSENGER_INSTANCE_REGISTRY_DIR", "TMPDIR" ].each do |name|
         if ENV.has_key?(name) && !ENV[name].empty?
           return ENV[name]
         end
       end
-      return Dir['/tmp/systemd-private-*-{httpd,nginx}.service-*/tmp'].first || "/tmp"
+      Dir['/tmp/systemd-private-*-{httpd,nginx}.service-*/tmp'].first || "/tmp"
     end
 
     def self.process_is_alive?(pid)
       begin
         Process.kill(0, pid)
-        return true
+        true
       rescue Errno::ESRCH
-        return false
+        false
       rescue SystemCallError => e
-        return true
+        true
       end
     end
+
   end # module AdminTools
 
 end # module PhusionPassenger

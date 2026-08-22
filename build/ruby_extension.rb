@@ -38,12 +38,12 @@ else
   source_dir  = "src/ruby_native_extension"
   NATIVE_SUPPORT_TARGET = File.join(output_dir, output_name)
 
-  task :native_support => NATIVE_SUPPORT_TARGET
-  task :clean => 'native_support:clean'
+  task native_support: NATIVE_SUPPORT_TARGET
+  task clean: 'native_support:clean'
 
   dependencies = [
     File.join(output_dir, "Makefile"),
-    "#{source_dir}/passenger_native_support.c"
+    "#{source_dir}/passenger_native_support.c",
   ]
   file(NATIVE_SUPPORT_TARGET => dependencies) do
     sh "mkdir -p '#{output_dir}'" if !File.exist?(output_dir)

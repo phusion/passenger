@@ -272,7 +272,7 @@ struct insert_nonmovable_emplace_proxy
    {}
 
    template<class Iterator>
-   inline void uninitialized_copy_n_and_update(Allocator &a, Iterator p, std::size_t n)
+   BOOST_CONTAINER_FORCEINLINE void uninitialized_copy_n_and_update(Allocator &a, Iterator p, std::size_t n)
    {  this->priv_uninitialized_copy_some_and_update(a, index_tuple_t(), p, n);  }
 
    private:
@@ -303,7 +303,7 @@ struct insert_emplace_proxy
    {}
 
    template<class Iterator>
-   inline void copy_n_and_update(Allocator &a, Iterator p, std::size_t n)
+   BOOST_CONTAINER_FORCEINLINE void copy_n_and_update(Allocator &a, Iterator p, std::size_t n)
    {  this->priv_copy_some_and_update(a, index_tuple_t(), p, n);  }
 
    private:
@@ -326,6 +326,7 @@ struct insert_emplace_proxy
       alloc_traits::destroy(a, vp);
    }
 };
+
 
 //Specializations to avoid an unneeded temporary when emplacing from a single argument o type value_type
 template<class Allocator>

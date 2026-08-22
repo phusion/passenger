@@ -15,31 +15,31 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Use NFS to mount /vagrant because our unit tests expect a
   # POSIX compliant filesystem.
-  config.vm.synced_folder ".", "/vagrant", :type => "nfs"
+  config.vm.synced_folder ".", "/vagrant", type: "nfs"
 
   # Passenger Standalone and 'rails server'
-  config.vm.network :forwarded_port, :host => 3000, :guest => 3000
-  config.vm.network :forwarded_port, :host => 3001, :guest => 3001
-  config.vm.network :forwarded_port, :host => 3002, :guest => 3002
+  config.vm.network :forwarded_port, host: 3000, guest: 3000
+  config.vm.network :forwarded_port, host: 3001, guest: 3001
+  config.vm.network :forwarded_port, host: 3002, guest: 3002
   # Apache
-  config.vm.network :forwarded_port, :host => 8000, :guest => 8000
-  config.vm.network :forwarded_port, :host => 8001, :guest => 8001
-  config.vm.network :forwarded_port, :host => 8002, :guest => 8002
-  config.vm.network :forwarded_port, :host => 8003, :guest => 8003
-  config.vm.network :forwarded_port, :host => 8004, :guest => 8004
-  config.vm.network :forwarded_port, :host => 8005, :guest => 8005
-  config.vm.network :forwarded_port, :host => 8010, :guest => 8010
+  config.vm.network :forwarded_port, host: 8000, guest: 8000
+  config.vm.network :forwarded_port, host: 8001, guest: 8001
+  config.vm.network :forwarded_port, host: 8002, guest: 8002
+  config.vm.network :forwarded_port, host: 8003, guest: 8003
+  config.vm.network :forwarded_port, host: 8004, guest: 8004
+  config.vm.network :forwarded_port, host: 8005, guest: 8005
+  config.vm.network :forwarded_port, host: 8010, guest: 8010
   # Nginx
-  config.vm.network :forwarded_port, :host => 8100, :guest => 8100
-  config.vm.network :forwarded_port, :host => 8101, :guest => 8101
-  config.vm.network :forwarded_port, :host => 8102, :guest => 8102
-  config.vm.network :forwarded_port, :host => 8103, :guest => 8103
-  config.vm.network :forwarded_port, :host => 8104, :guest => 8104
-  config.vm.network :forwarded_port, :host => 8105, :guest => 8105
-  config.vm.network :forwarded_port, :host => 8110, :guest => 8110
+  config.vm.network :forwarded_port, host: 8100, guest: 8100
+  config.vm.network :forwarded_port, host: 8101, guest: 8101
+  config.vm.network :forwarded_port, host: 8102, guest: 8102
+  config.vm.network :forwarded_port, host: 8103, guest: 8103
+  config.vm.network :forwarded_port, host: 8104, guest: 8104
+  config.vm.network :forwarded_port, host: 8105, guest: 8105
+  config.vm.network :forwarded_port, host: 8110, guest: 8110
 
   config.vm.provider :virtualbox do |vb, override|
-    override.vm.network :private_network, :type => "dhcp"
+    override.vm.network :private_network, type: "dhcp"
     vb.cpus   = CPUS
     vb.memory = MEMORY
   end
@@ -50,5 +50,5 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vf.vmx["memsize"]  = MEMORY.to_s
   end
 
-  config.vm.provision :shell, :path => "dev/vagrant/provision.sh"
+  config.vm.provision :shell, path: "dev/vagrant/provision.sh"
 end

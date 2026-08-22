@@ -65,10 +65,10 @@ def build_compiler_flags_from_options_or_flags(options_or_flags)
     end
 
     if flags = options[:flags]
-      result.concat([flags].flatten)
+      result.concat([ flags ].flatten)
     end
 
-    result.flatten.reject{ |x| x.nil? || x.empty? }.join(" ")
+    result.flatten.reject { |x| x.nil? || x.empty? }.join(" ")
   elsif options_or_flags.is_a?(String)
     options_or_flags
   elsif options_or_flags.respond_to?(:call)
@@ -81,13 +81,13 @@ def build_compiler_flags_from_options_or_flags(options_or_flags)
 end
 
 def generate_compilation_task_dependencies(source, options = nil)
-  result = [source]
+  result = [ source ]
   if dependencies = CXX_DEPENDENCY_MAP[source]
     result.concat(dependencies)
   end
   options = maybe_eval_lambda(options)
   if options && options[:deps]
-    result.concat([options[:deps]].flatten.compact)
+    result.concat([ options[:deps] ].flatten.compact)
   end
   result
 end
@@ -105,14 +105,14 @@ def compile_cxx(object, source, options_or_flags = nil)
 end
 
 def create_c_executable(target, objects, options_or_flags = nil)
-  objects = [objects].flatten.join(" ")
+  objects = [ objects ].flatten.join(" ")
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(target)
   run_compiler("#{cc} -o #{target} #{objects} #{EXTRA_PRE_C_LDFLAGS} #{flags} #{extra_c_ldflags}")
 end
 
 def create_cxx_executable(target, objects, options_or_flags = nil)
-  objects = [objects].flatten.join(" ")
+  objects = [ objects ].flatten.join(" ")
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(target)
   run_compiler("#{cxx} -o #{target} #{objects} #{EXTRA_PRE_CXX_LDFLAGS} #{flags} #{extra_cxx_ldflags}")
@@ -125,7 +125,7 @@ def create_static_library(target, objects)
   #   ar: foo.a: Inappropriate file type or format
   #
   # So here we delete the ar file before creating it, which bypasses this problem.
-  objects = [objects].flatten.join(" ")
+  objects = [ objects ].flatten.join(" ")
   ensure_target_directory_exists(target)
   sh "rm -rf #{target}"
   sh "ar cru #{target} #{objects}"
@@ -143,7 +143,7 @@ def create_shared_library(target, objects, options_or_flags = nil)
   else
     fPIC = "-fPIC"
   end
-  objects = [objects].flatten.join(" ")
+  objects = [ objects ].flatten.join(" ")
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(target)
   run_compiler("#{cxx} #{shlib_flag} #{objects} #{fPIC} -o #{target} #{flags}")

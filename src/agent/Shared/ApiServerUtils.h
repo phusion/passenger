@@ -167,14 +167,17 @@ authorize(ApiServer *server, Client *client, Request *req) {
 	}
 
 	if (server->getApiAccountDatabase().empty()) {
-		SKC_INFO_FROM_STATIC(server, client,
-			"Authenticated as administrator because API account database is empty");
-		auth.apiKey = ApplicationPool2::ApiKey::makeSuper();
-		auth.canReadPool = true;
-		auth.canModifyPool = true;
-		auth.canInspectState = true;
-		auth.canAdminister = true;
-	} else if (parseBasicAuthHeader(req, username, password)) {
+		/*
+		 * Deliberately DEBUG, not WARN or INFO. This branch is evaluated on every
+		 * request before authentication, and the API socket is world-writable, so
+		 * anything emitted at the default log level lets any local client flood a
+		 * root-owned log file. The condition is a persistent configuration state
+		 * rather than a per-request event, so it belongs in a one-time startup
+		 * diagnostic, not here.
+		 */
+		SKC_DEBUG_FROM_STATIC(server, client,
+			"API account database is empty; refusing unauthenticated access");
+	} else 	if (parseBasicAuthHeader(req, username, password)) {
 		SKC_DEBUG_FROM_STATIC(server, client,
 			"HTTP basic authentication supplied: " << username);
 		if (username == "api") {
@@ -189,7 +192,9 @@ authorize(ApiServer *server, Client *client, Request *req) {
 		} else {
 			const typename ApiServer::ApiAccount *account =
 				server->getApiAccountDatabase().lookup(username);
-			if (account != NULL && constantTimeCompare(password, account->password)) {
+			if (account != NULL && !account->password.empty()
+			 && constantTimeCompare(password, account->password))
+			{
 				SKC_INFO_FROM_STATIC(server, client,
 					"Authenticated with administrator account: " << username);
 				auth.apiKey = ApplicationPool2::ApiKey::makeSuper();

@@ -1,0 +1,42 @@
+name: Azure cache deletion workflow (Debian)
+
+on: workflow_dispatch
+
+jobs:
+  define-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      distros: ${{ steps.distros.outputs.distros }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        timeout-minutes: 1
+        with:
+          submodules: true
+      - name: Define Distros
+        id: distros
+        run: echo "distros=[$(awk -F= '/DEFAULT_DISTROS/{print $2}' packaging/debian/internal/lib/distro_info.sh | sed -e 's/ /", "/g')]" >> "$GITHUB_OUTPUT"
+
+  delete:
+    name: Delete debian cache from azure
+    needs: define-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: ${{ fromJSON(needs.define-matrix.outputs.distros) }}
+        arch:
+          - amd64
+          - arm64
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Delete cache
+        run: ./dev/ci/delete-cache-az-blob-storage
+        timeout-minutes: 5
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+          BLOB_NAME: "binaries/debian-cache-${{ matrix.distro }}-${{ matrix.arch }}.tar.zstd"
+          CACHE_PATH: packaging/debian/cache

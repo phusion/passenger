@@ -39,7 +39,7 @@
 
 namespace boost { namespace mpl { namespace aux {
 
-template< typename T > static T const& ptr_to_ref(T*);
+template< typename T > T const& ptr_to_ref(T*);
 
 }}}
 

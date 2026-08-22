@@ -15,7 +15,7 @@ if !Shellwords.respond_to?(:escape)
       # A LF cannot be escaped with a backslash because a backslash + LF
       # combo is regarded as line continuation and simply ignored.
       str.gsub!(/\n/, "'\n'")
-      return str
+      str
     end
   end
 end

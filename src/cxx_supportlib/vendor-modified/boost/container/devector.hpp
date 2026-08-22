@@ -1230,6 +1230,15 @@ class devector
       BOOST_ASSERT(invariants_ok());
    }
 
+   inline size_type front_capacity() const
+   {
+      return m_.back_idx;
+   }
+
+   inline size_type back_capacity() const
+   {
+      return size_type(m_.capacity - m_.front_idx);
+   }
 
    /**
     * [MoveInsertable]: http://en.cppreference.com/w/cpp/concept/MoveInsertable
@@ -2263,16 +2272,6 @@ class devector
       return boost::intrusive::pointer_traits<pointer>::const_cast_from(i);
    }
 
-   inline size_type front_capacity() const
-   {
-      return m_.back_idx;
-   }
-
-   inline size_type back_capacity() const
-   {
-      return size_type(m_.capacity - m_.front_idx);
-   }
-
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
    inline T* priv_raw_begin() BOOST_NOEXCEPT
@@ -3040,6 +3039,28 @@ class devector
 
    #endif // ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+//! <b>Effects</b>: Erases all elements that compare equal to v from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, class A, class O, class U>
+inline typename devector<T, A, O>::size_type erase(devector<T, A, O>& c, const U& v)
+{
+   typename devector<T, A, O>::size_type old_size = c.size();
+   c.erase(boost::container::remove(c.begin(), c.end(), v), c.end());
+   return old_size - c.size();
+}
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, class A, class O, class Pred>
+inline typename devector<T, A, O>::size_type erase_if(devector<T, A, O>& c, Pred pred)
+{
+   typename devector<T, A, O>::size_type old_size = c.size();
+   c.erase(boost::container::remove_if(c.begin(), c.end(), pred), c.end());
+   return old_size - c.size();
+}
 
 }} // namespace boost::container
 

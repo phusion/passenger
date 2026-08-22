@@ -138,4 +138,3 @@ def maybe_eval_lambda(lambda_or_value)
     lambda_or_value
   end
 end
-

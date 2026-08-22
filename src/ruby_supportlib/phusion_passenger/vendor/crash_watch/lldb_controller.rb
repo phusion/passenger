@@ -1,4 +1,5 @@
 # encoding: binary
+
 #
 # Copyright (c) 2016-2025 Asynchronous B.V.
 #
@@ -26,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'vendor/crash_watch/base'
 PhusionPassenger.require_passenger_lib 'vendor/crash_watch/utils'
 
 module CrashWatch
+
   class LldbNotFound < Error
   end
 
@@ -65,7 +67,7 @@ module CrashWatch
       result = []
       while !done
         begin
-          if select([@out], nil, nil, timeout)
+          if select([ @out ], nil, nil, timeout)
             line = @out.readline.chomp
             line.sub!(/^LLDB:/, '')
             puts "lldb read #{line.inspect}" if @debug
@@ -179,4 +181,5 @@ module CrashWatch
       end
     end
   end
+
 end

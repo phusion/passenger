@@ -26,6 +26,7 @@ PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'config/command'
 
 module PhusionPassenger
+
   module Config
 
     class AboutCommand < Command
@@ -39,9 +40,9 @@ module PhusionPassenger
         puts "  ruby-libdir              Show #{PROGRAM_NAME}'s Ruby library directory."
         puts "  includedir               Show the Nginx runtime library headers directory."
         puts "  nginx-addon-dir          Show #{PROGRAM_NAME}'s Nginx addon directory."
-        puts "  nginx-libs               Show paths to #{PROGRAM_NAME}'s libraries" 
+        puts "  nginx-libs               Show paths to #{PROGRAM_NAME}'s libraries"
         puts "                           for static linking to Nginx runtime."
-        puts "  nginx-dynamic-libs       Show paths to #{PROGRAM_NAME}'s libraries" 
+        puts "  nginx-dynamic-libs       Show paths to #{PROGRAM_NAME}'s libraries"
         puts "                           for dynamic linking to Nginx runtime."
         puts "  nginx-dynamic-compiled   Check whether runtime libraries for dynamic"
         puts "                           linking to Nginx are compiled."
@@ -214,18 +215,19 @@ module PhusionPassenger
     private
       def common_library
         PhusionPassenger.require_passenger_lib 'common_library'
-        return COMMON_LIBRARY.
+        COMMON_LIBRARY.
           only(*NGINX_LIBS_SELECTOR).
           set_output_dir("#{PhusionPassenger.lib_dir}/common/libpassenger_common")
       end
-      
+
       def common_dynamic_library
         PhusionPassenger.require_passenger_lib 'common_library'
-        return COMMON_LIBRARY.
+        COMMON_LIBRARY.
           only(*NGINX_LIBS_SELECTOR).
           set_output_dir("#{PhusionPassenger.lib_dir}/nginx_dynamic/module_libpassenger_common")
       end
     end
 
   end # module Config
+
 end # module PhusionPassenger

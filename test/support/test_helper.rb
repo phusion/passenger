@@ -1,14 +1,11 @@
 # Clean Bundler environment variables. Otherwise we can't test against multiple Rails versions.
 if defined?(Bundler)
-  clean_env = nil
-  if Bundler.method_defined?(:with_unbundled_env)
-    Bundler.with_unbundled_env do
-      clean_env = ENV.to_hash
-    end
+  if Bundler.respond_to?(:original_env)
+    clean_env = Bundler.original_env
+  elsif Bundler.respond_to?(:unbundled_env)
+    clean_env = Bundler.unbundled_env
   else
-    Bundler.with_clean_env do
-      clean_env = ENV.to_hash
-    end
+    clean_env = Bundler.clean_env
   end
   ENV.replace(clean_env)
 end
@@ -25,6 +22,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
 # Module containing helper methods, to be included in unit tests.
 module TestHelper
+
   ######## Stub helpers ########
 
   class Stub
@@ -62,8 +60,8 @@ module TestHelper
         File.chown(Process.uid, Process.gid, @app_root)
       end
       copy_stub_contents
-      system("chmod", "-R", "a+rw", @full_app_root)
-      system("chmod", "a+x", @full_app_root)
+      system('chmod', '-R', 'a+rw', @full_app_root)
+      system('chmod', 'a+x', @full_app_root)
     end
 
     def reset
@@ -78,7 +76,7 @@ module TestHelper
       FileUtils.rm_rf(files)
 
       copy_stub_contents
-      system("chmod", "-R", "a+rw", @full_app_root)
+      system('chmod', '-R', 'a+rw', @full_app_root)
     end
 
     def move(new_app_root)
@@ -96,12 +94,12 @@ module TestHelper
     end
 
     def public_file(name)
-      return File.binread("#{@full_app_root}/public/#{name}")
+      File.binread("#{@full_app_root}/public/#{name}")
     end
 
   private
     def stub_source_dir
-      return "stub/#{@name}"
+      "stub/#{@name}"
     end
 
     def copy_stub_contents
@@ -111,7 +109,7 @@ module TestHelper
 
   class RackStub < Stub
     def startup_file
-      return "#{@full_app_root}/config.ru"
+      "#{@full_app_root}/config.ru"
     end
 
   private
@@ -135,13 +133,13 @@ module TestHelper
 
   class PythonStub < Stub
     def startup_file
-      return "#{@full_app_root}/passenger_wsgi.py"
+      "#{@full_app_root}/passenger_wsgi.py"
     end
   end
 
   class NodejsStub < Stub
     def startup_file
-      return "#{@full_app_root}/app.js"
+      "#{@full_app_root}/app.js"
     end
 
     def copy_stub_contents
@@ -166,7 +164,7 @@ module TestHelper
       raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
     end
     start_web_server_if_necessary
-    return Net::HTTP.get(URI.parse("#{@server}#{uri}"))
+    Net::HTTP.get(URI.parse("#{@server}#{uri}"))
   end
 
   def get_response(uri)
@@ -174,7 +172,7 @@ module TestHelper
       raise "You must set the '@server' instance variable before get() can be used. For example, @server = 'http://mydomain.test/'"
     end
     start_web_server_if_necessary
-    return Net::HTTP.get_response(URI.parse("#{@server}#{uri}"))
+    Net::HTTP.get_response(URI.parse("#{@server}#{uri}"))
   end
 
   def post(uri, params = {})
@@ -190,14 +188,14 @@ module TestHelper
         return http.post(url.path, query, headers).body
       end
     else
-      return Net::HTTP.post_form(url, params).body
+      Net::HTTP.post_form(url, params).body
     end
   end
 
   def check_hosts_configuration
     begin
-      ok = Resolv.getaddress("passenger.test") == "127.0.0.1"
-      ok = ok && Resolv.getaddress("1.passenger.test") == "127.0.0.1"
+      ok = Resolv.getaddress('passenger.test') == '127.0.0.1'
+      ok = ok && Resolv.getaddress('1.passenger.test') == '127.0.0.1'
     rescue Resolv::ResolvError, ArgumentError
       # There's a bug in Ruby 1.8.6-p287's resolv.rb library, which causes
       # an ArgumentError to be raised instead of ResolvError when resolving
@@ -205,7 +203,7 @@ module TestHelper
       ok = false
     end
     if !ok
-      message = "To run the integration test, you must update " <<
+      message = 'To run the integration test, you must update ' <<
         "your hosts file.\n" <<
         "Please add these to your /etc/hosts:\n\n" <<
         "127.0.0.1 passenger.test\n" <<
@@ -214,9 +212,9 @@ module TestHelper
         "127.0.0.1 7.passenger.test 8.passenger.test 9.passenger.test\n"
       if RUBY_PLATFORM =~ /darwin/
         message << "\n\nThen run:\n\n" <<
-          "  dscacheutil -flushcache"
+          '  dscacheutil -flushcache'
       end
-      STDERR.puts "---------------------------"
+      STDERR.puts '---------------------------'
       STDERR.puts message
       exit!
     end
@@ -248,7 +246,7 @@ module TestHelper
         sleep(check_interval)
       end
     end
-    raise "Time limit exceeded"
+    raise 'Time limit exceeded'
   end
 
   def should_never_happen(deadline_duration = 1, check_interval = 0.05)
@@ -285,9 +283,9 @@ module TestHelper
       arg.to_s
     end
     if Process.respond_to?(:spawn)
-      return Process.spawn(*args)
+      Process.spawn(*args)
     else
-      return fork do
+      fork do
         exec(*args)
       end
     end
@@ -298,15 +296,15 @@ module TestHelper
   def run_script(code, *args)
     stdin_child, stdin_parent = IO.pipe
     stdout_parent, stdout_child = IO.pipe
-    program_args = [PhusionPassenger::PlatformInfo.ruby_command, "-e",
+    program_args = [ PhusionPassenger::PlatformInfo.ruby_command, '-e',
       "eval(STDIN.read, binding, '(script)', 0)",
-      PhusionPassenger::LIBDIR, *args]
+      PhusionPassenger::LIBDIR, *args ]
     if Process.respond_to?(:spawn)
       program_args << {
         STDIN  => stdin_child,
         STDOUT => stdout_child,
         STDERR => STDERR,
-        :close_others => true
+        :close_others => true,
       }
       pid = Process.spawn(*program_args)
     else
@@ -329,12 +327,12 @@ module TestHelper
     result = stdout_parent.read
     stdout_parent.close
     Process.waitpid(pid)
-    return result
+    result
   rescue Exception
     Process.kill('SIGKILL', pid) if pid
     raise
   ensure
-    [stdin_child, stdout_child, stdin_parent, stdout_parent].each do |io|
+    [ stdin_child, stdout_child, stdin_parent, stdout_parent ].each do |io|
       io.close if io && !io.closed?
     end
     begin
@@ -350,17 +348,7 @@ module TestHelper
         return instance.send(name)
       end
     else
-      return instance
-    end
-  end
-
-  if "".respond_to?(:force_encoding)
-    def binary_string(str)
-      return str.force_encoding("binary")
-    end
-  else
-    def binary_string(str)
-      return str
+      instance
     end
   end
 end
@@ -395,6 +383,6 @@ File.class_eval do
   end
 
   def self.binread(filename)
-    return File.read(filename)
+    File.read(filename)
   end if !respond_to?(:binread)
 end

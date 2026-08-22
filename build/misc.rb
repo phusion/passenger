@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -71,7 +72,7 @@ def extract_latest_news_contents_and_items
   items = contents.split(/^ \* /)
   items.shift while items.first == ""
 
-  return [contents, items]
+  [ contents, items ]
 end
 
 desc "Convert the Changelog items for the latest release to HTML"
@@ -154,7 +155,7 @@ task :contributors do
   entries.push "Yichun Zhang"
 
   File.open("CONTRIBUTORS", "w") do |f|
-    f.puts(entries.sort{ |a, b| a.downcase <=> b.downcase }.uniq.join("\n"))
+    f.puts(entries.sort { |a, b| a.downcase <=> b.downcase }.uniq.join("\n"))
   end
   puts "Updated CONTRIBUTORS"
 end
@@ -168,9 +169,9 @@ dependencies = [
   COMMON_LIBRARY.link_objects,
   LIBBOOST_OXT,
   LIBEV_TARGET,
-  LIBUV_TARGET
+  LIBUV_TARGET,
 ].flatten.compact
-task :compile_app => dependencies do
+task compile_app: dependencies do
   source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
   if !source
     STDERR.puts "Please specify the source filename with SOURCE=(...)"
@@ -187,11 +188,11 @@ task :compile_app => dependencies do
   begin
     compile_cxx(object,
       source,
-      :include_paths => [
+      include_paths: [
         "src/agent",
-        *CXX_SUPPORTLIB_INCLUDE_PATHS
+        *CXX_SUPPORTLIB_INCLUDE_PATHS,
       ],
-      :flags => [
+      flags: [
         OPTIMIZE ? "-O" : nil,
         "-DSTANDALONE",
         libev_cflags,
@@ -200,7 +201,7 @@ task :compile_app => dependencies do
     )
     create_cxx_executable(exe,
       object,
-      :flags => [
+      flags: [
         "-DSTANDALONE",
         libev_cflags,
         libuv_cflags,
@@ -211,7 +212,7 @@ task :compile_app => dependencies do
         PlatformInfo.curl_libs,
         PlatformInfo.zlib_libs,
         PlatformInfo.crypto_libs,
-        PlatformInfo.portability_cxx_ldflags
+        PlatformInfo.portability_cxx_ldflags,
       ]
     )
   ensure

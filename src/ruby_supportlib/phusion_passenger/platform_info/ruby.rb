@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -31,6 +32,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
   module PlatformInfo
+
     # Store original $GEM_HOME value so that even if the app customizes
     # $GEM_HOME we can still work with the original value.
     gem_home = ENV['GEM_HOME']
@@ -143,7 +145,7 @@ module PhusionPassenger
           exit 1
         end
       else
-        return ruby_executable
+        ruby_executable
       end
     end
     memoize :ruby_command
@@ -160,7 +162,7 @@ module PhusionPassenger
     def self.ruby_supports_fork?
       # MRI >= 1.9.2's respond_to? returns false for methods
       # that are not implemented.
-      return Process.respond_to?(:fork) &&
+      Process.respond_to?(:fork) &&
         RUBY_ENGINE != "jruby" &&
         RUBY_ENGINE != "macruby" &&
         rb_config['target_os'] !~ /mswin|windows|mingw/
@@ -170,7 +172,7 @@ module PhusionPassenger
     # be available for the current Ruby implementation.
     def self.passenger_needs_ruby_dev_header?
       # Too much of a trouble for JRuby. We can do without it.
-      return RUBY_ENGINE != "jruby"
+      RUBY_ENGINE != "jruby"
     end
 
     # Returns the correct 'gem' command for this Ruby interpreter.
@@ -181,7 +183,7 @@ module PhusionPassenger
       if options[:sudo] && gem_install_requires_sudo?
         command = "#{ruby_sudo_command} #{command}"
       end
-      return command
+      command
     end
     memoize :gem_command
 
@@ -189,9 +191,9 @@ module PhusionPassenger
     def self.gem_install_requires_sudo?
       `#{gem_command} env` =~ /INSTALLATION DIRECTORY: (.+)/
       if install_dir = $1
-        return !File.writable?(install_dir)
+        !File.writable?(install_dir)
       else
-        return nil
+        nil
       end
     end
     memoize :gem_install_requires_sudo?
@@ -203,7 +205,7 @@ module PhusionPassenger
     # The return value may not be the actual correct invocation
     # for Rake. Use `rake_command` for that.
     def self.rake
-      return locate_ruby_tool('rake')
+      locate_ruby_tool('rake')
     end
     memoize :rake
 
@@ -219,14 +221,14 @@ module PhusionPassenger
     # belongs to the current Ruby interpreter. Returns nil if it
     # doesn't exist.
     def self.rspec
-      return locate_ruby_tool('rspec')
+      locate_ruby_tool('rspec')
     end
     memoize :rspec
 
     # Returns whether the current Ruby interpreter is managed by RVM.
     def self.in_rvm?
       bindir = rb_config['bindir']
-      return bindir.include?('/.rvm/') || bindir.include?('/rvm/')
+      bindir.include?('/.rvm/') || bindir.include?('/rvm/')
     end
 
     # If the current Ruby interpreter is managed by RVM, returns all
@@ -238,7 +240,7 @@ module PhusionPassenger
     def self.rvm_paths
       if in_rvm?
         result = []
-        [ENV['rvm_path'], "#{PhusionPassenger.home_dir}/.rvm", "/usr/local/rvm"].each do |path|
+        [ ENV['rvm_path'], "#{PhusionPassenger.home_dir}/.rvm", "/usr/local/rvm" ].each do |path|
           next if path.nil?
           rubies_path = File.join(path, 'rubies')
           wrappers_path = File.join(path, 'wrappers')
@@ -257,10 +259,10 @@ module PhusionPassenger
             "'rvm get head && rvm reload && rvm repair all'."
           exit 1
         else
-          return result
+          result
         end
       else
-        return nil
+        nil
       end
     end
     memoize :rvm_paths
@@ -289,7 +291,7 @@ module PhusionPassenger
         # will modify $GEM_HOME to the --path directory. That's
         # why we need to parse the version of $GEM_HOME *before*
         # `bundle exec` had modified it.
-        [GEM_HOME, BUNDLER_ORIG_GEM_HOME].each do |gem_home|
+        [ GEM_HOME, BUNDLER_ORIG_GEM_HOME ].each do |gem_home|
           if gem_home && gem_home =~ %r{rvm/gems/(.+)}
             return $1.sub(/\/.*/, '')
           end
@@ -297,7 +299,7 @@ module PhusionPassenger
 
         # User might have explicitly set GEM_HOME to a custom directory,
         # or might have nuked $GEM_HOME. Extract info from $GEM_PATH.
-        [GEM_PATH, BUNDLER_ORIG_GEM_PATH].each do |gem_path|
+        [ GEM_PATH, BUNDLER_ORIG_GEM_PATH ].each do |gem_path|
           if gem_path
             gem_path.split(':').each do |gem_path_part|
               if gem_path_part =~ %r{rvm/gems/(.+)}
@@ -330,7 +332,7 @@ module PhusionPassenger
           "doesn't help, please contact this program's author for support."
         exit 1
       end
-      return nil
+      nil
     end
     memoize :rvm_ruby_string
 
@@ -342,16 +344,16 @@ module PhusionPassenger
     def self.rvm_installation_mode
       if in_rvm?
         if ENV['rvm_path'] =~ /\.rvm/
-          return :single
+          :single
         else
           if GEM_HOME =~ /\.rvm/
-            return :mixed
+            :mixed
           else
-            return :multi
+            :multi
           end
         end
       else
-        return nil
+        nil
       end
     end
 
@@ -359,9 +361,9 @@ module PhusionPassenger
     # Ruby interpreter is managed by RVM.
     def self.ruby_sudo_command
       if in_rvm?
-        return "rvmsudo"
+        "rvmsudo"
       else
-        return "sudo"
+        "sudo"
       end
     end
 
@@ -382,9 +384,9 @@ module PhusionPassenger
         result = "rvmsudo "
         result << "#{args} " if args
         result << shell
-        return result
+        result
       else
-        return "sudo -s #{args}".strip
+        "sudo -s #{args}".strip
       end
     end
 
@@ -414,7 +416,7 @@ module PhusionPassenger
           result = locate_ruby_tool_by_basename(transform_according_to_ruby_exec_format(name) + exeext)
         end
       end
-      return result
+      result
     end
 
     # Locates a Ruby tool command, e.g. 'gem', 'rake', 'bundle', etc. Instead of
@@ -445,7 +447,7 @@ module PhusionPassenger
   private
     def self.locate_ruby_tool_by_basename(name)
       if os_name_simple == "macosx" &&
-         ruby_command =~ %r(\A/System/Library/Frameworks/Ruby.framework/Versions/.*?/usr/bin/ruby\Z)
+         ruby_command =~ %r{\A/System/Library/Frameworks/Ruby.framework/Versions/.*?/usr/bin/ruby\Z}
         # On OS X we must look for Ruby binaries in /usr/bin.
         # RubyGems puts executables (e.g. 'rake') in there, not in
         # /System/Libraries/(...)/bin.
@@ -496,7 +498,7 @@ module PhusionPassenger
         return f.readline =~ /ruby/
       end
     rescue EOFError
-      return false
+      false
     end
     private_class_method :is_ruby_program?
 
@@ -508,12 +510,13 @@ module PhusionPassenger
       install_name = rb_config['RUBY_INSTALL_NAME']
       if install_name.include?('ruby')
         format = install_name.sub('ruby', '%s')
-        return sprintf(format, name)
+        sprintf(format, name)
       else
-        return name
+        name
       end
     end
     private_class_method :transform_according_to_ruby_exec_format
+
   end
 
 end # module PhusionPassenger

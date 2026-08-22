@@ -43,7 +43,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 #   end
 class Apache2Controller
   include PhusionPassenger
-  STUB_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/apache2")
+  STUB_DIR = File.expand_path(File.dirname(__FILE__) + '/../stub/apache2')
 
   class VHost
     attr_accessor :domain
@@ -95,7 +95,7 @@ class Apache2Controller
 
     if @codesigning_identity
       require 'open3'
-      stdout, stderr, status = Open3.capture3("codesign", "--force", "-s", @codesigning_identity, "--keychain", File.expand_path(@codesigning_keychain), @mod_passenger)
+      stdout, stderr, status = Open3.capture3('codesign', '--force', '-s', @codesigning_identity, '--keychain', File.expand_path(@codesigning_keychain), @mod_passenger)
       if !status.success?
         raise "Could not sign Apache module at #{@mod_passenger} with authority #{@codesigning_identity}: #{stderr}"
       end
@@ -108,10 +108,10 @@ class Apache2Controller
     write_config_file
     FileUtils.cp("#{STUB_DIR}/mime.types", @server_root)
 
-    command = [PlatformInfo.httpd, "-f", "#{@server_root}/httpd.conf", "-k", "start"]
+    command = [ PlatformInfo.httpd, '-f', "#{@server_root}/httpd.conf", '-k', 'start' ]
     if boolean_option('VALGRIND')
-      command = ['valgrind', '--dsymutil=yes', '--vgdb=yes',
-        '--vgdb-error=1', '--trace-children=no'] + command
+      command = [ 'valgrind', '--dsymutil=yes', '--vgdb=yes',
+        '--vgdb-error=1', '--trace-children=no' ] + command
     end
 
     prev_error_log_position = error_log_position
@@ -119,7 +119,7 @@ class Apache2Controller
       raise [
         "Could not start an Apache server: #{$?}",
         "\t---------------- Begin logs -------------------",
-        read_error_log_starting_from(prev_error_log_position).split("\n").map{ |l| "\t#{l}" }.join("\n"),
+        read_error_log_starting_from(prev_error_log_position).split("\n").map { |l| "\t#{l}" }.join("\n"),
         "\t---------------- End logs -------------------",
       ].join("\n")
     end
@@ -127,7 +127,7 @@ class Apache2Controller
     # Wait until the PID file has been created.
     wait_start_time = Time.now
     begin
-      Timeout::timeout(20) do
+      Timeout.timeout(20) do
         while !File.exist?("#{@server_root}/httpd.pid")
           sleep(0.1)
         end
@@ -135,9 +135,9 @@ class Apache2Controller
     rescue Timeout::Error
       end_start_time = Time.now
       raise [
-        "Timeout waiting for an Apache server report its PID:",
+        'Timeout waiting for an Apache server report its PID:',
         "\t---------------- Begin logs -------------------",
-        read_error_log_starting_from(prev_error_log_position).split("\n").map{ |l| "\t#{l}" }.join("\n"),
+        read_error_log_starting_from(prev_error_log_position).split("\n").map { |l| "\t#{l}" }.join("\n"),
         "\t---------------- End logs -------------------",
         "Started waiting at #{wait_start_time.iso8601(3)}",
         "  Ended waiting at #{end_start_time.iso8601(3)}",
@@ -147,7 +147,7 @@ class Apache2Controller
     # Wait until Apache is listening on the server port.
     wait_start_time = Time.now
     begin
-      Timeout::timeout(30) do
+      Timeout.timeout(30) do
         done = false
         while !done
           begin
@@ -164,7 +164,7 @@ class Apache2Controller
       raise [
         "Timeout waiting for an Apache server to listen on port #{@port}:",
         "\t---------------- Begin logs -------------------",
-        read_error_log_starting_from(prev_error_log_position).split("\n").map{ |l| "\t#{l}" }.join("\n"),
+        read_error_log_starting_from(prev_error_log_position).split("\n").map { |l| "\t#{l}" }.join("\n"),
         "\t---------------- End logs -------------------",
         "Started waiting at #{wait_start_time.iso8601(3)}",
         "  Ended waiting at #{end_start_time.iso8601(3)}",
@@ -180,8 +180,8 @@ class Apache2Controller
 
   def graceful_restart
     write_config_file
-    if !system(PlatformInfo.httpd, "-f", "#{@server_root}/httpd.conf", "-k", "graceful")
-      raise "Cannot restart Apache."
+    if !system(PlatformInfo.httpd, '-f', "#{@server_root}/httpd.conf", '-k', 'graceful')
+      raise 'Cannot restart Apache.'
     end
   end
 
@@ -203,13 +203,13 @@ class Apache2Controller
     end
     begin
       # Wait until the PID file is removed.
-      Timeout::timeout(17) do
+      Timeout.timeout(17) do
         while File.exist?(pid_file)
           sleep(0.1)
         end
       end
       # Wait until the server socket is closed.
-      Timeout::timeout(7) do
+      Timeout.timeout(7) do
         done = false
         while !done
           begin
@@ -222,7 +222,7 @@ class Apache2Controller
         end
       end
     rescue Timeout::Error
-      raise "Unable to stop Apache."
+      raise 'Unable to stop Apache.'
     end
     if File.exist?(@server_root)
       FileUtils.chmod_R(0777, @server_root)
@@ -241,7 +241,7 @@ class Apache2Controller
     if block_given?
       yield vhost
     end
-    vhosts.reject! {|host| host.domain == domain}
+    vhosts.reject! { |host| host.domain == domain }
     vhosts << vhost
   end
 
@@ -251,14 +251,14 @@ class Apache2Controller
       pid = File.read("#{@server_root}/httpd.pid").strip
       begin
         Process.kill(0, pid.to_i)
-        return true
+        true
       rescue Errno::ESRCH
-        return false
+        false
       rescue SystemCallError
-        return true
+        true
       end
     else
-      return false
+      false
     end
   end
 
@@ -269,7 +269,7 @@ class Apache2Controller
 
 private
   def get_binding
-    return binding
+    binding
   end
 
   def write_config_file
@@ -296,7 +296,7 @@ private
       f.read
     end
   rescue Errno::ENOENT
-    "(no log file)"
+    '(no log file)'
   end
 
   def modules_dir
@@ -310,15 +310,15 @@ private
   end
 
   def has_builtin_module?(name)
-    return builtin_modules.include?(name)
+    builtin_modules.include?(name)
   end
 
   def has_module?(name)
-    return File.exist?("#{modules_dir}/#{name}")
+    File.exist?("#{modules_dir}/#{name}")
   end
 
   def we_are_root?
-    return Process.uid == 0
+    Process.uid == 0
   end
 
   def boolean_option(name, default_value = false)
@@ -326,7 +326,7 @@ private
     if value.nil? || value.empty?
       default_value
     else
-      value == "yes" || value == "on" || value == "true" || value == "1"
+      value == 'yes' || value == 'on' || value == 'true' || value == '1'
     end
   end
 end

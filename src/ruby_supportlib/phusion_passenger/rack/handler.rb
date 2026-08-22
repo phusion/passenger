@@ -25,8 +25,11 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
+
   module Rack
+
     module Handler
+
       def run(app, options = {})
         result = system(ruby_executable, '-S', find_passenger_standalone,
                         'start', *build_args(options))
@@ -45,7 +48,7 @@ module PhusionPassenger
 
       private
       def build_args(options)
-        args = ['-e', environment]
+        args = [ '-e', environment ]
         args << '-p' << options[:Port].to_s if options[:Port]
         args << '-a' << options[:Host].to_s if options[:Host]
         args << '-R' << options[:config].to_s if options[:config]
@@ -68,6 +71,9 @@ module PhusionPassenger
       def find_passenger_standalone
         ::File.join(::PhusionPassenger.bin_dir, 'passenger')
       end
+
     end
+
   end
+
 end

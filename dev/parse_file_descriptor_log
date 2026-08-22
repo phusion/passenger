@@ -93,7 +93,7 @@ private
       fragments = info.split(" ")
       pid = fragments[2].sub(/\/.*/, '')
       source = fragments.last
-      [pid, source, message]
+      [ pid, source, message ]
     else
       nil
     end

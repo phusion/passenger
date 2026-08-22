@@ -48,14 +48,14 @@ KEY_URLS = [
 
 puts DL_URL if debug
 data = URI.open(DL_URL) do |f| f.read end
-File.write("./dl.tar.gz",data) if debug
+File.write("./dl.tar.gz", data) if debug
 puts SIG_URL if debug
 sig = URI.open(SIG_URL) do |f| f.read end
 
 KEY_URLS.each do |key_url|
   puts key_url if debug
   key = URI.open(key_url) do |f| f.read end
-  GPGME::Key.import(key) #only needed if the key has not been imported previously
+  GPGME::Key.import(key) # only needed if the key has not been imported previously
 end
 
 crypto = GPGME::Crypto.new

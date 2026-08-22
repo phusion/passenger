@@ -116,10 +116,7 @@ public:
     /** Advances the state of the generator by @c z. */
     inline void discard(std::uint64_t z) noexcept
     {
-        for (std::uint64_t i {}; i < z; ++i)
-        {
-            next();
-        }
+        state_ += z * UINT64_C(0x9E3779B97F4A7C15);
     }
 
     /**

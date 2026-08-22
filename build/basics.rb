@@ -103,7 +103,7 @@ LTO         = OPTIMIZE && boolean_option('LTO')
 CXX_SUPPORTLIB_INCLUDE_PATHS = [
   "src/cxx_supportlib",
   "src/cxx_supportlib/vendor-copy",
-  "src/cxx_supportlib/vendor-modified"
+  "src/cxx_supportlib/vendor-modified",
 ]
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.

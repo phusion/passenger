@@ -92,6 +92,29 @@ public:
 	}
 };
 
+/**
+ * Builds the config that WatchdogMain.cpp passes to the ApiServer constructor.
+ *
+ * Must assign `authorizations` to the OUTER key "watchdog_api_server_authorizations",
+ * not to the inner "authorizations" key. `watchdogConfig.inspectEffectiveValues()`
+ * already contains "watchdog_api_server_authorizations", defaulting to an empty
+ * array, and the ApiServer schema translator maps that outer name onto the inner
+ * "authorizations". Assigning the inner name here leaves both keys present in the
+ * same document; ConfigKit's translator assigns while iterating, jsoncpp iterates
+ * keys in sorted order, so the outer key gets applied last and silently overwrites
+ * these entries with the empty default, always emptying the API account database.
+ */
+inline Json::Value
+buildConfig(const ConfigKit::Store &watchdogConfig, const Json::Value &authorizations,
+	const StaticString &fdPassingPassword)
+{
+	Json::Value config = watchdogConfig.inspectEffectiveValues();
+	config["fd_passing_password"] = fdPassingPassword.toString();
+	config.removeMember("watchdog_api_server_authorizations"); // Replace with scoped auth
+	config["authorizations"] = authorizations;
+	return config;
+}
+
 struct ConfigChangeRequest {
 	ServerKit::HttpServerConfigChangeRequest forParent;
 	boost::scoped_ptr<ApiAccountUtils::ApiAccountDatabase> apiAccountDatabase;
@@ -160,6 +183,7 @@ private:
 		if (req->method == HTTP_GET) {
 			if (!authorizeStateInspectionOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
+				return;
 			}
 
 			HeaderTable headers;

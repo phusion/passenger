@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'standalone/control_utils'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 
 module PhusionPassenger
+
   module Standalone
 
     class StopCommand < Command
@@ -126,15 +127,16 @@ module PhusionPassenger
       def create_controller
         Standalone::ControlUtils.require_daemon_controller
         @controller = DaemonController.new(
-          :identifier    => "#{PROGRAM_NAME} Standalone engine",
-          :start_command => "true", # Doesn't matter
-          :ping_command  => "true", # Doesn't matter
-          :pid_file      => @options[:pid_file],
-          :log_file      => "/dev/null",
-          :stop_timeout  => @options[:stop_timeout]
+          identifier: "#{PROGRAM_NAME} Standalone engine",
+          start_command: "true", # Doesn't matter
+          ping_command: "true", # Doesn't matter
+          pid_file: @options[:pid_file],
+          log_file: "/dev/null",
+          stop_timeout: @options[:stop_timeout]
         )
       end
     end
 
   end
+
 end

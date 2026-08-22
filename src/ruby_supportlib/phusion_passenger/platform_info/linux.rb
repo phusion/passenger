@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -29,13 +30,14 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
   module PlatformInfo
+
     # An identifier for the current Linux distribution. nil if the operating system is not Linux.
     def self.linux_distro
       tags = linux_distro_tags
       if tags
-        return tags.first
+        tags.first
       else
-        return nil
+        nil
       end
     end
 
@@ -49,40 +51,41 @@ module PhusionPassenger
       end
       lsb_release = read_file("/etc/lsb-release")
       if lsb_release =~ /Ubuntu/
-        return [:ubuntu, :debian]
+        [ :ubuntu, :debian ]
       elsif File.exist?("/etc/debian_version")
-        return [:debian]
+        [ :debian ]
       elsif File.exist?("/etc/redhat-release")
         redhat_release = read_file("/etc/redhat-release")
         if redhat_release =~ /CentOS|AlmaLinux|Rocky Linux/
           # For now treat all non-RHEL enterprise linux distros the same
-          return [:centos, :redhat]
+          [ :centos, :redhat ]
         elsif redhat_release =~ /Fedora/
-          return [:fedora, :redhat]
+          [ :fedora, :redhat ]
         elsif redhat_release =~ /Mandriva/
-          return [:mandriva, :redhat]
+          [ :mandriva, :redhat ]
         else
           # On official RHEL distros, the content is in the form of
           # "Red Hat Enterprise Linux Server release 5.1 (Tikanga)"
-          return [:rhel, :redhat]
+          [ :rhel, :redhat ]
         end
       elsif File.exist?("/etc/system-release")
         system_release = read_file("/etc/system-release")
         if system_release =~ /Amazon Linux/
-          return [:amazon, :redhat]
+          [ :amazon, :redhat ]
         else
-          return [:unknown]
+          [ :unknown ]
         end
       elsif File.exist?("/etc/suse-release")
-        return [:suse]
+        [ :suse ]
       elsif File.exist?("/etc/gentoo-release")
-        return [:gentoo]
+        [ :gentoo ]
       else
-        return [:unknown]
+        [ :unknown ]
       end
       # TODO: Slackware
     end
     memoize :linux_distro_tags
+
   end
 
 end # PhusionPassenger

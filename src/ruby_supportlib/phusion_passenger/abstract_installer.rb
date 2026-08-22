@@ -72,10 +72,10 @@ module PhusionPassenger
     def run
       before_install
       run_steps
-      return true
+      true
     rescue Abort
       puts
-      return false
+      false
     rescue SignalException, SystemExit
       raise
     rescue PlatformInfo::RuntimeError => e
@@ -100,11 +100,11 @@ module PhusionPassenger
 
 
     def interactive?
-      return !@auto
+      !@auto
     end
 
     def non_interactive?
-      return !interactive?
+      !interactive?
     end
 
 
@@ -130,7 +130,7 @@ module PhusionPassenger
     end
 
     def dependencies
-      return [[], []]
+      [ [], [] ]
     end
 
     def check_dependencies(show_new_screen = true)
@@ -150,7 +150,7 @@ module PhusionPassenger
       end
 
       if runner.check_all
-        return true
+        true
       else
         puts
         puts "<red>Some required software is not installed.</red>"
@@ -176,7 +176,7 @@ module PhusionPassenger
         puts
         puts "  <yellow>#{install_doc_url}</yellow>"
         puts "  <yellow>#{troubleshooting_doc_url}</yellow>"
-        return false
+        false
       end
     end
 
@@ -198,9 +198,9 @@ module PhusionPassenger
          File.stat(PhusionPassenger.build_system_dir).uid == 0
         new_screen
         render_template 'installer_common/gem_install_permission_problems'
-        return false
+        false
       else
-        return true
+        true
       end
     end
 
@@ -215,7 +215,7 @@ module PhusionPassenger
       if !inaccessible_directories.empty?
         new_screen
         render_template 'installer_common/world_inaccessible_directories',
-          :directories => inaccessible_directories
+          directories: inaccessible_directories
         wait
       end
     end
@@ -239,11 +239,11 @@ module PhusionPassenger
       if ram_mb && swap_mb && ram_mb + swap_mb < required
         new_screen
         render_template 'installer_common/low_amount_of_memory_warning',
-          :required => required,
-          :current => ram_mb + swap_mb,
-          :ram => ram_mb,
-          :swap => swap_mb,
-          :install_doc_url => install_doc_url
+          required: required,
+          current: ram_mb + swap_mb,
+          ram: ram_mb,
+          swap: swap_mb,
+          install_doc_url: install_doc_url
         wait
       end
     end
@@ -301,8 +301,8 @@ module PhusionPassenger
     end
 
     def render_template(name, options = {})
-      options.merge!(:colors => @colors)
-      puts ConsoleTextTemplate.new({ :file => name }, options).result
+      options.merge!(colors: @colors)
+      puts ConsoleTextTemplate.new({ file: name }, options).result
     end
 
     def new_screen
@@ -342,7 +342,7 @@ module PhusionPassenger
           done = !block_given? || yield(result)
         end
       end
-      return result
+      result
     rescue Interrupt
       raise Abort
     end
@@ -356,7 +356,7 @@ module PhusionPassenger
           false
         end
       end
-      return result.downcase == 'y'
+      result.downcase == 'y'
     rescue Interrupt
       raise Abort
     end
@@ -378,9 +378,9 @@ module PhusionPassenger
         end
       end
       if result.empty?
-        return default
+        default
       else
-        return result.downcase == 'y'
+        result.downcase == 'y'
       end
     rescue Interrupt
       raise Abort
@@ -406,7 +406,7 @@ module PhusionPassenger
     end
 
     def home_dir
-      return PhusionPassenger.home_dir
+      PhusionPassenger.home_dir
     end
 
 
@@ -414,11 +414,11 @@ module PhusionPassenger
       puts "# #{args.join(' ')}"
       result = system(*args)
       if result
-        return true
+        true
       elsif $?.signaled? && $?.termsig == Signal.list["INT"]
         raise Interrupt
       else
-        return false
+        false
       end
     end
 
@@ -454,7 +454,7 @@ module PhusionPassenger
         logger.formatter = proc { |severity, datetime, progname, msg| "*** #{msg}\n" }
         logger
       end
-      return PhusionPassenger::Utils::Download.download(url, output, options)
+      PhusionPassenger::Utils::Download.download(url, output, options)
     end
 
     def list_parent_directories(dir)
@@ -464,7 +464,7 @@ module PhusionPassenger
       components.size.times do |i|
         dirs << File::SEPARATOR + components[0 .. i].join(File::SEPARATOR)
       end
-      return dirs.reverse
+      dirs.reverse
     end
 
     def world_executable?(dir)
@@ -473,7 +473,7 @@ module PhusionPassenger
       rescue Errno::EACCESS
         return false
       end
-      return stat.mode & 0000001 != 0
+      stat.mode & 0000001 != 0
     end
   end
 

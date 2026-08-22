@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2025 Asynchronous B.V.
+ *  Copyright (c) 2010-2026 Asynchronous B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Asynchronous B.V.
@@ -23,6 +23,27 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#ifndef _PASSENGER_WATCHDOG_AGENT_WATCHER_H_
+#define _PASSENGER_WATCHDOG_AGENT_WATCHER_H_
+
+#include <boost/enable_shared_from_this.hpp>
+#include <oxt/thread.hpp>
+#include <oxt/system_calls.hpp>
+#include <string>
+
+#include <LoggingKit/Logging.h>
+#include <FileDescriptor.h>
+#include <ProcessManagement/Utils.h>
+#include <Utils.h>
+#include <Utils/Timer.h>
+
+#include <Watchdog/WorkingObjects.h>
+
+namespace Passenger {
+namespace Watchdog {
+
+using namespace oxt;
+
 
 /**
  * Abstract base class for watching agent processes.
@@ -535,3 +556,9 @@ public:
 };
 
 typedef boost::shared_ptr<AgentWatcher> AgentWatcherPtr;
+
+
+} // namespace Watchdog
+} // namespace Passenger
+
+#endif /* _PASSENGER_WATCHDOG_AGENT_WATCHER_H_ */

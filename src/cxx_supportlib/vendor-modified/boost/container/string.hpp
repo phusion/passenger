@@ -274,7 +274,7 @@ class basic_string_base
       //active representation is short or long
       short_header hdr;
       BOOST_CONTAINER_STATIC_ASSERT((sizeof(short_header) == 1));
-      *(unsigned char*)&hdr = *(unsigned char*)&this->members_.m_repr;
+      *(unsigned char*)&hdr = *static_cast<const unsigned char*>(static_cast<const void *>(&this->members_.m_repr));
       return hdr.is_short != 0;
    }
 
@@ -3548,6 +3548,28 @@ inline std::basic_istream<CharT, Traits>&
 getline(std::basic_istream<CharT, Traits>& is, basic_string<CharT,Traits,Allocator>& s)
 {
    return getline(is, s, '\n');
+}
+
+//! <b>Effects</b>: Erases all elements that compare equal to v from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, class Tr, class A, class U>
+inline typename basic_string<T, Tr, A>::size_type erase(basic_string<T, Tr, A>& c, const U& v)
+{
+   typename basic_string<T, Tr, A>::size_type old_size = c.size();
+   c.erase(boost::container::remove(c.begin(), c.end(), v), c.end());
+   return old_size - c.size();
+}
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class T, class Tr, class A, class Pred>
+inline typename basic_string<T, Tr, A>::size_type erase_if(basic_string<T, Tr, A>& c, Pred pred)
+{
+   typename basic_string<T, Tr, A>::size_type old_size = c.size();
+   c.erase(boost::container::remove_if(c.begin(), c.end(), pred), c.end());
+   return old_size - c.size();
 }
 
 }}

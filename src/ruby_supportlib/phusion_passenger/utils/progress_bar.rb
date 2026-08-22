@@ -25,7 +25,7 @@
 module PhusionPassenger
 
   class ProgressBar
-    THROBBLER = ["-", "\\", "|", "/", "-"]
+    THROBBLER = [ "-", "\\", "|", "/", "-" ]
 
     def initialize(output = STDOUT)
       @output = output

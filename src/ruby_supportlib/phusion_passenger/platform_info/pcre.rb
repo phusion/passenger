@@ -28,6 +28,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
   module PlatformInfo
+
     def self.pcre_extra_cflags
       cflags = ""
       if PlatformInfo.os_name_simple == "macosx"
@@ -40,7 +41,7 @@ module PhusionPassenger
           cflags = "-I/opt/local/include"
         end
       end
-      return "#{cflags} -DPCRE2_CODE_UNIT_WIDTH=8"
+      "#{cflags} -DPCRE2_CODE_UNIT_WIDTH=8"
     end
     memoize :pcre_extra_cflags
 
@@ -59,6 +60,7 @@ module PhusionPassenger
       end
     end
     memoize :pcre_extra_ldflags
+
   end
 
 end # module PhusionPassenger

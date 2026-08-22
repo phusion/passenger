@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2017-2025 Asynchronous B.V.
 #
@@ -30,6 +31,7 @@ PhusionPassenger.require_passenger_lib 'utils/shellwords'
 module PhusionPassenger
 
   module PlatformInfo
+
     # Returns a list of network interfaces active on the current system, or
     # nil if unable to autodetect.
     #
@@ -73,18 +75,18 @@ module PhusionPassenger
       case os_name_simple
       when 'linux'
         {
-          :ipv4 => default_network_interface_linux_for_ip_type(:ipv4),
-          :ipv6 => default_network_interface_linux_for_ip_type(:ipv6)
+          ipv4: default_network_interface_linux_for_ip_type(:ipv4),
+          ipv6: default_network_interface_linux_for_ip_type(:ipv6),
         }
       when 'macosx', 'freebsd'
         {
-          :ipv4 => default_network_interface_bsd_for_ip_type(:ipv4),
-          :ipv6 => default_network_interface_bsd_for_ip_type(:ipv6)
+          ipv4: default_network_interface_bsd_for_ip_type(:ipv4),
+          ipv6: default_network_interface_bsd_for_ip_type(:ipv6),
         }
       else
         {
-          :ipv4 => :unknown,
-          :ipv6 => :unknown
+          ipv4: :unknown,
+          ipv6: :unknown,
         }
       end
     end
@@ -106,11 +108,11 @@ module PhusionPassenger
             device = elems[1].sub(/:$/, '')
             flags = parse_bsd_or_linux_ifconfig_flags(elems[2])
             current_iface = {
-              :device => device,
-              :type   => flags.include?(:loopback) ? :loopback : :unknown,
-              :flags  => flags,
-              :ipv4   => [],
-              :ipv6   => []
+              device: device,
+              type: flags.include?(:loopback) ? :loopback : :unknown,
+              flags: flags,
+              ipv4: [],
+              ipv6: [],
             }
             result[device] = current_iface
 
@@ -125,11 +127,11 @@ module PhusionPassenger
               actual_iface = current_iface
             else
               actual_iface = (result[device] ||= {
-                :device => device,
-                :type   => :unknown,
-                :flags  => [],
-                :ipv4   => [],
-                :ipv6   => []
+                device: device,
+                type: :unknown,
+                flags: [],
+                ipv4: [],
+                ipv6: [],
               })
             end
             actual_iface[:ipv4] << ip
@@ -146,11 +148,11 @@ module PhusionPassenger
         next if !File.directory?(path)
         device = File.basename(path)
         iface = (result[device] ||= {
-          :device => device,
-          :type   => :unknown,
-          :flags  => [],
-          :ipv4   => [],
-          :ipv6   => []
+          device: device,
+          type: :unknown,
+          flags: [],
+          ipv4: [],
+          ipv6: [],
         })
 
         if iface[:type] == :unknown && File.exist?("#{path}/type")
@@ -212,11 +214,11 @@ module PhusionPassenger
           device = elems[0].chomp(':')
           flags = parse_bsd_or_linux_ifconfig_flags(elems[1])
           current_interface = {
-            :device => device,
-            :type   => flags.include?(:loopback) ? :loopback : :unknown,
-            :flags  => flags,
-            :ipv4   => [],
-            :ipv6   => []
+            device: device,
+            type: flags.include?(:loopback) ? :loopback : :unknown,
+            flags: flags,
+            ipv4: [],
+            ipv6: [],
           }
           result << current_interface
 
@@ -288,6 +290,7 @@ module PhusionPassenger
         []
       end
     end
+
   end
 
 end # module PhusionPassenger

@@ -1,4 +1,5 @@
 # encoding: binary
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -102,19 +103,19 @@ module PhusionPassenger
         @main_socket_address, @main_socket = create_tcp_socket(options)
       end
       @server_sockets[:main] = {
-        :address     => @main_socket_address,
-        :socket      => @main_socket,
-        :protocol    => @force_http_session ? :http : :session,
-        :concurrency => @concurrency,
-        :accept_http_requests => true
+        address: @main_socket_address,
+        socket: @main_socket,
+        protocol: @force_http_session ? :http : :session,
+        concurrency: @concurrency,
+        accept_http_requests: true,
       }
 
       @http_socket_address, @http_socket = create_tcp_socket(options)
       @server_sockets[:http] = {
-        :address     => @http_socket_address,
-        :socket      => @http_socket,
-        :protocol    => :http,
-        :concurrency => 1
+        address: @http_socket_address,
+        socket: @http_socket,
+        protocol: :http,
+        concurrency: 1,
       }
 
       @owner_pipe = owner_pipe
@@ -272,7 +273,7 @@ module PhusionPassenger
       # can easily reactivate the workaround. Or maybe if we just need
       # TCP sockets for some other reason.
 
-      #return RUBY_PLATFORM !~ /darwin/
+      # return RUBY_PLATFORM !~ /darwin/
 
       ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
       # Unix domain socket implementation on JRuby
@@ -282,7 +283,7 @@ module PhusionPassenger
       # It's also bugged in Windows Subsystem for Linux
       # as of Windows 10, version 1803 (Fall Creators Update)
       # You will get "Address In Use" errors even if the port is unused.
-      return !@force_http_session && ruby_engine != "jruby" && !PlatformInfo.windows_subsystem?
+      !@force_http_session && ruby_engine != "jruby" && !PlatformInfo.windows_subsystem?
     end
 
     def create_unix_socket_on_filesystem(options)
@@ -308,7 +309,7 @@ module PhusionPassenger
         socket.sync = true
         socket.close_on_exec!
         File.chmod(0600, socket_address)
-        ["unix:#{socket_address}", socket]
+        [ "unix:#{socket_address}", socket ]
       end
     end
 
@@ -323,7 +324,7 @@ module PhusionPassenger
       socket.sync = true
       socket.close_on_exec!
       socket_address = "tcp://#{bind_address}:#{socket.addr[1]}"
-      return [socket_address, socket]
+      [ socket_address, socket ]
     end
 
     # Reset signal handlers to their default handler, and install some
@@ -369,22 +370,22 @@ module PhusionPassenger
 
     def start_threads
       common_options = {
-        :app              => @app,
-        :app_group_name   => @app_group_name,
-        :connect_password => @connect_password,
-        :keepalive_enabled  => @keepalive
+        app: @app,
+        app_group_name: @app_group_name,
+        connect_password: @connect_password,
+        keepalive_enabled: @keepalive,
       }
       main_socket_options = common_options.merge(
-        :server_socket => @main_socket,
-        :socket_name => "main socket",
-        :protocol => @server_sockets[:main][:protocol] == :session ?
+        server_socket: @main_socket,
+        socket_name: "main socket",
+        protocol: @server_sockets[:main][:protocol] == :session ?
           :session :
           :http
       )
       http_socket_options = common_options.merge(
-        :server_socket => @http_socket,
-        :socket_name => "HTTP socket",
-        :protocol => :http
+        server_socket: @http_socket,
+        socket_name: "HTTP socket",
+        protocol: :http
       )
 
       # Used for marking threads that have finished initializing,
@@ -470,7 +471,7 @@ module PhusionPassenger
           end
         end
         begin
-          ios = select([owner_pipe_watcher[0], @graceful_termination_pipe[0]])[0]
+          ios = select([ owner_pipe_watcher[0], @graceful_termination_pipe[0] ])[0]
           if ios.include?(owner_pipe_watcher[0])
             trace(2, "Owner pipe closed")
           else
@@ -483,7 +484,7 @@ module PhusionPassenger
           owner_pipe_watcher[1].close if !owner_pipe_watcher[1].closed?
         end
       else
-        ios = select([@owner_pipe, @graceful_termination_pipe[0]])[0]
+        ios = select([ @owner_pipe, @graceful_termination_pipe[0] ])[0]
         if ios.include?(@owner_pipe)
           trace(2, "Owner pipe closed")
         else
@@ -529,7 +530,7 @@ module PhusionPassenger
           debug("Error shutting down HTTP thread (#{address}): #{e} (#{e.class})")
         end
       end
-      return threads
+      threads
     end
 
     def terminate_threads

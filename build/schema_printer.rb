@@ -26,12 +26,12 @@ SCHEMA_PRINTER_TARGET = "#{AGENT_OUTPUT_DIR}SchemaPrinter"
 SCHEMA_PRINTER_MAIN_OBJECT = "#{AGENT_OUTPUT_DIR}SchemaPrinterMain.o"
 SCHEMA_PRINTER_OBJECTS = {
   SCHEMA_PRINTER_MAIN_OBJECT =>
-    "src/schema_printer/SchemaPrinterMain.cpp"
+    "src/schema_printer/SchemaPrinterMain.cpp",
 }
 
 dependencies = [
   'src/schema_printer/SchemaPrinterMain.cpp.cxxcodebuilder',
-  CXX_DEPENDENCY_MAP['src/schema_printer/SchemaPrinterMain.cpp.cxxcodebuilder']
+  CXX_DEPENDENCY_MAP['src/schema_printer/SchemaPrinterMain.cpp.cxxcodebuilder'],
 ].flatten.compact
 file('src/schema_printer/SchemaPrinterMain.cpp' => dependencies) do
   source = 'src/schema_printer/SchemaPrinterMain.cpp'
@@ -45,18 +45,18 @@ SCHEMA_PRINTER_OBJECTS.each_pair do |object, source|
     object,
     source,
     lambda { {
-      :include_paths => [
+      include_paths: [
         "src/agent",
-        *CXX_SUPPORTLIB_INCLUDE_PATHS
+        *CXX_SUPPORTLIB_INCLUDE_PATHS,
       ],
-      :flags => [
+      flags: [
         agent_cflags,
         libev_cflags,
         libuv_cflags,
         PlatformInfo.curl_flags,
         PlatformInfo.openssl_extra_cflags,
-        PlatformInfo.zlib_flags
-      ]
+        PlatformInfo.zlib_flags,
+      ],
     } }
   )
 end
@@ -69,7 +69,7 @@ dependencies = SCHEMA_PRINTER_OBJECTS.keys + [
   LIBBOOST_OXT,
   schema_printer_libs.link_objects,
   LIBEV_TARGET,
-  LIBUV_TARGET
+  LIBUV_TARGET,
 ].flatten.compact
 file(SCHEMA_PRINTER_TARGET => dependencies) do
   sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
@@ -77,26 +77,26 @@ file(SCHEMA_PRINTER_TARGET => dependencies) do
     [
       schema_printer_libs.link_objects_as_string,
       SCHEMA_PRINTER_OBJECTS.keys,
-      LIBBOOST_OXT_LINKARG
+      LIBBOOST_OXT_LINKARG,
     ],
-    :flags => [
+    flags: [
       libev_libs,
       libuv_libs,
       PlatformInfo.curl_libs,
       PlatformInfo.zlib_libs,
       PlatformInfo.crypto_libs,
       PlatformInfo.portability_cxx_ldflags,
-      agent_ldflags
+      agent_ldflags,
     ]
   )
 end
 
 desc 'Update dev/configkit-schemas/index.json'
-task :configkit_schemas_index => SCHEMA_PRINTER_TARGET do
+task configkit_schemas_index: SCHEMA_PRINTER_TARGET do
   sh "#{SCHEMA_PRINTER_TARGET} > dev/configkit-schemas/index.json"
 end
 
 desc 'Update ConfigKit schema inline comments'
-task :configkit_schemas_inline_comments => :configkit_schemas_index do
+task configkit_schemas_inline_comments: :configkit_schemas_index do
   sh './dev/configkit-schemas/update_schema_inline_comments.rb'
 end

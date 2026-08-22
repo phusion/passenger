@@ -1115,10 +1115,10 @@ class tree
    std::pair<iterator, bool> insert_or_assign(const_iterator hint, BOOST_FWD_REF(KeyType) key, BOOST_FWD_REF(M) obj)
    {
       insert_commit_data data;
-      const key_type & k = key;  //Support emulated rvalue references
+      const typename remove_cvref<KeyType>::type & k = key;  //Support emulated rvalue references
       std::pair<iiterator, bool> ret =
-         hint == const_iterator() ? this->icont().insert_unique_check(k, data)
-                                  : this->icont().insert_unique_check(hint.get(), k, data);
+         hint == const_iterator() ? this->icont().insert_unique_check(k, KeyNodeCompare(key_comp()), data)
+                                  : this->icont().insert_unique_check(hint.get(), k, KeyNodeCompare(key_comp()), data);
       if(ret.second){
          ret.first = this->priv_insert_or_assign_commit(boost::forward<KeyType>(key), boost::forward<M>(obj), data);
       }
@@ -1152,8 +1152,11 @@ class tree
       !dtl::is_convertible<K, iterator>::value &&     //not convertible to iterator
       !dtl::is_convertible<K, const_iterator>::value  //not convertible to const_iterator
       , size_type>::type
-      erase(const K& k)
-   {  return AllocHolder::erase_key(k, KeyNodeCompare(key_comp()), alloc_version()); }
+      erase(BOOST_FWD_REF(K) key)
+   {
+      const typename remove_cvref<K>::type & k = key;  //Support emulated rvalue references
+      return AllocHolder::erase_key(k, KeyNodeCompare(key_comp()), alloc_version());
+   }
 
    template <class K>
    inline typename dtl::enable_if_c<

@@ -173,7 +173,7 @@ class private_node_pool_impl
             //Unlink the nodes
             free_nodes.clear();
             it = m_blocklist.erase_after(bit);
-            mp_segment_mngr_base->deallocate((void*)addr);
+            mp_segment_mngr_base->deallocate(const_cast<void*>(addr));
          }
          //Otherwise, insert them in the backup list, since the
          //next "remove_if" does not need to check them again.
@@ -221,7 +221,7 @@ class private_node_pool_impl
       while(!m_blocklist.empty()){
          void *addr = get_block_from_hook(&m_blocklist.front(), blocksize);
          m_blocklist.pop_front();
-         mp_segment_mngr_base->deallocate((void*)addr);
+         mp_segment_mngr_base->deallocate(const_cast<void*>(addr));
       }
       //Just clear free node list
       m_freelist.clear();

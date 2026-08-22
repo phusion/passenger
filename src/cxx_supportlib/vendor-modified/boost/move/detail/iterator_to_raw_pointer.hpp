@@ -27,7 +27,7 @@ namespace movelib {
 namespace detail {
 
 template <class T>
-inline T* iterator_to_pointer(T* i)
+BOOST_MOVE_FORCEINLINE T* iterator_to_pointer(T* i)
 {  return i; }
 
 template <class Iterator>

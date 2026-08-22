@@ -1058,6 +1058,7 @@ create_request(ngx_http_request_t *r)
     body = r->upstream->request_bufs;
     r->upstream->request_bufs = cl;
 
+    if (!r->request_body_no_buffering) {
     while (body) {
         if (r->headers_in.chunked && r->request_body_no_buffering) {
             /* If Transfer-Encoding is chunked, then Nginx dechunks the body.
@@ -1112,6 +1113,7 @@ create_request(ngx_http_request_t *r)
             cl = cl->next;
             cl->buf = b;
         }
+    }
     }
 
     b->flush = 1;
@@ -1302,6 +1304,7 @@ parse_status_line(ngx_http_request_t *r, passenger_context_t *context)
                 return NGX_HTTP_SCGI_PARSE_NO_HEADER;
             }
 
+            r->http_major = ch - '0';
             state = sw_major_digit;
             break;
 
@@ -1316,6 +1319,11 @@ parse_status_line(ngx_http_request_t *r, passenger_context_t *context)
                 return NGX_HTTP_SCGI_PARSE_NO_HEADER;
             }
 
+            if (r->http_major > 99) {
+                return NGX_HTTP_SCGI_PARSE_NO_HEADER;
+            }
+
+            r->http_major = r->http_major * 10 + (ch - '0');
             break;
 
         /* the first digit of minor HTTP version */
@@ -1324,6 +1332,7 @@ parse_status_line(ngx_http_request_t *r, passenger_context_t *context)
                 return NGX_HTTP_SCGI_PARSE_NO_HEADER;
             }
 
+            r->http_minor = ch - '0';
             state = sw_minor_digit;
             break;
 
@@ -1338,6 +1347,11 @@ parse_status_line(ngx_http_request_t *r, passenger_context_t *context)
                 return NGX_HTTP_SCGI_PARSE_NO_HEADER;
             }
 
+            if (r->http_minor > 99) {
+                return NGX_HTTP_SCGI_PARSE_NO_HEADER;
+            }
+
+            r->http_minor = r->http_minor * 10 + (ch - '0');
             break;
 
         /* HTTP status code */
@@ -1350,7 +1364,7 @@ parse_status_line(ngx_http_request_t *r, passenger_context_t *context)
                 return NGX_HTTP_SCGI_PARSE_NO_HEADER;
             }
 
-            context->status = context->status * 10 + ch - '0';
+            context->status = context->status * 10 + (ch - '0');
 
             if (++context->status_count == 3) {
                 state = sw_space_after_status;

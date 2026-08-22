@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2014-2025 Asynchronous B.V.
 #
@@ -28,6 +29,7 @@ PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'config/command'
 
 module PhusionPassenger
+
   module Config
 
     class ValidateInstallCommand < Command
@@ -75,11 +77,11 @@ module PhusionPassenger
 
     private
       def self.create_default_options
-        return {
-          :auto => !STDIN.tty?,
-          :validate_passenger => true,
-          :colors => STDOUT.tty?,
-          :summary => true
+        {
+          auto: !STDIN.tty?,
+          validate_passenger: true,
+          colors: STDOUT.tty?,
+          summary: true,
         }
       end
 
@@ -180,7 +182,7 @@ module PhusionPassenger
 
         menu = Utils::TerminalChoiceMenu.new([
           "#{SHORT_PROGRAM_NAME} itself",
-          "Apache"
+          "Apache",
         ])
         menu["#{SHORT_PROGRAM_NAME} itself"].checked = @options[:validate_passenger]
         menu["Apache"].checked = @options[:validate_apache2]
@@ -213,7 +215,7 @@ module PhusionPassenger
           check_ok
         else
           check_warning
-          suggest %Q{
+          suggest %Q(
             Please add #{PhusionPassenger.bin_dir} to PATH.
             Otherwise you will get "command not found" errors upon running
             any Passenger commands.
@@ -221,7 +223,7 @@ module PhusionPassenger
             Learn more at about PATH at:
 
               https://www.phusionpassenger.com/library/indepth/environment_variables.html#the-path-environment-variable
-          }
+          )
         end
       end
 
@@ -267,7 +269,7 @@ module PhusionPassenger
           check_ok
         else
           check_warning
-          suggest %Q{
+          suggest %Q(
             You are currently validating against #{PROGRAM_NAME} #{VERSION_STRING}, located in:
 
               #{PhusionPassenger.bin_dir}/passenger
@@ -279,7 +281,7 @@ module PhusionPassenger
 
             Please uninstall these other #{SHORT_PROGRAM_NAME} installations to avoid
             confusion or conflicts.
-          }
+          )
         end
       end
 
@@ -324,7 +326,7 @@ module PhusionPassenger
               exit(INTERNAL_ERROR_CODE)
             end
           elsif detector.results.size > 1
-            other_installs = detector.results - [apache2]
+            other_installs = detector.results - [ apache2 ]
 
             log "<yellow>Multiple Apache installations detected!</yellow>"
             log ""
@@ -398,7 +400,7 @@ module PhusionPassenger
               next_step = "When done, please re-run this program."
             end
 
-            suggest %Q{
+            suggest %Q(
               Unable to validate your Apache installation: more software required
 
               This program requires the <b>apxs2</b> tool in order to be able to validate your
@@ -408,7 +410,7 @@ module PhusionPassenger
               #{install_instructions}
 
               #{next_step}
-            }
+            )
 
             false
           end
@@ -419,11 +421,11 @@ module PhusionPassenger
           dep = PlatformInfo::Depcheck.find("apache2")
           install_instructions = dep.install_instructions.split("\n").join("\n            ")
 
-          suggest %Q{
+          suggest %Q(
             Apache is not installed. You can solve this as follows:
 
             #{install_instructions}
-          }
+          )
 
           false
         end
@@ -435,7 +437,7 @@ module PhusionPassenger
         if PlatformInfo.httpd_default_config_file.nil?
           check_error
           passenger_config = "#{PhusionPassenger.bin_dir}/passenger-config"
-          suggest %Q{
+          suggest %Q(
             Your Apache installation might be broken
 
             You are about to validate #{PROGRAM_NAME} against the following
@@ -453,7 +455,7 @@ module PhusionPassenger
                #{sudo_s_e}
                export PATH="$ORIG_PATH"
                #{ruby_command} #{passenger_config} --detect-apache2
-          }
+          )
           return
         end
 
@@ -463,7 +465,7 @@ module PhusionPassenger
           check_error
 
           if Process.uid == 0
-            suggest %Q{
+            suggest %Q(
               Permission problems
 
               This program must be able to analyze your Apache installation. But it can't
@@ -479,13 +481,13 @@ module PhusionPassenger
               systems, SELinux and AppArmor might be responsible.
 
               When you've solved the problem, please re-run this program.
-            }
+            )
           else
             whoami = `whoami`.strip
             sudo = PhusionPassenger::PlatformInfo.ruby_sudo_command
             selfcommand = "#{PhusionPassenger.bin_dir}/passenger-config validate-install #{@orig_argv.join(' ')}"
 
-            suggest %Q{
+            suggest %Q(
               Permission problems
 
               This program must be able to analyze your Apache installation. But it can't
@@ -500,7 +502,7 @@ module PhusionPassenger
                  #{sudo_s_e}
                  export PATH=\"$ORIG_PATH\"
                  #{ruby_command} #{selfcommand}
-            }
+            )
           end
           return
         end
@@ -538,7 +540,7 @@ module PhusionPassenger
             check_ok
           else
             check_error
-            suggest %Q{
+            suggest %Q(
               Incorrect #{SHORT_PROGRAM_NAME} module path detected
 
               #{PROGRAM_NAME} for Apache requires a 'LoadModule passenger_module'
@@ -554,28 +556,28 @@ module PhusionPassenger
               Please edit the config file and change the directive to this instead:
 
                  LoadModule passenger_module #{PhusionPassenger.apache2_module_path}
-            }
+            )
           end
         elsif occurrences == 0
           if @options[:invoked_from_installer]
             check_warning
-            suggest %Q{
+            suggest %Q(
               You did not specify 'LoadModule passenger_module' in any of your Apache
               configuration files. Please paste the configuration snippet that this
               installer printed earlier, into one of your Apache configuration files, such
               as #{PlatformInfo.httpd_default_config_file}.
-            }
+            )
           else
             check_error
             installer_command = "#{PhusionPassenger.bin_dir}/passenger-install-apache2-module"
-            suggest %Q{
+            suggest %Q(
               You did not specify 'LoadModule passenger_module' in any of your
               Apache configuration files. This means that #{PROGRAM_NAME}
               for Apache is not installed or not active. Please run the
               #{PROGRAM_NAME} Apache module installer:
 
                  #{ruby_command} #{installer_command} --apxs2=#{PlatformInfo.apxs2 || 'none'}
-            }
+            )
           end
         else
           check_error
@@ -614,18 +616,18 @@ module PhusionPassenger
            PhusionPassenger.originally_packaged? &&
            PhusionPassenger.build_system_dir =~ /^#{Regexp.escape Gem.dir}\// &&
            File.exist?("#{Gem.bindir}/passenger-config")
-          return Gem.bindir
+          Gem.bindir
         else
-          return nil
+          nil
         end
       end
 
       # Returns the Homebrew bin dir, if Phusion Passenger is installed through Homebrew.
       def homebrew_bindir
         if PhusionPassenger.packaging_method == "homebrew"
-          return "/usr/local/bin"
+          "/usr/local/bin"
         else
-          return nil
+          nil
         end
       end
 
@@ -721,11 +723,11 @@ module PhusionPassenger
       end
 
       def unindent(text)
-        return PlatformInfo.send(:unindent, text)
+        PlatformInfo.send(:unindent, text)
       end
 
       def reindent(text, level)
-        return PlatformInfo.send(:reindent, text, level)
+        PlatformInfo.send(:reindent, text, level)
       end
 
       def sudo_s_e
@@ -750,4 +752,5 @@ module PhusionPassenger
     end
 
   end # module Config
+
 end # module PhusionPassenger

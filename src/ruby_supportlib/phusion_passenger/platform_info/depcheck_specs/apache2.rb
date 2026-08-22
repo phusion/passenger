@@ -7,7 +7,7 @@ define 'apache2' do
       {
         :found => true,
         "Location of httpd" => PlatformInfo.httpd,
-        "Apache version"    => PlatformInfo.httpd_version
+        "Apache version"    => PlatformInfo.httpd_version,
       }
     else
       false
@@ -15,7 +15,7 @@ define 'apache2' do
   end
 
   on :ubuntu do
-    if `#{PlatformInfo::uname_command} -a`.include? 'precise'
+    if `#{PlatformInfo.uname_command} -a`.include? 'precise'
       apt_get_install "apache2-mpm-worker"
     else
       apt_get_install "apache2"
@@ -43,7 +43,7 @@ define 'apache2-dev' do
     if PlatformInfo.apxs2
       {
         :found => true,
-        "Location of apxs2" => PlatformInfo.apxs2
+        "Location of apxs2" => PlatformInfo.apxs2,
       }
     else
       false
@@ -51,14 +51,14 @@ define 'apache2-dev' do
   end
 
   on :ubuntu do
-    if `#{PlatformInfo::uname_command} -a`.include? 'precise'
+    if `#{PlatformInfo.uname_command} -a`.include? 'precise'
       apt_get_install "apache2-threaded-dev"
     else
       apt_get_install "apache2-dev"
     end
   end
   on :debian do
-    if PlatformInfo::os_version >= '9.4'
+    if PlatformInfo.os_version >= '9.4'
       apt_get_install "apache2-dev"
     else
       apt_get_install "apache2-threaded-dev"
@@ -87,7 +87,7 @@ define 'apr-dev' do
       {
         :found     => true,
         "Location" => PlatformInfo.apr_config,
-        "Version"  => `#{PlatformInfo.apr_config} --version`.strip
+        "Version"  => `#{PlatformInfo.apr_config} --version`.strip,
       }
     else
       false
@@ -120,7 +120,7 @@ define 'apu-dev' do
       {
         :found     => true,
         "Location" => PlatformInfo.apu_config,
-        "Version"  => `#{PlatformInfo.apu_config} --version`.strip
+        "Version"  => `#{PlatformInfo.apu_config} --version`.strip,
       }
     else
       false

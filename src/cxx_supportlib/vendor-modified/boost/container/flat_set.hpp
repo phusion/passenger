@@ -28,6 +28,7 @@
 // container/detail
 #include <boost/container/detail/flat_tree.hpp>
 #include <boost/container/detail/mpl.hpp>
+#include <boost/container/detail/algorithm.hpp>
 // move
 #include <boost/move/traits.hpp>
 #include <boost/move/utility_core.hpp>
@@ -1132,6 +1133,15 @@ class flat_set
    {  return this->get_sequence_cref();  }
 };
 
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class K, class C, class A, class Pred>
+inline typename flat_set<K, C, A>::size_type erase_if(flat_set<K, C, A>& c, Pred pred)
+{
+   return container_erase_if(c, pred);
+}
+
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
 
 template <typename InputIterator>
@@ -1862,6 +1872,15 @@ class flat_multiset
    inline const sequence_type & sequence() const BOOST_NOEXCEPT
    {  return this->get_sequence_cref();  }
 };
+
+//! <b>Effects</b>: Erases all elements that satisfy the predicate pred from the container c.
+//!
+//! <b>Complexity</b>: Linear.
+template <class K, class C, class A, class Pred>
+inline typename flat_multiset<K, C, A>::size_type erase_if(flat_multiset<K, C, A>& c, Pred pred)
+{
+   return container_erase_if(c, pred);
+}
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
 

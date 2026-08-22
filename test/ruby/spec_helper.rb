@@ -4,7 +4,7 @@ end
 
 RUBY_VERSION_INT = RUBY_VERSION.split('.')[0..2].join.to_i
 
-source_root = File.expand_path(File.dirname(__FILE__) + "/../..")
+source_root = File.expand_path(File.dirname(__FILE__) + '/../..')
 Dir.chdir("#{source_root}/test")
 
 require 'rubygems'
@@ -12,18 +12,18 @@ require 'json'
 begin
   CONFIG = JSON.load(File.read('config.json'))
 rescue Errno::ENOENT
-  STDERR.puts "*** You do not have the file test/config.json. " <<
-    "Please copy test/config.json.example to " <<
-    "test/config.json, and edit it."
+  STDERR.puts '*** You do not have the file test/config.json. ' <<
+    'Please copy test/config.json.example to ' <<
+    'test/config.json, and edit it.'
   exit 1
 end
 
 def boolean_option(name, default_value = false)
   value = ENV[name]
   if value.nil? || value.empty?
-    return default_value
+    default_value
   else
-    return value == "yes" || value == "on" || value == "true" || value == "1"
+    value == 'yes' || value == 'on' || value == 'true' || value == '1'
   end
 end
 
@@ -49,7 +49,7 @@ include TestHelper
 # so that it doesn't happen in the child processes.
 srand
 
-trap "QUIT" do
+trap 'QUIT' do
   STDERR.puts PhusionPassenger::Utils.global_backtrace_report
 end
 
@@ -63,7 +63,7 @@ class DeadlineTimer
     @thread = Thread.new do
       Thread.current.abort_on_exception = true
       expected_iteration = 1
-      ios = [@pipe[0]]
+      ios = [ @pipe[0] ]
       while true
         @mutex.synchronize do
           while @iteration != expected_iteration
@@ -73,7 +73,7 @@ class DeadlineTimer
         if !select(ios, nil, nil, deadline)
           STDERR.puts "*** Test timed out (#{deadline} seconds)"
           STDERR.puts PhusionPassenger::Utils.global_backtrace_report
-          main_thread.raise(Timeout::Error, "Test timed out")
+          main_thread.raise(Timeout::Error, 'Test timed out')
           expected_iteration += 1
         elsif @pipe[0].read(1).nil?
           break
@@ -100,11 +100,11 @@ DEADLINE_TIMER = DeadlineTimer.new(Thread.current, 30)
 
 RSpec.configure do |config|
   config.expect_with :rspec do |c|
-    c.syntax = [:should, :expect]
+    c.syntax = [ :should, :expect ]
   end
 
   config.mock_with :rspec do |mocks|
-    mocks.syntax = [:should, :receive]
+    mocks.syntax = [ :should, :receive ]
     mocks.yield_receiver_to_any_instance_implementation_blocks = false
   end
 

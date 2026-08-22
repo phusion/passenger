@@ -28,13 +28,14 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 module PhusionPassenger
 
   module PlatformInfo
+
   private
     def self.detect_language_extension(language)
       case language
       when :c
-        return "c"
+        "c"
       when :cxx
-        return "cpp"
+        "cpp"
       else
         raise ArgumentError, "Unsupported language #{language.inspect}"
       end
@@ -44,9 +45,9 @@ module PhusionPassenger
     def self.detect_compiler_type_name(language)
       case language
       when :c
-        return "C"
+        "C"
       when :cxx
-        return "C++"
+        "C++"
       else
         raise ArgumentError, "Unsupported language #{language.inspect}"
       end
@@ -56,31 +57,27 @@ module PhusionPassenger
     def self.create_compiler_command(language, flags1, flags2, link = false)
       case language
       when :c
-        result  = [cc, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
+        result  = [ cc, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
           ENV['EXTRA_PRE_CFLAGS'], flags1, flags2, ENV['EXTRA_CFLAGS'],
-          ENV['EXTRA_LDFLAGS']]
+          ENV['EXTRA_LDFLAGS'] ]
       when :cxx
-        result  = [cxx, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
+        result  = [ cxx, link ? ENV['EXTRA_PRE_LDFLAGS'] : nil,
           ENV['EXTRA_PRE_CXXFLAGS'], flags1, flags2, ENV['EXTRA_CXXFLAGS'],
-          ENV['EXTRA_LDFLAGS']]
+          ENV['EXTRA_LDFLAGS'] ]
       else
         raise ArgumentError, "Unsupported language #{language.inspect}"
       end
-      return result.compact.join(" ").strip
+      result.compact.join(" ").strip
     end
     private_class_method :create_compiler_command
 
     def self.run_compiler(description, command, source_file, source, capture_output = false)
       if verbose?
-        message = "#{description}\n" <<
-          "Running: #{command}\n"
+        message = "#{description}\nRunning: #{command}\n"
         if source.strip.empty?
-          message << "Source file is empty."
+          message += "Source file is empty."
         else
-          message << "Source file contains:\n" <<
-            "-------------------------\n" <<
-            unindent(source) <<
-            "\n-------------------------"
+          message += "Source file contains:\n-------------------------\n#{unindent(source)}\n-------------------------"
         end
         log(message)
       end
@@ -92,10 +89,7 @@ module PhusionPassenger
           result = nil
           exec_error_reason = e.message
         end
-        log("Output:\n" <<
-          "-------------------------\n" <<
-          output.to_s <<
-          "\n-------------------------")
+        log("Output:\n-------------------------\n#{output}\n-------------------------")
       elsif verbose?
         result = system(command)
       else
@@ -103,20 +97,20 @@ module PhusionPassenger
       end
       if result.nil?
         log("Command could not be executed! #{exec_error_reason}".strip)
-        return false
+        false
       elsif result
         log("Check succeeded")
         if capture_output
-          return { :result => true, :output => output }
+          { result: true, output: output }
         else
-          return true
+          true
         end
       else
         log("Check failed with exit status #{$?.exitstatus}")
         if capture_output == :always
-          return { :result => false, :output => output }
+          { result: false, output: output }
         else
-          return false
+          false
         end
       end
     end
@@ -142,20 +136,20 @@ module PhusionPassenger
     private_class_method :cc_or_cxx_supports_feliminate_unused_debug?
 
     def self.cc_or_cxx_supports_blocks?(language)
-      command = create_compiler_command(language,"-E -dM",'- </dev/null')
+      command = create_compiler_command(language, "-E -dM", '- </dev/null')
       result = `#{command}`
-      return result.include? "__BLOCKS__"
+      result.include? "__BLOCKS__"
     end
     private_class_method :cc_or_cxx_supports_blocks?
 
   public
     def self.cc
-      return string_env('CC', default_cc)
+      string_env('CC', default_cc)
     end
     memoize :cc
 
     def self.cxx
-      return string_env('CXX', default_cxx)
+      string_env('CXX', default_cxx)
     end
     memoize :cxx
 
@@ -171,17 +165,17 @@ module PhusionPassenger
       # compiled with GCC.
       # https://code.google.com/p/phusion-passenger/issues/detail?id=950
       if PlatformInfo.find_command('cc')
-        return 'cc'
+        'cc'
       else
-        return 'gcc'
+        'gcc'
       end
     end
 
     def self.default_cxx
       if PlatformInfo.find_command('c++')
-        return 'c++'
+        'c++'
       else
-        return 'g++'
+        'g++'
       end
     end
 
@@ -224,9 +218,9 @@ module PhusionPassenger
     def self.find_header(header_name, language, flags = nil)
       extension = detect_language_extension(language)
       create_temp_file("passenger-compile-check.#{extension}") do |filename, f|
-        source = %Q{
+        source = %Q(
           #include <#{header_name}>
-        }
+        )
         f.puts(source)
         f.close
         begin
@@ -235,7 +229,7 @@ module PhusionPassenger
             flags)
           if result = run_compiler("Checking for #{header_name}", command, filename, source, true)
             result[:output] =~ /^#include <...> search starts here:$(.+?)^End of search list\.$/m
-            search_paths = $1.to_s.strip.split("\n").map{ |line| line.strip }
+            search_paths = $1.to_s.strip.split("\n").map { |line| line.strip }
             search_paths.each do |dir|
               if File.file?("#{dir}/#{header_name}")
                 return "#{dir}/#{header_name}"
@@ -340,13 +334,13 @@ module PhusionPassenger
 
     # Checks whether the compiler supports "-arch #{arch}".
     def self.compiler_supports_architecture?(arch)
-      return try_compile("Checking for C compiler '-arch' support",
+      try_compile("Checking for C compiler '-arch' support",
         :c, '', "-arch #{arch}")
     end
 
     def self.cc_supports_visibility_flag?
       return false if os_name_simple == "aix"
-      return try_compile("Checking for C compiler '-fvisibility' support",
+      try_compile("Checking for C compiler '-fvisibility' support",
         :c, '', '-fvisibility=hidden')
     end
     memoize :cc_supports_visibility_flag?, true
@@ -367,62 +361,62 @@ module PhusionPassenger
 
     def self.cxx_supports_visibility_flag?
       return false if os_name_simple == "aix"
-      return try_compile("Checking for C++ compiler '-fvisibility' support",
+      try_compile("Checking for C++ compiler '-fvisibility' support",
         :cxx, '', '-fvisibility=hidden')
     end
     memoize :cxx_supports_visibility_flag?, true
 
     def self.cc_supports_wno_attributes_flag?
-      return try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C compiler '-Wno-attributes' support",
         :c, '', '-Wno-attributes')
     end
     memoize :cc_supports_wno_attributes_flag?, true
 
     def self.cxx_supports_wno_attributes_flag?
-      return try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C++ compiler '-Wno-attributes' support",
         :cxx, '', '-Wno-attributes')
     end
     memoize :cxx_supports_wno_attributes_flag?, true
 
     def self.cc_supports_wno_missing_field_initializers_flag?
-      return try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C compiler '-Wno-missing-field-initializers' support",
         :c, '', '-Wno-missing-field-initializers')
     end
     memoize :cc_supports_wno_missing_field_initializers_flag?, true
 
     def self.cxx_supports_wno_missing_field_initializers_flag?
-      return try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C++ compiler '-Wno-missing-field-initializers' support",
         :cxx, '', '-Wno-missing-field-initializers')
     end
     memoize :cxx_supports_wno_missing_field_initializers_flag?, true
 
     def self.cc_supports_wno_unknown_pragmas_flag?
-      return try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C compiler '-Wno-unknown-pragmas' support",
         :c, '', '-Wno-unknown-pragmas')
     end
     memoize :cc_supports_wno_unknown_pragmas_flag?, true
 
     def self.cxx_supports_wno_unknown_pragmas_flag?
-      return try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C++ compiler '-Wno-unknown-pragmas' support",
         :cxx, '', '-Wno-unknown-pragmas')
     end
     memoize :cxx_supports_wno_unknown_pragmas_flag?, true
 
     def self.cxx_supports_wno_unused_local_typedefs_flag?
-      return try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C++ compiler '-Wno-unused-local-typedefs' support",
         :cxx, '', '-Wno-unused-local-typedefs')
     end
     memoize :cxx_supports_wno_unused_local_typedefs_flag?, true
 
     def self.cxx_supports_wno_format_nonliteral_flag?
-      return try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C++ compiler '-Wno-format-nonliteral' support",
         :cxx, '', '-Wno-format-nonliteral')
     end
@@ -443,13 +437,13 @@ module PhusionPassenger
     memoize :cxx_supports_fno_optimize_sibling_calls_flag?
 
     def self.cc_supports_no_tls_direct_seg_refs_option?
-      return try_compile("Checking for C compiler '-mno-tls-direct-seg-refs' support",
+      try_compile("Checking for C compiler '-mno-tls-direct-seg-refs' support",
         :c, '', '-mno-tls-direct-seg-refs')
     end
     memoize :cc_supports_no_tls_direct_seg_refs_option?, true
 
     def self.cxx_supports_no_tls_direct_seg_refs_option?
-      return try_compile("Checking for C++ compiler '-mno-tls-direct-seg-refs' support",
+      try_compile("Checking for C++ compiler '-mno-tls-direct-seg-refs' support",
         :cxx, '', '-mno-tls-direct-seg-refs')
     end
     memoize :cxx_supports_no_tls_direct_seg_refs_option?, true
@@ -462,27 +456,27 @@ module PhusionPassenger
     memoize :compiler_supports_wno_ambiguous_member_template?, true
 
     def self.cc_supports_feliminate_unused_debug?
-      return cc_or_cxx_supports_feliminate_unused_debug?(:c)
+      cc_or_cxx_supports_feliminate_unused_debug?(:c)
     end
     memoize :cc_supports_feliminate_unused_debug?, true
 
     def self.cxx_supports_feliminate_unused_debug?
-      return cc_or_cxx_supports_feliminate_unused_debug?(:cxx)
+      cc_or_cxx_supports_feliminate_unused_debug?(:cxx)
     end
     memoize :cxx_supports_feliminate_unused_debug?, true
 
     def self.cc_block_support_ok?
-      return (os_name_simple != 'macosx' || cc_or_cxx_supports_blocks?(:c) || os_version >= "10.13" )
+      (os_name_simple != 'macosx' || cc_or_cxx_supports_blocks?(:c) || os_version >= "10.13")
     end
     memoize :cc_block_support_ok?, true
 
     def self.cxx_block_support_ok?
-      return (os_name_simple != 'macosx' || cc_or_cxx_supports_blocks?(:cxx) || os_version >= "10.13" )
+      (os_name_simple != 'macosx' || cc_or_cxx_supports_blocks?(:cxx) || os_version >= "10.13")
     end
     memoize :cxx_block_support_ok?, true
 
     def self.cxx_supports_wno_vla_cxx_extension_flag?
-      return try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C++ compiler '-Wno-vla-cxx-extension' support",
         :cxx, '', '-Wno-vla-cxx-extension')
     end
@@ -496,18 +490,18 @@ module PhusionPassenger
     # Warnings should be suppressed with -Wno-attributes.
     def self.cc_visibility_flag_generates_warnings?
       if os_name_simple == "linux" && `#{cc} -v 2>&1` =~ /gcc version (.*?)/
-        return $1 <= "4.1.2"
+        $1 <= "4.1.2"
       else
-        return false
+        false
       end
     end
     memoize :cc_visibility_flag_generates_warnings?, true
 
     def self.cxx_visibility_flag_generates_warnings?
       if os_name_simple == "linux" && `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
-        return $1 <= "4.1.2"
+        $1 <= "4.1.2"
       else
-        return false
+        false
       end
     end
     memoize :cxx_visibility_flag_generates_warnings?, true
@@ -539,39 +533,39 @@ module PhusionPassenger
         };
       }
       if try_compile("Checking for C++ -std=gnu++14 compiler flag", :cxx, source, '-std=gnu++14')
-        return "-std=gnu++14"
+        "-std=gnu++14"
       elsif try_compile("Checking for C++ -std=c++14 compiler flag", :cxx, source, '-std=c++14')
-        return "-std=c++14"
+        "-std=c++14"
       else
-        return nil
+        nil
       end
     end
     memoize :cxx_14_flag, true
 
     def self.has_rt_library?
-      return try_link("Checking for -lrt support",
+      try_link("Checking for -lrt support",
         :c, "int main() { return 0; }\n", '-lrt')
     end
     memoize :has_rt_library?, true
 
     def self.has_math_library?
-      return try_link("Checking for -lmath support",
+      try_link("Checking for -lmath support",
         :c, "int main() { return 0; }\n", '-lmath')
     end
     memoize :has_math_library?, true
 
     def self.has_dl_library?
-      return try_link("Checking for -ldl support",
+      try_link("Checking for -ldl support",
         :c, "int main() { return 0; }\n", '-ldl')
     end
     memoize :has_dl_library?, true
 
     def self.has_accept4?
-      return try_compile("Checking for accept4()", :c, %Q{
+      try_compile("Checking for accept4()", :c, %Q(
         #define _GNU_SOURCE
         #include <sys/socket.h>
         static void *foo = accept4;
-      })
+      ))
     end
     memoize :has_accept4?, true
 
@@ -588,7 +582,7 @@ module PhusionPassenger
         result = '-g'
       end
       if cc_supports_fno_limit_debug_info_flag?
-        result << ' -fno-limit-debug-info'
+        result += ' -fno-limit-debug-info'
       end
       result
     end
@@ -606,16 +600,16 @@ module PhusionPassenger
         result = '-g'
       end
       if cxx_supports_fno_limit_debug_info_flag?
-        result << ' -fno-limit-debug-info'
+        result += ' -fno-limit-debug-info'
       end
       result
     end
 
     def self.export_dynamic_flags
       if os_name_simple == "linux"
-        return '-rdynamic'
+        '-rdynamic'
       else
-        return nil
+        nil
       end
     end
 
@@ -629,28 +623,28 @@ module PhusionPassenger
 
 
     def self.make
-      return string_env('MAKE', find_command('make'))
+      string_env('MAKE', find_command('make'))
     end
     memoize :make, true
 
     def self.gnu_make
       if result = string_env('GMAKE')
-        return result
+        result
       else
         result = find_command('gmake')
         if !result
           result = find_command('make')
           if result
             if `#{result} --version 2>&1` =~ /GNU/
-              return result
+              result
             else
-              return nil
+              nil
             end
           else
-            return nil
+            nil
           end
         else
-          return result
+          result
         end
       end
     end
@@ -659,11 +653,12 @@ module PhusionPassenger
     def self.xcode_select_version
       if find_command('xcode-select')
         `xcode-select --version` =~ /version (.+)\./
-        return $1
+        $1
       else
-        return nil
+        nil
       end
     end
+
   end
 
 end # module PhusionPassenger

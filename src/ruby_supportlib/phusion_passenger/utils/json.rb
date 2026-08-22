@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 #
 ## Stupid small pure Ruby JSON parser & generator.
 #
@@ -29,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'utils/strscan'
 require 'forwardable'
 
 module PhusionPassenger
+
 module Utils
 
 # Usage:
@@ -55,7 +57,7 @@ class JSON
   def_delegators :scanner, :scan, :matched
   private :s, :scan, :matched
 
-  def initialize data
+  def initialize(data)
     @scanner = PhusionPassenger::Utils::StringScanner.new data.to_s
   end
 
@@ -105,14 +107,14 @@ class JSON
     ary
   end
 
-  SPEC = {'b' => "\b", 'f' => "\f", 'n' => "\n", 'r' => "\r", 't' => "\t"}
+  SPEC = { 'b' => "\b", 'f' => "\f", 'n' => "\n", 'r' => "\r", 't' => "\t" }
   UNI = 'u'; CODE = /[a-fA-F0-9]{4}/
   STR = /"/; STE = '"'
   ESC = '\\'
 
   def string
     if scan(STR)
-      str, esc = '', false
+      str, esc = String.new, false
       while c = s.getch
         if esc
           str << (c == UNI ? (s.scan(CODE) || error).to_i(16).chr : SPEC[c] || c)
@@ -133,7 +135,7 @@ class JSON
     raise "parse error at: #{scan(/.{1,20}/m).inspect}"
   end
 
-  def repeat_until reg
+  def repeat_until(reg)
     until scan(reg)
       pos = s.pos
       yield
@@ -142,6 +144,7 @@ class JSON
   end
 
   module Generator
+
     def generate(obj)
       raise ArgumentError unless obj.is_a? Array or obj.is_a? Hash
       generate_type(obj)
@@ -157,7 +160,7 @@ class JSON
       end
     end
 
-    ESC_MAP = Hash.new {|h,k| k }.update \
+    ESC_MAP = Hash.new { |h, k| k }.update \
       "\r" => 'r',
       "\n" => 'n',
       "\f" => 'f',
@@ -167,7 +170,7 @@ class JSON
     def quote(str) %("#{str}") end
 
     def generate_String(str)
-      quote str.gsub(/[\r\n\f\t\b"\\]/) { "\\#{ESC_MAP[$&]}"}
+      quote str.gsub(/[\r\n\f\t\b"\\]/) { "\\#{ESC_MAP[$&]}" }
     end
 
     def generate_VersionComparer(vc)
@@ -188,17 +191,19 @@ class JSON
 
     def generate_NilClass(*) 'null' end
 
-    def generate_Array(ary) '[%s]' % ary.map {|o| generate_type(o) }.join(', ') end
+    def generate_Array(ary) '[%s]' % ary.map { |o| generate_type(o) }.join(', ') end
 
     def generate_Hash(hash)
       '{%s}' % hash.map { |key, value|
         "#{generate_String(key.to_s)}: #{generate_type(value)}"
       }.join(', ')
     end
+
   end
 
   extend Generator
 end
 
 end # module Utils
+
 end # module PhusionPassenger

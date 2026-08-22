@@ -24,7 +24,7 @@ define 'ruby-dev' do
     end
   end
 
-  if ruby_command =~ %r(^/usr/bin/ruby) || ruby_command =~ %r(^/System/Library/Frameworks/Ruby.framework)
+  if ruby_command =~ %r{^/usr/bin/ruby} || ruby_command =~ %r{^/System/Library/Frameworks/Ruby.framework}
     # Only tell user to install the headers with the system's package manager
     # if Ruby itself was installed with the package manager.
     on :debian do
@@ -57,13 +57,13 @@ define 'ruby-openssl' do
   define_checker do
     begin
       require 'openssl'
-      { :found => true }
+      { found: true }
     rescue LoadError
       false
     end
   end
 
-  if ruby_command =~ %r(^/usr/bin/ruby)
+  if ruby_command =~ %r{^/usr/bin/ruby}
     # Only tell user to install ruby-openssl with the system's package manager
     # if Ruby itself was installed with the package manager.
     on :debian do
@@ -78,7 +78,7 @@ define 'rubygems' do
   define_checker do
     begin
       require 'rubygems'
-      { :found => true }
+      { found: true }
     rescue LoadError
       false
     end
@@ -86,7 +86,7 @@ define 'rubygems' do
 
   install_instructions "Please download it from <b>#{website}</b>. " +
     "Extract the tarball, and run <b>ruby setup.rb</b>"
-  if ruby_command =~ %r(^/usr/bin/ruby)
+  if ruby_command =~ %r{^/usr/bin/ruby}
     # Only tell user to install RubyGems with the system's package manager
     # if Ruby itself was installed with the package manager.
     #
@@ -121,7 +121,7 @@ define 'rake' do
     end
   end
 
-  if ruby_command =~ %r(^/usr/bin/ruby)
+  if ruby_command =~ %r{^/usr/bin/ruby}
     # Only tell user to install Rake with the system's package manager
     # if Ruby itself was installed with the package manager.
     on :debian do
@@ -131,7 +131,7 @@ define 'rake' do
       urpmi "rake"
     end
     on :redhat do
-      yum_install "rubygem-rake", :epel => true
+      yum_install "rubygem-rake", epel: true
     end
   end
   on :other_platforms do

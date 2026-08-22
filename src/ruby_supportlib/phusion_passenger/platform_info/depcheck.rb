@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'platform_info/linux'
 PhusionPassenger.require_passenger_lib 'platform_info/compiler'
@@ -8,6 +9,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 module PhusionPassenger
+
   module PlatformInfo
 
     # Almost all software require other software in order to run. We call those
@@ -37,6 +39,7 @@ module PhusionPassenger
     # should print as many details about the dependency as possible (location, version,
     # etc) so that the user can override any decisions if necessary.
     module Depcheck
+
       THIS_DIR   = File.expand_path(File.dirname(__FILE__))
       @@loaded   = {}
       @@database = {}
@@ -200,7 +203,7 @@ module PhusionPassenger
         def check_for_ruby_library(name)
           begin
             require(name)
-            { :found => true }
+            { found: true }
           rescue LoadError
             if defined?(Gem)
               false
@@ -208,7 +211,7 @@ module PhusionPassenger
               begin
                 require 'rubygems'
                 require(name)
-                { :found => true }
+                { found: true }
               rescue LoadError
                 false
               end
@@ -291,7 +294,7 @@ module PhusionPassenger
         end
 
         def gem_command
-          PlatformInfo.gem_command(:sudo => true) || 'gem'
+          PlatformInfo.gem_command(sudo: true) || 'gem'
         end
 
         def find_command(command, *args)
@@ -334,7 +337,7 @@ module PhusionPassenger
               raise "Cannot find depcheck spec #{identifier.inspect}" if !dep
               puts_header "Checking for #{dep.name}..."
               result = dep.check
-              result = { :found => false } if !result
+              result = { found: false } if !result
 
               if result[:found] && !result[:error]
                 puts_detail "Found: <green>yes</green>"
@@ -355,7 +358,7 @@ module PhusionPassenger
               end
             end
 
-            return @missing_dependencies.empty?
+            @missing_dependencies.empty?
           ensure
             PlatformInfo.log_implementation = old_log_impl
           end
@@ -390,7 +393,9 @@ module PhusionPassenger
           puts "      #{text}"
         end
       end # class ConsoleRunner
+
     end # module Depcheck
 
   end # module PlatformInfo
+
 end # module PhusionPassenger

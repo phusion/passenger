@@ -24,119 +24,119 @@ describe DebugLogging do
     DebugLogging.log_file = @log_file
   end
 
-  describe "#debug" do
+  describe '#debug' do
     it "doesn't print the message if log level is LVL_INFO" do
       use_log_file!
       DebugLogging.log_level = LVL_INFO
-      DebugLogging.debug("hello")
+      DebugLogging.debug('hello')
       File.exist?(@log_file).should be_falsey
     end
 
-    it "prints the message if log level is LVL_DEBUG" do
+    it 'prints the message if log level is LVL_DEBUG' do
       use_log_file!
       DebugLogging.log_level = LVL_DEBUG
-      DebugLogging.debug("hello")
+      DebugLogging.debug('hello')
       File.exist?(@log_file).should be_truthy
     end
 
-    it "prints the message if log level is greater than LVL_DEBUG" do
+    it 'prints the message if log level is greater than LVL_DEBUG' do
       use_log_file!
       DebugLogging.log_level = LVL_DEBUG2
-      DebugLogging.debug("hello")
+      DebugLogging.debug('hello')
       File.exist?(@log_file).should be_truthy
     end
 
-    it "prints the location of the calling function" do
+    it 'prints the location of the calling function' do
       use_log_file!
       DebugLogging.log_level = LVL_DEBUG
-      DebugLogging.debug("hello")
-      File.read(@log_file).should include("debug_logging_spec.rb")
+      DebugLogging.debug('hello')
+      File.read(@log_file).should include('debug_logging_spec.rb')
     end
 
-    it "prints to STDERR by default" do
+    it 'prints to STDERR by default' do
       io = StringIO.new
       DebugLogging.log_level = LVL_DEBUG
       DebugLogging.stderr_evaluator = lambda { io }
-      DebugLogging.debug("hello")
-      io.string.should include("hello")
+      DebugLogging.debug('hello')
+      io.string.should include('hello')
     end
 
-    it "reopens the log file handle if it has been closed" do
+    it 'reopens the log file handle if it has been closed' do
       use_log_file!
       DebugLogging.log_level = LVL_DEBUG
-      DebugLogging.debug("hello")
+      DebugLogging.debug('hello')
       DebugLogging._log_device.close
-      DebugLogging.debug("world")
-      File.read(@log_file).should include("world")
+      DebugLogging.debug('world')
+      File.read(@log_file).should include('world')
     end
 
-    it "also works as included method" do
+    it 'also works as included method' do
       use_log_file!
       DebugLogging.log_level = LVL_DEBUG
-      MyClass.new.send(:debug, "hello")
-      File.read(@log_file).should include("hello")
+      MyClass.new.send(:debug, 'hello')
+      File.read(@log_file).should include('hello')
     end
 
-    it "is private when included" do
+    it 'is private when included' do
       MyClass.private_method_defined?(:debug)
     end
   end
 
-  describe "#trace" do
+  describe '#trace' do
     specify "#trace(x, ...) doesn't print the message if the log level is lower than LVL_INFO + x" do
       use_log_file!
       DebugLogging.log_level = LVL_INFO + 1
-      DebugLogging.trace(2, "hello")
+      DebugLogging.trace(2, 'hello')
       File.exist?(@log_file).should be_falsey
     end
 
-    specify "#trace(x, ...) prints the message if the log level equals LVL_INFO + 2" do
+    specify '#trace(x, ...) prints the message if the log level equals LVL_INFO + 2' do
       use_log_file!
       DebugLogging.log_level = LVL_INFO + 2
-      DebugLogging.trace(2, "hello")
+      DebugLogging.trace(2, 'hello')
       File.exist?(@log_file).should be_truthy
     end
 
-    specify "#trace(x, ...) prints the message if the log level is greater than LVL_INFO + 3" do
+    specify '#trace(x, ...) prints the message if the log level is greater than LVL_INFO + 3' do
       use_log_file!
       DebugLogging.log_level = LVL_INFO + 3
-      DebugLogging.trace(2, "hello")
+      DebugLogging.trace(2, 'hello')
       File.exist?(@log_file).should be_truthy
     end
 
-    specify "#trace prints the location of the calling function" do
+    specify '#trace prints the location of the calling function' do
       io = StringIO.new
       DebugLogging.log_level = LVL_DEBUG
       DebugLogging.stderr_evaluator = lambda { io }
-      DebugLogging.trace(1, "hello")
-      io.string.should include("hello")
+      DebugLogging.trace(1, 'hello')
+      io.string.should include('hello')
     end
 
-    it "prints to STDERR by default" do
+    it 'prints to STDERR by default' do
       io = StringIO.new
       DebugLogging.log_level = LVL_DEBUG
       DebugLogging.stderr_evaluator = lambda { io }
-      DebugLogging.trace(1, "hello")
-      io.string.should include("hello")
+      DebugLogging.trace(1, 'hello')
+      io.string.should include('hello')
     end
 
-    it "reopens the log file handle if it has been closed" do
+    it 'reopens the log file handle if it has been closed' do
       use_log_file!
       DebugLogging.log_level = LVL_DEBUG
-      DebugLogging.trace(1, "hello")
+      DebugLogging.trace(1, 'hello')
       DebugLogging._log_device.close
-      DebugLogging.trace(1, "world")
-      File.read(@log_file).should include("world")
+      DebugLogging.trace(1, 'world')
+      File.read(@log_file).should include('world')
     end
 
-    it "also works as included method" do
+    it 'also works as included method' do
       use_log_file!
       DebugLogging.log_level = LVL_DEBUG
-      MyClass.new.send(:trace, 1, "hello")
-      File.read(@log_file).should include("hello")
+      MyClass.new.send(:trace, 1, 'hello')
+      File.read(@log_file).should include('hello')
     end
 
-    it "is private when included" do
+    it 'is private when included' do
       MyClass.private_method_defined?(:trace)
     end
   end

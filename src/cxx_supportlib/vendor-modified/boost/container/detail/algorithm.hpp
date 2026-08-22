@@ -22,6 +22,7 @@
 #endif
 
 #include <boost/intrusive/detail/algorithm.hpp>
+#include <boost/move/utility_core.hpp>
 
 namespace boost {
 namespace container {
@@ -177,6 +178,61 @@ ForwardIt1 search(ForwardIt1 first1, ForwardIt1 last1,
          }
       }
    }
+}
+
+template<class InpIt, class U>
+InpIt find(InpIt first, InpIt last, const U& value)
+{
+    for (; first != last; ++first)
+        if (*first == value)
+            return first;
+ 
+    return last;
+}
+
+
+template<class FwdIt, class U>
+FwdIt remove(FwdIt first, FwdIt last, const U& value)
+{
+    first = find(first, last, value);
+    if (first != last)
+        for (FwdIt i = first; ++i != last;)
+            if (!(*i == value))
+                *first++ = boost::move(*i);
+    return first;
+}
+
+template<class FwdIt, class Pred>
+FwdIt remove_if(FwdIt first, FwdIt last, Pred p)
+{
+    first = find_if(first, last, p);
+    if (first != last)
+        for (FwdIt i = first; ++i != last;)
+            if (!p(*i))
+                *first++ = boost::move(*i);
+    return first;
+}
+
+template <class Cont, class Pred>
+typename Cont::size_type container_erase_if(Cont& c, Pred p)
+{
+   typedef typename Cont::size_type size_type;
+   typedef typename Cont::iterator  it_t;
+
+   size_type prev_size = c.size();
+   it_t it         = c.begin();
+
+   //end() must be called each loop for non-node containers
+   while ( it != c.end() ) {
+      if (p(*it)) {
+         it = c.erase(it);
+      }
+      else {
+         ++it;
+      }
+   }
+
+   return prev_size - c.size();
 }
 
 }  //namespace container {

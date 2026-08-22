@@ -53,7 +53,7 @@ class Addr2line
     source = @stdout.readline
     function.strip!
     source.strip!
-    return [function, source]
+    [ function, source ]
   end
 
   def close
@@ -73,7 +73,7 @@ def passthrough(input, output)
 end
 
 def debug(message)
-  #puts message
+  # puts message
 end
 
 input = STDIN

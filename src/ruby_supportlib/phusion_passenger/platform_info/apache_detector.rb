@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 require 'pathname'
 
 module PhusionPassenger
+
   module PlatformInfo
 
     # Detects all possible Apache installations on the system, and presents the
@@ -144,10 +145,10 @@ module PhusionPassenger
         add_result do |result|
           result.apxs2 = apxs2
           log "Detecting main Apache executable..."
-          result.httpd = PlatformInfo.httpd(:apxs2 => apxs2)
+          result.httpd = PlatformInfo.httpd(apxs2: apxs2)
           if result.httpd
             log "Detecting version..."
-            if result.version = PlatformInfo.httpd_version(:httpd => result.httpd)
+            if result.version = PlatformInfo.httpd_version(httpd: result.httpd)
               log " --> #{result.version}"
             else
               log "<red> --> Cannot detect version!</red>"
@@ -156,14 +157,14 @@ module PhusionPassenger
           end
           if result.httpd
             log "Detecting control command..."
-            result.ctl = PlatformInfo.apache2ctl(:apxs2 => apxs2)
+            result.ctl = PlatformInfo.apache2ctl(apxs2: apxs2)
             result.httpd = nil if !result.ctl
           end
           if result.httpd
             log "Detecting configuration file location..."
             result.config_file = PlatformInfo.httpd_default_config_file(
-              :httpd => result.httpd,
-              :apache2ctl => result.ctl)
+              httpd: result.httpd,
+              apache2ctl: result.ctl)
             if result.config_file
               log " --> #{result.config_file}"
             else
@@ -173,8 +174,8 @@ module PhusionPassenger
           if result.httpd
             log "Detecting error log file..."
             result.error_log = PlatformInfo.httpd_actual_error_log(
-              :httpd => result.httpd,
-              :apache2ctl => result.ctl)
+              httpd: result.httpd,
+              apache2ctl: result.ctl)
             if result.error_log
               log " --> #{result.error_log}"
             else
@@ -183,12 +184,12 @@ module PhusionPassenger
           end
           if result.httpd
             log "Detecting a2enmod and a2dismod..."
-            result.a2enmod = PlatformInfo.a2enmod(:apxs2 => apxs2)
-            result.a2dismod = PlatformInfo.a2dismod(:apxs2 => apxs2)
+            result.a2enmod = PlatformInfo.a2enmod(apxs2: apxs2)
+            result.a2dismod = PlatformInfo.a2dismod(apxs2: apxs2)
           end
           if result.httpd
-            result.config_file_broken = PlatformInfo.apache2ctl_V(:apxs2 => apxs2,
-              :apache2ctl => result.ctl).nil?
+            result.config_file_broken = PlatformInfo.apache2ctl_V(apxs2: apxs2,
+              apache2ctl: result.ctl).nil?
           end
           if result.httpd
             log "<green>Found a usable Apache installation using #{apxs2_description}.</green>"
@@ -258,7 +259,7 @@ module PhusionPassenger
       def result_for(apxs2)
         # All the results use realpaths, so the input must too.
         apxs2 = try_realpath(apxs2)
-        return @results.find { |r| r.apxs2 == apxs2 }
+        @results.find { |r| r.apxs2 == apxs2 }
       end
 
     private
@@ -284,7 +285,7 @@ module PhusionPassenger
         if old_size != filenames.size
           log "#{old_size - filenames.size} symlink duplicate(s) detected; ignoring them."
         end
-        return filenames
+        filenames
       end
 
       def add_result
@@ -310,4 +311,5 @@ module PhusionPassenger
     end
 
   end
+
 end # module Phusion Passenger
