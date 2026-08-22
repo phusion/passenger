@@ -3,6 +3,7 @@ Release 6.2.1 (Not yet released)
  * Improve SELinux compatibility. Closes GH-2630 & GH-2670.
  * Improve header parsing resilience. Closes GH-2646.
  * [Ruby] Improve Frozen String compatibility. GH-2659.
+ * Make 503 error prettier on mobile.
  * 
 
 
