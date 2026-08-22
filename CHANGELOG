@@ -1,6 +1,7 @@
 Release 6.2.1 (Not yet released)
 -------------
  * Improve SELinux compatibility. Closes GH-2630 & GH-2670.
+ * Improve header parsing resilience. Closes GH-2646.
  * 
 
 

@@ -79,7 +79,7 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 			}
 			if (resp->httpState == AppResponse::PARSING_HEADERS) {
 				// Not yet done parsing.
-				return Channel::Result(buffer.size(), false);
+				return Channel::Result(ret, false);
 			}
 
 			// Done parsing.
