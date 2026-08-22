@@ -121,7 +121,11 @@ end
 
 def setter_function_declaration_for(option)
   func_name = function_name_for(option)
-  "static const char *#{func_name}(cmd_parms *cmd, void *pcfg, const char *arg)"
+  if option[:type] == :flag
+    "static const char *#{func_name}(cmd_parms *cmd, void *pcfg, int arg)"
+  else
+    "static const char *#{func_name}(cmd_parms *cmd, void *pcfg, const char *arg)"
+  end
 end
 
 def setter_function_body_for(option)
@@ -193,13 +197,13 @@ def setter_function_body_for(option)
   elsif option[:type] == :flag
     if option[:context] == :global
       add_code %Q{
-        #{field_reference} = arg != NULL;
+        #{field_reference} = arg != 0;
         return NULL;
       }
     else
       add_code %Q{
         #{field_reference} =
-          (arg != NULL) ?
+          (arg != 0) ?
           ENABLED :
           DISABLED;
         return NULL;

@@ -57,13 +57,13 @@ namespace Apache2Module {
  */
 
 static const char *
-cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mAllowEncodedSlashesSourceFile = cmd->directive->filename;
 	config->mAllowEncodedSlashesSourceLine = cmd->directive->line_num;
 	config->mAllowEncodedSlashesExplicitlySet = true;
 	config->mAllowEncodedSlashes =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
@@ -188,26 +188,26 @@ cmd_passenger_app_type(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_passenger_buffer_response(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_buffer_response(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mBufferResponseSourceFile = cmd->directive->filename;
 	config->mBufferResponseSourceLine = cmd->directive->line_num;
 	config->mBufferResponseExplicitlySet = true;
 	config->mBufferResponse =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
 }
 
 static const char *
-cmd_passenger_buffer_upload(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_buffer_upload(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mBufferUploadSourceFile = cmd->directive->filename;
 	config->mBufferUploadSourceLine = cmd->directive->line_num;
 	config->mBufferUploadExplicitlySet = true;
 	config->mBufferUpload =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
@@ -304,7 +304,7 @@ cmd_passenger_direct_instance_request_address(cmd_parms *cmd, void *pcfg, const 
 }
 
 static const char *
-cmd_passenger_disable_anonymous_telemetry(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_disable_anonymous_telemetry(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {
 		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
@@ -314,12 +314,12 @@ cmd_passenger_disable_anonymous_telemetry(cmd_parms *cmd, void *pcfg, const char
 	serverConfig.disableAnonymousTelemetrySourceFile = cmd->directive->filename;
 	serverConfig.disableAnonymousTelemetrySourceLine = cmd->directive->line_num;
 	serverConfig.disableAnonymousTelemetryExplicitlySet = true;
-	serverConfig.disableAnonymousTelemetry = arg != NULL;
+	serverConfig.disableAnonymousTelemetry = arg != 0;
 	return NULL;
 }
 
 static const char *
-cmd_passenger_disable_log_prefix(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_disable_log_prefix(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {
 		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
@@ -329,12 +329,12 @@ cmd_passenger_disable_log_prefix(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.disableLogPrefixSourceFile = cmd->directive->filename;
 	serverConfig.disableLogPrefixSourceLine = cmd->directive->line_num;
 	serverConfig.disableLogPrefixExplicitlySet = true;
-	serverConfig.disableLogPrefix = arg != NULL;
+	serverConfig.disableLogPrefix = arg != 0;
 	return NULL;
 }
 
 static const char *
-cmd_passenger_disable_security_update_check(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_disable_security_update_check(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {
 		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
@@ -344,7 +344,7 @@ cmd_passenger_disable_security_update_check(cmd_parms *cmd, void *pcfg, const ch
 	serverConfig.disableSecurityUpdateCheckSourceFile = cmd->directive->filename;
 	serverConfig.disableSecurityUpdateCheckSourceLine = cmd->directive->line_num;
 	serverConfig.disableSecurityUpdateCheckExplicitlySet = true;
-	serverConfig.disableSecurityUpdateCheck = arg != NULL;
+	serverConfig.disableSecurityUpdateCheck = arg != 0;
 	return NULL;
 }
 
@@ -364,26 +364,26 @@ cmd_passenger_dump_config_manifest(cmd_parms *cmd, void *pcfg, const char *arg) 
 }
 
 static const char *
-cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mEnabledSourceFile = cmd->directive->filename;
 	config->mEnabledSourceLine = cmd->directive->line_num;
 	config->mEnabledExplicitlySet = true;
 	config->mEnabled =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
 }
 
 static const char *
-cmd_passenger_error_override(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_error_override(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mErrorOverrideSourceFile = cmd->directive->filename;
 	config->mErrorOverrideSourceLine = cmd->directive->line_num;
 	config->mErrorOverrideExplicitlySet = true;
 	config->mErrorOverride =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
@@ -419,7 +419,7 @@ cmd_passenger_force_max_concurrent_requests_per_process(cmd_parms *cmd, void *pc
 }
 
 static const char *
-cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
 	if (err != NULL) {
 		return err;
@@ -430,7 +430,7 @@ cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, const char *arg) 
 	config->mFriendlyErrorPagesSourceLine = cmd->directive->line_num;
 	config->mFriendlyErrorPagesExplicitlySet = true;
 	config->mFriendlyErrorPages =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
@@ -452,13 +452,13 @@ cmd_passenger_group(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mHighPerformanceSourceFile = cmd->directive->filename;
 	config->mHighPerformanceSourceLine = cmd->directive->line_num;
 	config->mHighPerformanceExplicitlySet = true;
 	config->mHighPerformance =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
@@ -480,7 +480,7 @@ cmd_passenger_instance_registry_dir(cmd_parms *cmd, void *pcfg, const char *arg)
 }
 
 static const char *
-cmd_passenger_load_shell_envvars(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_load_shell_envvars(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
 	if (err != NULL) {
 		return err;
@@ -491,7 +491,7 @@ cmd_passenger_load_shell_envvars(cmd_parms *cmd, void *pcfg, const char *arg) {
 	config->mLoadShellEnvvarsSourceLine = cmd->directive->line_num;
 	config->mLoadShellEnvvarsExplicitlySet = true;
 	config->mLoadShellEnvvars =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
@@ -670,7 +670,7 @@ cmd_passenger_nodejs(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_passenger_old_routing(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_old_routing(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {
 		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
@@ -680,7 +680,7 @@ cmd_passenger_old_routing(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.oldRoutingSourceFile = cmd->directive->filename;
 	serverConfig.oldRoutingSourceLine = cmd->directive->line_num;
 	serverConfig.oldRoutingExplicitlySet = true;
-	serverConfig.oldRouting = arg != NULL;
+	serverConfig.oldRouting = arg != 0;
 	return NULL;
 }
 
@@ -714,7 +714,7 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_passenger_preload_bundler(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_preload_bundler(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
 	if (err != NULL) {
 		return err;
@@ -725,7 +725,7 @@ cmd_passenger_preload_bundler(cmd_parms *cmd, void *pcfg, const char *arg) {
 	config->mPreloadBundlerSourceLine = cmd->directive->line_num;
 	config->mPreloadBundlerExplicitlySet = true;
 	config->mPreloadBundler =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
@@ -821,7 +821,7 @@ cmd_passenger_security_update_check_proxy(cmd_parms *cmd, void *pcfg, const char
 }
 
 static const char *
-cmd_passenger_show_version_in_header(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_show_version_in_header(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {
 		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
@@ -831,7 +831,7 @@ cmd_passenger_show_version_in_header(cmd_parms *cmd, void *pcfg, const char *arg
 	serverConfig.showVersionInHeaderSourceFile = cmd->directive->filename;
 	serverConfig.showVersionInHeaderSourceLine = cmd->directive->line_num;
 	serverConfig.showVersionInHeaderExplicitlySet = true;
-	serverConfig.showVersionInHeader = arg != NULL;
+	serverConfig.showVersionInHeader = arg != 0;
 	return NULL;
 }
 
@@ -908,13 +908,13 @@ cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_passenger_sticky_sessions(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_sticky_sessions(cmd_parms *cmd, void *pcfg, int arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mStickySessionsSourceFile = cmd->directive->filename;
 	config->mStickySessionsSourceLine = cmd->directive->line_num;
 	config->mStickySessionsExplicitlySet = true;
 	config->mStickySessions =
-		(arg != NULL) ?
+		(arg != 0) ?
 		ENABLED :
 		DISABLED;
 	return NULL;
@@ -941,7 +941,7 @@ cmd_passenger_sticky_sessions_cookie_name(cmd_parms *cmd, void *pcfg, const char
 }
 
 static const char *
-cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {
 		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
@@ -951,12 +951,12 @@ cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.turbocachingSourceFile = cmd->directive->filename;
 	serverConfig.turbocachingSourceLine = cmd->directive->line_num;
 	serverConfig.turbocachingExplicitlySet = true;
-	serverConfig.turbocaching = arg != NULL;
+	serverConfig.turbocaching = arg != 0;
 	return NULL;
 }
 
 static const char *
-cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
 	fprintf(stderr, "WARNING: The 'PassengerUseGlobalQueue' option is obsolete: global queueing is now always turned on. Please remove this option from your configuration file.\n");
 	fflush(stderr);
 	return NULL;
@@ -978,7 +978,7 @@ cmd_passenger_user(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, const char *arg) {
+cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, int arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {
 		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
@@ -988,7 +988,7 @@ cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.userSwitchingSourceFile = cmd->directive->filename;
 	serverConfig.userSwitchingSourceLine = cmd->directive->line_num;
 	serverConfig.userSwitchingExplicitlySet = true;
-	serverConfig.userSwitching = arg != NULL;
+	serverConfig.userSwitching = arg != 0;
 	return NULL;
 }
 
