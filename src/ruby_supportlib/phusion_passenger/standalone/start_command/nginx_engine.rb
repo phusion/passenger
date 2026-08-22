@@ -46,7 +46,7 @@ module PhusionPassenger
           test_nginx_config(nginx_config_path, 'nginx.conf')
 
           Standalone::ControlUtils.require_daemon_controller
-          @engine = DaemonController.new(build_daemon_controller_options)
+          @engine = DaemonController.new(**build_daemon_controller_options)
 
           begin
             @engine.start
@@ -326,7 +326,7 @@ module PhusionPassenger
         def serialize_strset(*items)
           items = items.map(&:b)
           null  = "\0".b
-          return [items.join(null)].pack('m*').gsub("\n", "").strip
+          [ items.join(null) ].pack('m*').gsub("\n", "").strip
         end
 
         #####################

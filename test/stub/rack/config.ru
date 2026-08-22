@@ -50,9 +50,9 @@ app = lambda do |env|
     text_response('This is the uncached version of /cached')
   when '/upload_with_params'
     req = Rack::Request.new(env)
-    name1 = req.params["name1"].b
-    name2 = req.params["name2"].b
-    file = req.params["data"][:tempfile]
+    name1 = req.params['name1'].b
+    name2 = req.params['name2'].b
+    file = req.params['data'][:tempfile]
     file.binmode
     text_response(
       "name 1 = #{name1}\n" <<

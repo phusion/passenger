@@ -4,6 +4,7 @@ Release 6.2.1 (Not yet released)
  * Improve header parsing resilience. Closes GH-2646.
  * [Ruby] Improve Frozen String compatibility. GH-2659.
  * Make 503 error prettier on mobile.
+ * [Standalone] Improve detecting Nginx startup error messages. Closes GH-1970.
  * 
 
 

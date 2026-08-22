@@ -351,6 +351,7 @@ module TestHelper
       instance
     end
   end
+
 end
 
 File.class_eval do

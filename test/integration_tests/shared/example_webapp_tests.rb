@@ -66,7 +66,7 @@ RSpec.shared_examples_for 'an example web app' do
       response.should ==
         "name 1 = Kotonoha\n".b <<
         "name 2 = Sekai\n".b <<
-        "data = ".b << static_file.read
+        'data = '.b << static_file.read
     ensure
       static_file.close
     end

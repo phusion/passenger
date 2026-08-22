@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # daemon_controller, library for robust daemon management
 # Copyright (c) 2010-2025 Asynchronous B.V.
 #
@@ -22,9 +24,9 @@
 module PhusionPassenger
 
 class DaemonController
-  MAJOR = 1
-  MINOR = 2
-  TINY  = 1
+  MAJOR = 3
+  MINOR = 0
+  TINY = 2
   VERSION_STRING = "#{MAJOR}.#{MINOR}.#{TINY}"
 end # class DaemonController
 
