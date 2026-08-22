@@ -181,9 +181,9 @@ module PhusionPassenger
         if @simulate_eof
           length, buffer = args
           if buffer
-            buffer.replace(binary_string(""))
+            buffer.replace("".b)
           else
-            buffer = binary_string("")
+            buffer = "".b
           end
           if length
             return nil
@@ -292,16 +292,6 @@ module PhusionPassenger
 
       def raise_error_because_activity_disallowed!
         raise IOError, "It is not possible to read or write from the client socket because the current."
-      end
-
-      if ''.respond_to?(:force_encoding)
-        def binary_string(str)
-          ''.force_encoding('binary')
-        end
-      else
-        def binary_string(str)
-          ''
-        end
       end
     end
 

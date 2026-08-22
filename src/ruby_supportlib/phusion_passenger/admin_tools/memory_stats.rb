@@ -251,7 +251,7 @@ module PhusionPassenger
           ps_output = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,%cpu,command`
           threads_known = true
         end
-        list = force_binary(ps_output).split("\n")
+        list = ps_output.b.split("\n")
         list.shift
         list.each do |line|
           line.gsub!(/^ */, '')
@@ -297,16 +297,6 @@ module PhusionPassenger
         end
       rescue Errno::EACCES, Errno::ENOENT, Errno::ESRCH
         nil
-      end
-
-      if ''.respond_to?(:force_encoding)
-        def force_binary(str)
-          str.force_encoding('binary')
-        end
-      else
-        def force_binary(str)
-          str
-        end
       end
     end
 

@@ -324,13 +324,9 @@ module PhusionPassenger
         end
 
         def serialize_strset(*items)
-          if "".respond_to?(:force_encoding)
-            items = items.map { |x| x.force_encoding('binary') }
-            null  = "\0".force_encoding('binary')
-          else
-            null  = "\0"
-          end
-          [ items.join(null) ].pack('m*').gsub("\n", "").strip
+          items = items.map(&:b)
+          null  = "\0".b
+          return [items.join(null)].pack('m*').gsub("\n", "").strip
         end
 
         #####################

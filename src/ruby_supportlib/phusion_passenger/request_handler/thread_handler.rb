@@ -101,12 +101,7 @@ module PhusionPassenger
       def main_loop(finish_callback)
         socket_wrapper = Utils::UnseekableSocket.new
         channel        = MessageChannel.new
-        if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('2.3.0')
-          buffer = String.new(encoding: Encoding::BINARY)
-        else
-          buffer = ""
-          buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
-        end
+        buffer         = ''.b
 
         begin
           finish_callback.call
