@@ -65,7 +65,7 @@ def main
       option = resolve_possible_alias(option)
       format =
         "%s(%s,\n" \
-        "\t(%s) %s,\n" \
+        "\t(%s)(void *)%s,\n" \
         "\tNULL,\n" \
         "\t%s,\n" \
         "\t%s),\n"

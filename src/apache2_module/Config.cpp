@@ -83,9 +83,9 @@ namespace Apache2Module {
 using namespace std;
 
 
-typedef const char * (*Take1Func)(cmd_parms *, void *, const char *);
-typedef const char * (*Take2Func)(cmd_parms *, void *, const char *, const char *);
-typedef const char * (*FlagFunc)(cmd_parms *, void *, int);
+typedef const char * (*Take1Func)();
+typedef const char * (*Take2Func)();
+typedef const char * (*FlagFunc)();
 
 ServerConfig serverConfig;
 
@@ -181,13 +181,6 @@ postprocessConfig(server_rec *s, apr_pool_t *pool, apr_pool_t *temp_pool) {
 
 static const char *
 cmd_passenger_enterprise_only(cmd_parms *cmd, void *pcfg, const char *arg) {
-	return "this feature is only available in Phusion Passenger Enterprise. "
-		"You are currently running the open source Phusion Passenger Enterprise. "
-		"Please learn more about and/or buy Phusion Passenger Enterprise at https://www.phusionpassenger.com/features#premium-features";
-}
-
-static const char *
-cmd_passenger_enterprise_only(cmd_parms *cmd, void *pcfg, int arg) {
 	return "this feature is only available in Phusion Passenger Enterprise. "
 		"You are currently running the open source Phusion Passenger Enterprise. "
 		"Please learn more about and/or buy Phusion Passenger Enterprise at https://www.phusionpassenger.com/features#premium-features";
