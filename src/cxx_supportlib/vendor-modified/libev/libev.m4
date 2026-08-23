@@ -2,7 +2,8 @@ dnl this file is part of libev, do not make local modifications
 dnl http://software.schmorp.de/pkg/libev
 
 dnl libev support
-AC_CHECK_HEADERS(sys/inotify.h sys/epoll.h sys/event.h port.h poll.h sys/select.h sys/eventfd.h sys/signalfd.h)
+AC_CHECK_HEADERS(sys/inotify.h sys/epoll.h sys/event.h port.h poll.h sys/timerfd.h)
+AC_CHECK_HEADERS(sys/select.h sys/eventfd.h sys/signalfd.h linux/aio_abi.h linux/fs.h)
  
 AC_CHECK_FUNCS(inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd)
  
@@ -34,6 +35,10 @@ AC_CHECK_FUNCS(nanosleep, [], [
       AC_CHECK_FUNCS(nanosleep)
    fi
 ])
+
+AC_CHECK_TYPE(__kernel_rwf_t, [
+   AC_DEFINE(HAVE_KERNEL_RWF_T, 1, Define to 1 if linux/fs.h defined kernel_rwf_t)
+], [], [#include <linux/fs.h>])
 
 if test -z "$LIBEV_M4_AVOID_LIBM"; then
    LIBM=m

@@ -1,7 +1,7 @@
 /*
  * loop member variable declarations
  *
- * Copyright (c) 2007,2008,2009,2010,2011,2012,2013 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011,2012,2013,2019 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -107,6 +107,46 @@ VARx(int, epoll_epermcnt)
 VARx(int, epoll_epermmax)
 #endif
 
+#if EV_USE_LINUXAIO || EV_GENWRAP
+VARx(aio_context_t, linuxaio_ctx)
+VARx(int, linuxaio_iteration)
+VARx(struct aniocb **, linuxaio_iocbps)
+VARx(int, linuxaio_iocbpmax)
+VARx(struct iocb **, linuxaio_submits)
+VARx(int, linuxaio_submitcnt)
+VARx(int, linuxaio_submitmax)
+VARx(ev_io, linuxaio_epoll_w)
+#endif
+
+#if EV_USE_IOURING || EV_GENWRAP
+VARx(int, iouring_fd)
+VARx(unsigned, iouring_to_submit);
+VARx(int, iouring_entries)
+VARx(int, iouring_max_entries)
+VARx(void *, iouring_sq_ring)
+VARx(void *, iouring_cq_ring)
+VARx(void *, iouring_sqes)
+VARx(uint32_t, iouring_sq_ring_size)
+VARx(uint32_t, iouring_cq_ring_size)
+VARx(uint32_t, iouring_sqes_size)
+VARx(uint32_t, iouring_sq_head)
+VARx(uint32_t, iouring_sq_tail)
+VARx(uint32_t, iouring_sq_ring_mask)
+VARx(uint32_t, iouring_sq_ring_entries)
+VARx(uint32_t, iouring_sq_flags)
+VARx(uint32_t, iouring_sq_dropped)
+VARx(uint32_t, iouring_sq_array)
+VARx(uint32_t, iouring_cq_head)
+VARx(uint32_t, iouring_cq_tail)
+VARx(uint32_t, iouring_cq_ring_mask)
+VARx(uint32_t, iouring_cq_ring_entries)
+VARx(uint32_t, iouring_cq_overflow)
+VARx(uint32_t, iouring_cq_cqes)
+VARx(ev_tstamp, iouring_tfd_to)
+VARx(int, iouring_tfd)
+VARx(ev_io, iouring_tfd_w)
+#endif
+
 #if EV_USE_KQUEUE || EV_GENWRAP
 VARx(pid_t, kqueue_fd_pid)
 VARx(struct kevent *, kqueue_changes)
@@ -187,6 +227,11 @@ VARx(ev_io, sigfd_w)
 VARx(sigset_t, sigfd_set)
 #endif
 
+#if EV_USE_TIMERFD || EV_GENWRAP
+VARx(int, timerfd) /* timerfd for time jump detection */
+VARx(ev_io, timerfd_w)
+#endif
+
 VARx(unsigned int, origflags) /* original loop flags */
 
 #if EV_FEATURE_API || EV_GENWRAP
@@ -195,8 +240,8 @@ VARx(unsigned int, loop_depth) /* #ev_run enters - #ev_run leaves */
 
 VARx(void *, userdata)
 /* C++ doesn't support the ev_loop_callback typedef here. stinks. */
-VAR (release_cb, void (*release_cb)(EV_P) EV_THROW)
-VAR (acquire_cb, void (*acquire_cb)(EV_P) EV_THROW)
+VAR (release_cb, void (*release_cb)(EV_P) EV_NOEXCEPT)
+VAR (acquire_cb, void (*acquire_cb)(EV_P) EV_NOEXCEPT)
 VAR (invoke_cb , ev_loop_callback invoke_cb)
 #endif
 
