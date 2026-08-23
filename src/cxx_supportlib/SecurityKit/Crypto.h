@@ -51,7 +51,7 @@ namespace Passenger {
 #if BOOST_OS_MACOS
 typedef SecKeyRef PUBKEY_TYPE;
 #else
-typedef RSA* PUBKEY_TYPE;
+typedef EVP_PKEY* PUBKEY_TYPE;
 #endif
 
 using namespace std;

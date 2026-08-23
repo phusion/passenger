@@ -746,23 +746,15 @@ void Crypto::freeAESEncrypted(AESEncResult &aesEnc) {
 
 bool Crypto::encryptRSA(unsigned char *dataChars, size_t dataLen,
 		string encryptPubKeyPath, unsigned char **encryptedCharsPtr, size_t &encryptedLen) {
-	RSA *rsaPubKey = NULL;
 	EVP_PKEY *rsaPubKeyEVP = NULL;
 	EVP_PKEY_CTX *ctx = NULL;
 	bool result = false;
 
 	do {
 		// 1. Get the RSA public key to encrypt with
-		rsaPubKey = loadPubKey(encryptPubKeyPath.c_str());
-		if (rsaPubKey == NULL) {
+		rsaPubKeyEVP = loadPubKey(encryptPubKeyPath.c_str());
+		if (rsaPubKeyEVP == NULL) {
 			logError("Failed to load public key at " + encryptPubKeyPath);
-			break;
-		}
-
-		rsaPubKeyEVP = EVP_PKEY_new();
-		if (1 != EVP_PKEY_assign_RSA(rsaPubKeyEVP, rsaPubKey)) {
-			logErrorExtended("EVP_PKEY_assign_RSA");
-			freePubKey(rsaPubKey); // since it's not tied to EVP key yet
 			break;
 		}
 
@@ -806,29 +798,21 @@ bool Crypto::encryptRSA(unsigned char *dataChars, size_t dataLen,
 		EVP_PKEY_CTX_free(ctx);
 	}
 	if (rsaPubKeyEVP != NULL) {
-		EVP_PKEY_free(rsaPubKeyEVP); // also frees the rsaPubKey
+		EVP_PKEY_free(rsaPubKeyEVP);
 	}
 
 	return result;
 }
 
 bool Crypto::verifySignature(string signaturePubKeyPath, char *signatureChars, int signatureLen, string data) {
-	RSA *rsaPubKey = NULL;
 	EVP_PKEY *rsaPubKeyEVP = NULL;
 	EVP_MD_CTX *mdctx = NULL;
 	bool result = false;
 
 	do {
-		rsaPubKey = loadPubKey(signaturePubKeyPath.c_str());
-		if (rsaPubKey == NULL) {
+		rsaPubKeyEVP = loadPubKey(signaturePubKeyPath.c_str());
+		if (rsaPubKeyEVP == NULL) {
 			logError("Failed to load public key at " + signaturePubKeyPath);
-			break;
-		}
-
-		rsaPubKeyEVP = EVP_PKEY_new();
-		if (!EVP_PKEY_assign_RSA(rsaPubKeyEVP, rsaPubKey)) {
-			freePubKey(rsaPubKey);
-			logErrorExtended("EVP_PKEY_assign_RSA");
 			break;
 		}
 
@@ -861,7 +845,6 @@ bool Crypto::verifySignature(string signaturePubKeyPath, char *signatureChars, i
 
 	if (rsaPubKeyEVP) {
 		EVP_PKEY_free(rsaPubKeyEVP);
-		// freePubKey not needed, already free by EVP_PKEY_free.
 	}
 
 	return result;
@@ -873,15 +856,14 @@ PUBKEY_TYPE Crypto::loadPubKey(const char *filename) {
 		return NULL;
 	}
 
-	RSA *rsa = RSA_new();
-	rsa = PEM_read_RSA_PUBKEY(fp, &rsa, NULL, NULL);
+	EVP_PKEY *pkey = PEM_read_PUBKEY(fp, NULL, NULL, NULL);
 	fclose(fp);
-	return rsa;
+	return pkey;
 }
 
 void Crypto::freePubKey(PUBKEY_TYPE pubKey) {
 	if (pubKey) {
-		RSA_free(pubKey);
+		EVP_PKEY_free(pubKey);
 	}
 }
 
