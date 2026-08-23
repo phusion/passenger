@@ -6,6 +6,7 @@ Release 6.2.1 (Not yet released)
  * Make 503 error prettier on mobile.
  * [Standalone] Improve detecting Nginx startup error messages. Closes GH-1970.
  * Upgrade vendored libuv from 1.8.0 to 1.49.2, to pick up a decade of BSD/kqueue and threadpool bug fixes that may address GH-2569.
+ * Upgrade vendored libev from 4.23 to 4.33.
  * 
 
 

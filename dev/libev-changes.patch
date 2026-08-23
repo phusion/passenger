@@ -1,0 +1,108 @@
+From 4fb0fa52b2ad4d5cc1263c15d41f272ec142864b Mon Sep 17 00:00:00 2001
+From: Camden Narzt <c.narzt@me.com>
+Date: Sun, 23 Aug 2026 16:27:02 -0600
+Subject: [PATCH] changes
+
+---
+ ev++.h |  4 ++--
+ ev.c   | 18 +++++++++++++++++-
+ ev.h   |  9 ++++++---
+ 3 files changed, 25 insertions(+), 6 deletions(-)
+
+diff --git a/ev++.h b/ev++.h
+index 22dfcf5..f445fbc 100644
+--- a/ev++.h
++++ b/ev++.h
+@@ -570,12 +570,12 @@ namespace ev {
+     return ev_embeddable_backends ();
+   }
+ 
+-  inline void set_allocator (void *(*cb)(void *ptr, long size) EV_NOEXCEPT) EV_NOEXCEPT
++  inline void set_allocator (void *(*cb)(void *ptr, long size)) EV_NOEXCEPT
+   {
+     ev_set_allocator (cb);
+   }
+ 
+-  inline void set_syserr_cb (void (*cb)(const char *msg) EV_NOEXCEPT) EV_NOEXCEPT
++  inline void set_syserr_cb (void (*cb)(const char *msg)) EV_NOEXCEPT
+   {
+     ev_set_syserr_cb (cb);
+   }
+diff --git a/ev.c b/ev.c
+index ec212a1..9c697cb 100644
+--- a/ev.c
++++ b/ev.c
+@@ -507,7 +507,11 @@
+ #endif
+ 
+ #if EV_USE_INOTIFY
+-# include <sys/statfs.h>
++# ifdef __FreeBSD__
++#  include <sys/mount.h>
++# else
++#  include <sys/statfs.h>
++# endif
+ # include <sys/inotify.h>
+ /* some very old inotify.h headers don't have IN_DONT_FOLLOW */
+ # ifndef IN_DONT_FOLLOW
+@@ -3196,6 +3200,18 @@ ev_backend (EV_P) EV_NOEXCEPT
+   return backend;
+ }
+ 
++int
++ev_backend_fd (EV_P) EV_THROW
++{
++  return backend_fd;
++}
++
++int
++ev_loop_get_pipe (EV_P_ unsigned int index) EV_THROW
++{
++  return evpipe[index];
++}
++
+ #if EV_FEATURE_API
+ unsigned int
+ ev_iteration (EV_P) EV_NOEXCEPT
+diff --git a/ev.h b/ev.h
+index 4669c39..2384093 100644
+--- a/ev.h
++++ b/ev.h
+@@ -545,13 +545,13 @@ EV_API_DECL void ev_sleep (ev_tstamp delay) EV_NOEXCEPT; /* sleep for a while */
+  * or take some potentially destructive action.
+  * The default is your system realloc function.
+  */
+-EV_API_DECL void ev_set_allocator (void *(*cb)(void *ptr, long size) EV_NOEXCEPT) EV_NOEXCEPT;
++EV_API_DECL void ev_set_allocator (void *(*cb)(void *ptr, long size)) EV_NOEXCEPT;
+ 
+ /* set the callback function to call on a
+  * retryable syscall error
+  * (such as failed select, poll, epoll_wait)
+  */
+-EV_API_DECL void ev_set_syserr_cb (void (*cb)(const char *msg) EV_NOEXCEPT) EV_NOEXCEPT;
++EV_API_DECL void ev_set_syserr_cb (void (*cb)(const char *msg)) EV_NOEXCEPT;
+ 
+ #if EV_MULTIPLICITY
+ 
+@@ -616,6 +616,9 @@ EV_API_DECL unsigned int ev_backend (EV_P) EV_NOEXCEPT; /* backend in use by loo
+ 
+ EV_API_DECL void ev_now_update (EV_P) EV_NOEXCEPT; /* update event loop time */
+ 
++EV_API_DECL int ev_backend_fd (EV_P) EV_THROW;
++EV_API_DECL int ev_loop_get_pipe (EV_P_ unsigned int index) EV_THROW;
++
+ #if EV_WALK_ENABLE
+ /* walk (almost) all watchers in the loop of a given type, invoking the */
+ /* callback on every such watcher. The callback might stop the watcher, */
+@@ -672,7 +675,7 @@ EV_API_DECL void *ev_userdata (EV_P) EV_NOEXCEPT;
+ typedef void (*ev_loop_callback)(EV_P);
+ EV_API_DECL void ev_set_invoke_pending_cb (EV_P_ ev_loop_callback invoke_pending_cb) EV_NOEXCEPT;
+ /* C++ doesn't allow the use of the ev_loop_callback typedef here, so we need to spell it out */
+-EV_API_DECL void ev_set_loop_release_cb (EV_P_ void (*release)(EV_P) EV_NOEXCEPT, void (*acquire)(EV_P) EV_NOEXCEPT) EV_NOEXCEPT;
++EV_API_DECL void ev_set_loop_release_cb (EV_P_ void (*release)(EV_P), void (*acquire)(EV_P)) EV_NOEXCEPT;
+ 
+ EV_API_DECL unsigned int ev_pending_count (EV_P) EV_NOEXCEPT; /* number of pending events, if any */
+ 
+-- 
+2.50.1 (Apple Git-155)
+
