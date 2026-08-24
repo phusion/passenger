@@ -3,10 +3,11 @@ Release 6.2.1 (Not yet released)
  * Improve SELinux compatibility. Closes GH-2630 & GH-2670.
  * Improve header parsing resilience. Closes GH-2646.
  * [Ruby] Improve Frozen String compatibility. GH-2659.
- * Make 503 error prettier on mobile.
+ * Make 503 error prettier on mobile by adding a viewport meta-tag.
  * [Standalone] Improve detecting Nginx startup error messages. Closes GH-1970.
- * Upgrade vendored libuv from 1.8.0 to 1.49.2, to pick up a decade of BSD/kqueue and threadpool bug fixes that may address GH-2569.
+ * Upgrade vendored libuv from 1.8.0 to 1.49.2, to pick up a decade of BSD/kqueue and threadpool bug fixes that should fix GH-2569.
  * Upgrade vendored libev from 4.23 to 4.33.
+ * Fix OpenSSL deprecation warnings. Closes GH-2673.
  * 
 
 
