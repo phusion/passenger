@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2025 Asynchronous B.V.
+# Copyright (c) 2016-2026 Asynchronous B.V.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the

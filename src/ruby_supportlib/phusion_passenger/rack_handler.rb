@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2016-2025 Asynchronous B.V.
+#  Copyright (c) 2016-2026 Asynchronous B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Asynchronous B.V.

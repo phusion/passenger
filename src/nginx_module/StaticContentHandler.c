@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Igor Sysoev
- * Copyright (c) 2010-2025 Asynchronous B.V.
+ * Copyright (c) 2010-2026 Asynchronous B.V.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

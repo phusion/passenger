@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
- * Copyright (c) 2013-2025 Asynchronous B.V.
+ * Copyright (c) 2013-2026 Asynchronous B.V.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
