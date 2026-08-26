@@ -103,9 +103,6 @@ module PhusionPassenger
       LoaderSharedHelpers.record_journey_step_begin('PRELOADER_FORK_SUBPROCESS',
         'STEP_IN_PROGRESS', work_dir)
 
-      # Improve copy-on-write friendliness.
-      GC.start
-
       begin
         pid = fork
       rescue SystemCallError => e
