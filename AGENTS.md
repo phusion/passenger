@@ -1,8 +1,9 @@
 This is the codebase for the Phusion Passenger application server. Mostly C++14 and Ruby.
 
-CRITICALLY IMPORTANT, MUST READ FIRST:
-- @./doc/DevHandbook.md — know what other development docs can be consulted
-- @./doc/BasicArchitectureOverview.md — foundational knowledge that aids you in determining research directions
+Before starting work:
+
+- read the table of contents in `./doc/DevHandbook.md` to discover available developer documentation. Read relevant documents as needed for the task.
+- read `./doc/BasicArchitectureOverview.md` to learn foundational knowledge that aids you in determining research directions.
 
 ## Coding guidelines
 

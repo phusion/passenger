@@ -32,15 +32,25 @@ Configure the C++ unit test suite:
 Use [bear](https://github.com/rizsotto/bear) to generate `compile_commands.json` once:
 
 ```bash
-bear -- drake -j4 nginx apache2 test:cxx:build buildout/test/oxt/main
+bear -- rake -m -j4 nginx apache2 test:cxx:build buildout/test/oxt/main
 ```
 
 ## Build caching
 
 Use [ccache](https://ccache.dev/). Set this environment variable to make our build system prefix all compiler invocations with `ccache`:
 
-```
+```bash
 export USE_CCACHE=1
+```
+
+When using multiple worktrees, configure cache sharing:
+
+```bash
+export CCACHE_BASEDIR=<full path to common parent directory of the worktrees>
+
+# Prevent debug info from distinguishing between worktrees
+export EXTRA_CFLAGS=-fdebug-prefix-map="$PWD"=.
+export EXTRA_CXXFLAGS=-fdebug-prefix-map="$PWD"=.
 ```
 
 ## C++ debugging
