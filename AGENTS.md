@@ -7,6 +7,7 @@ Before starting work:
 
 ## Coding guidelines
 
+- Make the smallest changes to existing interfaces as possible. Be averse to rewriting things.
 - Prefer boring, explicit code over cleverness or premature abstraction. Keep the main code path easy to follow and centered on business logic; move incidental technical or secondary details into helpers when they obscure that flow. Some duplication is fine. Extract shared abstractions only when they clearly improve readability or eliminate substantial duplication, and avoid speculative generalization.
 - Proper error handling
   - Shell scripts: use pipefail
@@ -14,8 +15,8 @@ Before starting work:
 - Commenting strategy:
   - Comment non-obvious context the code cannot express clearly: purpose, domain terms, responsibilities, input and output semantics, algorithm stages, invariants, caveats, and decisions. Explain complicated algorithms in high-level manner to aid human readability. Briefly state non-obvious class, module or method responsibilities. Put the comment where that information applies.
   - Write for a capable contributor new to the subsystem or platform. Use natural, plain English and precise technical terms where useful. Define unfamiliar concepts where introduced, explain how they relate to nearby code, and do not make readers derive their meaning from mechanics or call sites.
-State purpose or constraints before mechanics. Keep comments short and local, put broader or cross-cutting rationale/caveats in the developer handbook, and do not narrate straightforward code.
-- Make the smallest changes to existing interfaces as possible. Be averse to rewriting things.
+  - State purpose or constraints before mechanics. Keep comments short and local, put broader or cross-cutting rationale/caveats in the developer handbook, and do not narrate straightforward code.
+- Before finishing a non-trivial change, verify it once: re-read the request, inspect the full diff, run relevant tests/checks, and look for missed requirements, wrong assumptions, guideline violations, edge cases, regressions, or unnecessary changes. Fix any concrete issues you find. Do not assume something must be changed; preserve correct code and avoid revisions made only for the sake of revising.
 
 ### For C++
 
