@@ -109,7 +109,7 @@ For example, in Ruby applications a significant amount of memory is taken up by 
 
 SpawningKit provides facilities to use this preforking technique. Obviously, this technique can only be used if the target programming language actually supports forking. This is the case with e.g. C, Ruby (using MRI) and Python (using CPython), but not with e.g. Node.js, Ruby (using JRuby), Go and anything running on the JVM.
 
-Using the preforking technique through SpawningKit requires either application code modifications, or the existance of a wrapper that supports this technique.
+Using the preforking technique through SpawningKit requires either application code modifications, or the existence of a wrapper that supports this technique.
 
 ### The start command
 
