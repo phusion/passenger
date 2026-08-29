@@ -19,6 +19,18 @@ Packaging-specific test suites:
 - `rake test:integration:native_packaging` — run from Debian and RPM packaging automation.
 - `rake test:source_packaging` — run from gem and source tarball packaging automation.
 
+## Apache 2 integration test suite usage
+
+To run specific tests, use either the `E` or `LOC` environment variables:
+
+```bash
+# Match on test name. Passed to `rspec -e`
+rake test:integration:apache2 E="doesn't use page caching if the HTTP request is not GET"
+
+# Match on file name and line numbers. Passed to `rspec`. Note: filename is relative to `test/`
+rake test:integration:apache2 "./integration_tests/apache2_tests.rb[1:3:5]"
+```
+
 ## Advanced C++ test suite usage
 
 The `test:cxx` unit test suite contains many different test groups. To run a specific one, set the environment variable `GROUPS` to a comma-delimited list of group names:

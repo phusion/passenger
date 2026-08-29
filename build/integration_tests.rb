@@ -43,7 +43,10 @@ task 'test:integration:apache2' => dependencies do
   if boolean_option('SUDO')
     command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
   end
-  if grep = string_option('E')
+  if (loc = string_option('LOC'))
+    command << " #{shesc(loc)}"
+  end
+  if (grep = string_option('E'))
     command << " -e #{shesc grep}"
   end
   sh "cd test && exec #{command}"
