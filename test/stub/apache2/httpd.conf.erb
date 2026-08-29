@@ -49,7 +49,7 @@ Listen 127.0.0.1:<%= @port %>
 
 <% if !has_builtin_module?('prefork.c') &&
       !has_builtin_module?('worker.c') &&
-      !has_builtin_module?('event.c') %>  
+      !has_builtin_module?('event.c') %>
 	<% if has_module?('mod_mpm_event.so') %>
 		LoadModule mpm_event_module "<%= modules_dir %>/mod_mpm_event.so"
 	<% elsif has_module?('mod_mpm_worker.so') %>
@@ -71,6 +71,7 @@ PassengerRoot "<%= @passenger_root %>"
 PassengerDefaultRuby "<%= PlatformInfo.ruby_command %>"
 PassengerDefaultUser <%= CONFIG['default_user'] %>
 PassengerDefaultGroup <%= CONFIG['default_group'] %>
+PassengerPython "<%= PlatformInfo.find_command('python3') || 'python' %>"
 PassengerInstanceRegistryDir "<%= @passenger_temp_dir %>"
 PassengerDataBufferDir "<%= @passenger_temp_dir %>"
 RailsEnv production
