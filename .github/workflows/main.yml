@@ -72,10 +72,26 @@ jobs:
           GEM_PATH="$GEM_PATH"
           PASSENGER_DUMP_CRASH_WATCH_TO_STDERR=true
           PASSENGER_FORCE_TERMINATE_ON_ABORT=true
+          LSAN_OPTIONS="exitcode=0:log_path=$(pwd)/buildout/lsan"
           /usr/bin/timeout --signal KILL --verbose 540
           ../buildout/test/cxx/main
         timeout-minutes: 10
         working-directory: test
+
+      - name: Print LeakSanitizer reports
+        run: |
+          shopt -s nullglob
+          REPORTS=(buildout/lsan.*)
+
+          if (( ${#REPORTS[@]} > 0 )); then
+            echo "::warning::LeakSanitizer found leaks in C++ Linux tests"
+            for REPORT in "${REPORTS[@]}"; do
+              echo "::group::${REPORT}"
+              cat "$REPORT"
+              echo "::endgroup::"
+            done
+          fi
+        if: '!cancelled()'
 
       - name: Archive logs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

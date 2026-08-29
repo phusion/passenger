@@ -24,6 +24,7 @@
 
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
+require 'shellwords'
 
 module PhusionPassenger
 
@@ -506,25 +507,208 @@ module PhusionPassenger
     end
     memoize :cxx_visibility_flag_generates_warnings?, true
 
-    def self.address_sanitizer_flags
+    def self.cc_supports_fsanitize_address?
       if cc_is_clang?
-        if `#{cc} --help` =~ /-fsanitize=/
-          "-fsanitize=address -fsanitize-address-use-after-return=always"
-        else
-          "-faddress-sanitizer"
-        end
+        `#{cc} --help 2>&1` =~ /-fsanitize=/
+      elsif cc_is_gcc?
+        `#{cc} --help=common 2>&1` =~ /-fsanitize=/
       else
-        nil
+        false
       end
     end
+    memoize :cc_supports_fsanitize_address?, true
 
-    def self.undefined_behavior_sanitizer_flags
-      if cc_is_clang?
-        "-fsanitize=undefined"
+    def self.cxx_supports_fsanitize_address?
+      if cxx_is_clang?
+        `#{cxx} --help 2>&1` =~ /-fsanitize=/
+      elsif cxx_is_gcc?
+        `#{cxx} --help=common 2>&1` =~ /-fsanitize=/
       else
-        nil
+        false
       end
     end
+    memoize :cxx_supports_fsanitize_address?, true
+
+    def self.address_sanitizer_cflags
+      if cc_is_clang?
+        if cc_supports_fsanitize_address?
+          result = "-fsanitize=address -fsanitize-address-use-after-return=always"
+        else
+          result = "-faddress-sanitizer"
+        end
+      elsif cc_supports_fsanitize_address?
+        result = "-fsanitize=address"
+      end
+
+      if result
+        result << " -fno-omit-frame-pointer"
+        result << " -fno-optimize-sibling-calls" if cc_supports_fno_optimize_sibling_calls_flag?
+        result
+      end
+    end
+    memoize :address_sanitizer_cflags
+
+    def self.address_sanitizer_cxxflags
+      if cxx_is_clang?
+        if cxx_supports_fsanitize_address?
+          result = "-fsanitize=address -fsanitize-address-use-after-return=always"
+        else
+          result = "-faddress-sanitizer"
+        end
+      elsif cxx_supports_fsanitize_address?
+        result = "-fsanitize=address"
+      end
+
+      if result
+        result << " -fno-omit-frame-pointer"
+        result << " -fno-optimize-sibling-calls" if cxx_supports_fno_optimize_sibling_calls_flag?
+        result
+      end
+    end
+    memoize :address_sanitizer_cxxflags
+
+    def self.address_sanitizer_c_ldflags
+      if cc_supports_fsanitize_address?
+        result = "-fsanitize=address"
+      elsif cc_is_clang?
+        result = "-faddress-sanitizer"
+      end
+      if result && (runtime_flags = cc_sanitizer_runtime_link_flags)
+        result << " #{runtime_flags}"
+      end
+      result
+    end
+    memoize :address_sanitizer_c_ldflags
+
+    def self.address_sanitizer_cxx_ldflags
+      if cxx_supports_fsanitize_address?
+        result = "-fsanitize=address"
+      elsif cxx_is_clang?
+        result = "-faddress-sanitizer"
+      end
+      if result && (runtime_flags = cxx_sanitizer_runtime_link_flags)
+        result << " #{runtime_flags}"
+      end
+      result
+    end
+    memoize :address_sanitizer_cxx_ldflags
+
+    # Clang uses a static ASAN runtime when linking most ELF shared libraries.
+    # A shared library cannot rely on its host executable having initialized that
+    # runtime, and even if it did, that runtime may not be compatible.
+    # So to ensure ASAN runtime initialization *and* compatibility, we always link
+    # to the shared ASAN runtime.
+    #
+    # GCC and macOS Clang already use a dynamic runtime by default.
+    def self.cc_shared_sanitizer_runtime_flag
+      return nil if os_name_simple == "macosx" || !cc_is_clang?
+
+      if `#{cc} --help 2>&1` =~ /-shared-libasan\b/
+        "-shared-libasan"
+      elsif `#{cc} --help 2>&1` =~ /-shared-libsan\b/
+        "-shared-libsan"
+      end
+    end
+    memoize :cc_shared_sanitizer_runtime_flag
+
+    def self.cc_sanitizer_runtime_dir
+      return nil if !cc_is_clang?
+
+      result = `#{cc} -print-runtime-dir 2>/dev/null`.strip
+      result if !result.empty? && File.directory?(result)
+    end
+    memoize :cc_sanitizer_runtime_dir
+
+    def self.cc_sanitizer_runtime_link_flags
+      if (runtime_flag = cc_shared_sanitizer_runtime_flag)
+        result = runtime_flag.dup
+        if (runtime_dir = cc_sanitizer_runtime_dir)
+          result << " -Wl,-rpath,#{Shellwords.escape(runtime_dir)}"
+        end
+        result
+      end
+    end
+    memoize :cc_sanitizer_runtime_link_flags
+
+    # See comment for `#cc_shared_sanitizer_runtime_flag`
+    def self.cxx_shared_sanitizer_runtime_flag
+      return nil if os_name_simple == "macosx" || !cxx_is_clang?
+
+      if `#{cxx} --help 2>&1` =~ /-shared-libasan\b/
+        "-shared-libasan"
+      elsif `#{cxx} --help 2>&1` =~ /-shared-libsan\b/
+        "-shared-libsan"
+      end
+    end
+    memoize :cxx_shared_sanitizer_runtime_flag
+
+    def self.cxx_sanitizer_runtime_dir
+      return nil if !cxx_is_clang?
+
+      result = `#{cxx} -print-runtime-dir 2>/dev/null`.strip
+      result if !result.empty? && File.directory?(result)
+    end
+    memoize :cxx_sanitizer_runtime_dir
+
+    def self.cxx_sanitizer_runtime_link_flags
+      if runtime_flag = cxx_shared_sanitizer_runtime_flag
+        result = runtime_flag.dup
+        if (runtime_dir = cxx_sanitizer_runtime_dir)
+          result << " -Wl,-rpath,#{Shellwords.escape(runtime_dir)}"
+        end
+        result
+      end
+    end
+    memoize :cxx_sanitizer_runtime_link_flags
+
+    def self.cxx_address_sanitizer_runtime_library_path
+      if cxx_is_gcc?
+        result = `#{cxx} -print-file-name=libasan.so 2>/dev/null`.strip
+        result if File.file?(result)
+      elsif cxx_is_clang? && (runtime_dir = cxx_sanitizer_runtime_dir)
+        runtime_arch = cpu_architectures.first
+        runtime_arch = "i386" if runtime_arch == "x86"
+        runtime_library = File.join(runtime_dir, "libclang_rt.asan-#{runtime_arch}.so")
+        runtime_library if File.file?(runtime_library)
+      end
+    end
+    memoize :cxx_address_sanitizer_runtime_library_path
+
+    def self.undefined_behavior_sanitizer_cflags
+      if (cc_is_clang? || cc_is_gcc?) && cc_supports_fsanitize_address?
+        "-fsanitize=undefined"
+      end
+    end
+    memoize :undefined_behavior_sanitizer_cflags
+
+    def self.undefined_behavior_sanitizer_cxxflags
+      if (cxx_is_clang? || cxx_is_gcc?) && cxx_supports_fsanitize_address?
+        "-fsanitize=undefined"
+      end
+    end
+    memoize :undefined_behavior_sanitizer_cxxflags
+
+    def self.undefined_behavior_sanitizer_c_ldflags
+      if (cc_is_clang? || cc_is_gcc?) && cc_supports_fsanitize_address?
+        result = "-fsanitize=undefined"
+        if (runtime_flags = cc_sanitizer_runtime_link_flags)
+          result << " #{runtime_flags}"
+        end
+        result
+      end
+    end
+    memoize :undefined_behavior_sanitizer_c_ldflags
+
+    def self.undefined_behavior_sanitizer_cxx_ldflags
+      if (cxx_is_clang? || cxx_is_gcc?) && cxx_supports_fsanitize_address?
+        result = "-fsanitize=undefined"
+        if (runtime_flags = cxx_sanitizer_runtime_link_flags)
+          result << " #{runtime_flags}"
+        end
+        result
+      end
+    end
+    memoize :undefined_behavior_sanitizer_cxx_ldflags
 
     def self.cxx_14_flag
       source = %{
