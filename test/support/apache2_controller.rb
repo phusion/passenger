@@ -3,6 +3,7 @@ require 'fileutils'
 require 'time'
 PhusionPassenger.require_passenger_lib 'platform_info/apache'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 
 # A class for starting, stopping and restarting Apache, and for manipulating
 # its configuration file. This is used by the integration tests.
@@ -95,7 +96,7 @@ class Apache2Controller
 
     if @codesigning_identity
       require 'open3'
-      stdout, stderr, status = Open3.capture3('codesign', '--force', '-s', @codesigning_identity, '--keychain', File.expand_path(@codesigning_keychain), @mod_passenger)
+      _stdout, stderr, status = Open3.capture3('codesign', '--force', '-s', @codesigning_identity, '--keychain', File.expand_path(@codesigning_keychain), @mod_passenger)
       if !status.success?
         raise "Could not sign Apache module at #{@mod_passenger} with authority #{@codesigning_identity}: #{stderr}"
       end
@@ -115,7 +116,20 @@ class Apache2Controller
     end
 
     prev_error_log_position = error_log_position
-    if !system(*command)
+    environment = {}
+    if boolean_option('USE_ASAN') && PlatformInfo.os_name_simple == 'linux'
+      if (asan_runtime_lib = PlatformInfo.cxx_address_sanitizer_runtime_library_path)
+        # Our Apache module is compiled with AddressSanitizer, but Apache may not be,
+        # and AddressSanitizer must be initialized during executable startup as early
+        # as possible.
+        environment['LD_PRELOAD'] = [ asan_runtime_lib, ENV['LD_PRELOAD'] ].compact.join(':')
+      end
+      # Apache and Passenger agents intentionally retain allocations across
+      # forked process shutdown, so leak reports from this integration setup
+      # are not actionable.
+      environment['ASAN_OPTIONS'] = [ ENV['ASAN_OPTIONS'], 'detect_leaks=0' ].compact.join(':')
+    end
+    if !system(environment, *command)
       raise [
         "Could not start an Apache server: #{$?}",
         "\t---------------- Begin logs -------------------",
