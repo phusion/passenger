@@ -27,7 +27,7 @@ Choose subagent model tier according to judgment required, not merely workload o
   - For Luna-tier models, prefer high for substantive delegated work; use medium only for simple, low-risk, highly mechanical work with clear success criteria or easy verification; do not use lower effort.
 - Only select GPT-5.6-family or newer models.
 
-Immediately after spawning a subagent, briefly report its task/purpose, `fork_turns`, requested model/reasoning effort (or inheritance), and a concise summary of the brief sent to it.
+Immediately after spawning a subagent, briefly report its requested model/reasoning effort (or inheritance). This is important for observability and agent instructions optimization reasons.
 
 Main agent remains responsible for the result. Treat subagent output as evidence, not ground truth: it may be incomplete, partially correct, or mistaken. Check it for plausibility, completeness, contradictions, and missed avenues before relying on it. If result seems weak, incomplete, surprising, or inconsistent with other evidence, send the subagent targeted follow-up instructions or use another subagent for independent verification. Prefer continuing an existing subagent investigation when retaining its accumulated context is useful rather than importing its intermediate work into the main context.
 

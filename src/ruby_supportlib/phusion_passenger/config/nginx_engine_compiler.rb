@@ -51,13 +51,14 @@ module PhusionPassenger
           "-Wno-error",
           PlatformInfo.openssl_extra_cflags,
           PlatformInfo.pcre_extra_cflags,
+          address_sanitizer ? PlatformInfo.address_sanitizer_cflags : nil,
         ].compact.join(" ").strip
         result = "--with-cc-opt=#{Shellwords.escape extra_cflags} "
 
         extra_ldflags = [
           PlatformInfo.openssl_extra_ldflags,
           PlatformInfo.pcre_extra_ldflags,
-          address_sanitizer ? PlatformInfo.address_sanitizer_flags : nil,
+          address_sanitizer ? PlatformInfo.address_sanitizer_c_ldflags : nil,
         ].compact.join(" ").strip
         if !extra_ldflags.empty?
           result << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
