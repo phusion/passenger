@@ -10,6 +10,10 @@ Our build system is [Rake](https://github.com/ruby/rake). Its functionality is s
 
 See more with `rake -T`.
 
+## Concurrent compilation
+
+Run `rake -m -j<NUMBER>` for concurrent compilation. `<NUMBER>` should equal the number of CPU cores.
+
 ## Environment variables
 
 You can pass environment variables via CLI arguments. These are equivalent:
