@@ -50,7 +50,7 @@ version).
 In this configuration, files can be scattered anywhere throughout the filesystem. This
 way Phusion Passenger can be packaged in an FHS-compliant way. The exact locations
 of the different types of files can be specified through a
-_location configuration file_. The existance and usage of a location configuration
+_location configuration file_. The existence and usage of a location configuration
 file does not automatically imply that Phusion Passenger is natively packaged.
 
 If Phusion Passenger needs to have a new Ruby extension compiled, then it will
