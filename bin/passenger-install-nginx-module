@@ -549,7 +549,7 @@ private
 
     extra_ldflags = [
       PlatformInfo.openssl_extra_ldflags,
-      boolean_option('USE_ASAN') ? PlatformInfo.address_sanitizer_flags : nil,
+      boolean_option('USE_ASAN') ? PlatformInfo.address_sanitizer_c_ldflags : nil,
     ].compact.join(" ").strip
 
     command = "sh ./configure --prefix='#{prefix}' "
