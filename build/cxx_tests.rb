@@ -294,9 +294,8 @@ task 'test:cxx' => cxx_test_dependencies do
 end
 
 file("test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" => generate_compilation_task_dependencies('test/cxx/TestSupport.h')) do
-  compile_cxx(
-    "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}",
-    'test/cxx/TestSupport.h',
+  target = "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}"
+  flags = build_compiler_flags_from_options_or_flags(
     include_paths: test_cxx_include_paths,
     flags: [
       "-x c++-header",
@@ -304,4 +303,16 @@ file("test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" => ge
       basic_test_cxx_flags,
     ].compact.flatten
   )
+  ensure_target_directory_exists(target)
+  # The compiler cache does not invalidate this precompiled header when a
+  # header it includes changes -- the generated Constants.h among them -- so it
+  # can hand every test object a PCH built from headers that no longer exist.
+  # It surfaces as a newly added constant being "not declared in this scope" in
+  # the test build only, while the agent, which uses no PCH, compiles against
+  # the same header perfectly well.
+  #
+  # So build it for real every time. It is one compilation, and the objects
+  # that consume it stay cached as before.
+  run_compiler("CCACHE_RECACHE=1 SCCACHE_RECACHE=1 #{cxx} -o #{target} " \
+    "#{EXTRA_PRE_CXXFLAGS} #{flags} #{extra_cxxflags} -c test/cxx/TestSupport.h")
 end
