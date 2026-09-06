@@ -3,7 +3,7 @@
 
 source 'https://rubygems.org/'
 
-ruby '>= 2.5'
+ruby '>= 3.0'
 
 gemspec
 
@@ -11,10 +11,10 @@ group :development do
   gem 'cgi'
   gem 'logger'
   gem 'json'
-  gem 'mime-types', '~> 3.5.1'
-  gem 'rspec', '~> 3.12.0'
+  gem 'mime-types', '~> 3.7.0'
+  gem 'rspec', '~> 3.13.2'
   gem 'rspec-collection_matchers'
-  gem 'webrick', '~> 1.8.1'
+  gem 'webrick', '~> 1.9.2'
   gem 'rubocop'
   gem 'rubocop-rails-omakase'
   gem 'gpgme', install_if: ENV['USER'] == 'camdennarzt'

@@ -16,6 +16,6 @@ Style/StringLiterals:
   EnforcedStyle: single_quotes
 
 AllCops:
-  TargetRubyVersion: 2.5
+  TargetRubyVersion: 3.0
   Exclude:
     - 'packaging/homebrew/**/*'
