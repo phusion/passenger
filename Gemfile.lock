@@ -40,8 +40,9 @@ GEM
     language_server-protocol (3.17.0.6)
     lint_roller (1.1.0)
     logger (1.7.0)
-    mime-types (3.5.2)
-      mime-types-data (~> 3.2015)
+    mime-types (3.7.0)
+      logger
+      mime-types-data (~> 3.2025, >= 3.2025.0507)
     mime-types-data (3.2026.0701)
     mini_portile2 (2.8.9)
     minitest (5.26.1)
@@ -58,23 +59,23 @@ GEM
     rainbow (3.1.1)
     rake (13.4.2)
     regexp_parser (2.12.0)
-    rspec (3.12.0)
-      rspec-core (~> 3.12.0)
-      rspec-expectations (~> 3.12.0)
-      rspec-mocks (~> 3.12.0)
+    rspec (3.13.2)
+      rspec-core (~> 3.13.0)
+      rspec-expectations (~> 3.13.0)
+      rspec-mocks (~> 3.13.0)
     rspec-collection_matchers (1.2.1)
       rspec-expectations (>= 2.99.0.beta1)
-    rspec-core (3.12.3)
-      rspec-support (~> 3.12.0)
-    rspec-expectations (3.12.4)
+    rspec-core (3.13.6)
+      rspec-support (~> 3.13.0)
+    rspec-expectations (3.13.5)
       diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.12.0)
-    rspec-mocks (3.12.7)
+      rspec-support (~> 3.13.0)
+    rspec-mocks (3.13.8)
       diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.12.0)
-    rspec-support (3.12.2)
-    rubocop (1.89.0)
-      json (~> 2.3)
+      rspec-support (~> 3.13.0)
+    rspec-support (3.13.7)
+    rubocop (1.90.0)
+      json (>= 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
       parallel (>= 1.10)
@@ -108,7 +109,7 @@ GEM
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
     unicode-emoji (4.2.0)
-    webrick (1.8.2)
+    webrick (1.9.2)
 
 PLATFORMS
   ruby
@@ -118,16 +119,16 @@ DEPENDENCIES
   gpgme
   json
   logger
-  mime-types (~> 3.5.1)
+  mime-types (~> 3.7.0)
   passenger!
-  rspec (~> 3.12.0)
+  rspec (~> 3.13.2)
   rspec-collection_matchers
   rubocop
   rubocop-rails-omakase
-  webrick (~> 1.8.1)
+  webrick (~> 1.9.2)
 
 RUBY VERSION
-   ruby 2.7.4p191
+   ruby 3.0.2p107
 
 BUNDLED WITH
    2.3.27

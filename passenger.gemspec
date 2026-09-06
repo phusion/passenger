@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   s.author = "Phusion - http://www.phusion.nl/"
   s.email = "software-signing@phusion.nl"
   s.require_paths = [ "src/ruby_supportlib" ]
-  s.required_ruby_version = ">= 2.5.9"
+  s.required_ruby_version = ">= 3.0.2"
   s.metadata = {
     "rubygems_mfa_required" => "true",
     "bug_tracker_uri"   => "https://github.com/phusion/passenger/issues",
