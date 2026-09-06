@@ -16,6 +16,8 @@ Style/StringLiterals:
   EnforcedStyle: single_quotes
 
 AllCops:
+  StringLiteralsFrozenByDefault: true
   TargetRubyVersion: 3.0
   Exclude:
     - 'packaging/homebrew/**/*'
+    - 'build/support/cxx_dependency_map.rb'
