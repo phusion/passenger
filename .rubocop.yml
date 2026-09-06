@@ -19,3 +19,4 @@ AllCops:
   TargetRubyVersion: 3.0
   Exclude:
     - 'packaging/homebrew/**/*'
+    - 'build/support/cxx_dependency_map.rb'
