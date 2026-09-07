@@ -29,7 +29,6 @@
 	// https://bugzilla.redhat.com/show_bug.cgi?id=165427
 	// Also needed for SO_PEERCRED.
 	#define _GNU_SOURCE
-#include <exception>
 #endif
 
 #include <oxt/system_calls.hpp>
@@ -37,6 +36,8 @@
 #include <oxt/macros.hpp>
 #include <string>
 #include <vector>
+#include <exception>
+#include <memory>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -70,7 +71,6 @@
 #include <Utils/Timer.h>
 #include <IOTools/IOUtils.h>
 #include <StrIntTools/StrIntUtils.h>
-#include <Utils/ScopeGuard.h>
 
 namespace Passenger {
 
@@ -569,6 +569,8 @@ createNonBlockingTcpSocketConnection(const StaticString &hostname, unsigned int 
 		throw IOException(message);
 	}
 
+	std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> addrInfoGuard(res, &freeaddrinfo);
+
 
 	int fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
 	if (fd == -1) {
@@ -576,7 +578,7 @@ createNonBlockingTcpSocketConnection(const StaticString &hostname, unsigned int 
 		throw SystemException("Cannot create a TCP socket file descriptor", e);
 	}
 
-	FdGuard guard(fd, nullptr, 0);
+	FdGuard fdGuard(fd, nullptr, 0);
 	P_LOG_FILE_DESCRIPTOR_OPEN4(fd, file, line, "NonBlockingTcpSocketConnection");
 	setNonBlocking(fd);
 
@@ -584,11 +586,10 @@ createNonBlockingTcpSocketConnection(const StaticString &hostname, unsigned int 
 	ret = syscalls::connect(fd, res->ai_addr, res->ai_addrlen);
 	if (ret == -1) {
 		if (errno == EINPROGRESS || errno == EWOULDBLOCK) {
-			guard.clear();
+			fdGuard.clear();
 			return make_pair(fd, false);
 		} else if (errno == EISCONN) {
-			freeaddrinfo(res);
-			guard.clear();
+			fdGuard.clear();
 			return make_pair(fd, true);
 		} else {
 			int e = errno;
@@ -600,8 +601,7 @@ createNonBlockingTcpSocketConnection(const StaticString &hostname, unsigned int 
 			throw SystemException(message, e);
 		}
 	} else {
-		freeaddrinfo(res);
-		guard.clear();
+		fdGuard.clear();
 		return make_pair(fd, true);
 	}
 }

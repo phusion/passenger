@@ -9084,7 +9084,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/StrIntTools/StrIntUtils.h",
    "src/cxx_supportlib/SystemTools/SystemTime.h",
    "src/cxx_supportlib/Utils/FastStringStream.h",
-   "src/cxx_supportlib/Utils/ScopeGuard.h",
    "src/cxx_supportlib/Utils/Socket.h",
    "src/cxx_supportlib/Utils/Timer.h",
    "src/cxx_supportlib/oxt/backtrace.hpp",
