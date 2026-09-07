@@ -572,7 +572,7 @@ createNonBlockingTcpSocketConnection(const StaticString &hostname, unsigned int 
 	std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> addrInfoGuard(res, &freeaddrinfo);
 
 
-	int fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
+	int fd = syscalls::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if (fd == -1) {
 		int e = errno;
 		throw SystemException("Cannot create a TCP socket file descriptor", e);
