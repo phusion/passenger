@@ -34,6 +34,7 @@
 #include <vector>
 #include <map>
 #include <exception>
+#include <functional>
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -221,11 +222,14 @@ private:
 	{
 		StdChannelsAsyncOpenStatePtr state = boost::make_shared<StdChannelsAsyncOpenState>(
 			session.workDirFd);
-		state->stdinOpenThread = new oxt::thread(boost::bind(
-			openStdinChannel, state, session.workDir->getPath()),
+		// The threads borrow state. The caller keeps it alive, and its destructor
+		// interrupts and joins both threads before freeing it. Giving the callbacks
+		// shared ownership would create a cycle through the thread objects.
+		state->stdinOpenThread = new oxt::thread(std::bind(
+			openStdinChannel, std::ref(*state), session.workDir->getPath()),
 			"FIFO opener: " + session.workDir->getPath() + "/stdin", 1024 * 128);
-		state->stdoutAndErrOpenThread = new oxt::thread(boost::bind(
-			openStdoutAndErrChannel, state, session.workDir->getPath()),
+		state->stdoutAndErrOpenThread = new oxt::thread(std::bind(
+			openStdoutAndErrChannel, std::ref(*state), session.workDir->getPath()),
 			"FIFO opener: " + session.workDir->getPath() + "/stdout_and_err", 1024 * 128);
 		return state;
 	}
@@ -288,22 +292,18 @@ private:
 		}
 	}
 
-	static void openStdinChannel(StdChannelsAsyncOpenStatePtr state,
-		const string &workDir)
-	{
-		int fd = syscalls::openat(state->workDirFd, "stdin", O_WRONLY | O_APPEND | O_NOFOLLOW);
+	static void openStdinChannel(StdChannelsAsyncOpenState &state, const string &workDir) {
+		int fd = syscalls::openat(state.workDirFd, "stdin", O_WRONLY | O_APPEND | O_NOFOLLOW);
 		int e = errno;
-		state->stdinFd.assign(fd, __FILE__, __LINE__);
-		state->stdinOpenErrno = e;
+		state.stdinFd.assign(fd, __FILE__, __LINE__);
+		state.stdinOpenErrno = e;
 	}
 
-	static void openStdoutAndErrChannel(StdChannelsAsyncOpenStatePtr state,
-		const string &workDir)
-	{
-		int fd = syscalls::openat(state->workDirFd, "stdout_and_err", O_RDONLY | O_NOFOLLOW);
+	static void openStdoutAndErrChannel(StdChannelsAsyncOpenState &state, const string &workDir) {
+		int fd = syscalls::openat(state.workDirFd, "stdout_and_err", O_RDONLY | O_NOFOLLOW);
 		int e = errno;
-		state->stdoutAndErrFd.assign(fd, __FILE__, __LINE__);
-		state->stdoutAndErrOpenErrno = e;
+		state.stdoutAndErrFd.assign(fd, __FILE__, __LINE__);
+		state.stdoutAndErrOpenErrno = e;
 	}
 
 	bool preloaderStarted() const {
