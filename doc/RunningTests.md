@@ -1,6 +1,6 @@
 # Running tests
 
-All commands also compile whatever is necessary.
+All Rake commands also compile whatever is necessary.
 
 Common test suites:
 
@@ -11,13 +11,16 @@ Common test suites:
 - `rake test:integration:nginx` — Nginx integration tests
 - `rake test:integration:standalone` — Passenger Standalone integration tests
 
-> [!NOTE]
-> Some tests, such as the ones about privilege lowering, require root. Those will only be run if Rake is run as root. For running `test:cxx` in root specifically, use `SUDO=1` (see below).
-
 Packaging-specific test suites:
 
 - `rake test:integration:native_packaging` — run from Debian and RPM packaging automation.
 - `rake test:source_packaging` — run from gem and source tarball packaging automation.
+
+> [!NOTE]
+> Some tests, such as the ones about privilege lowering, require root. Those will only be run if Rake is run as root. For running `test:cxx` in root specifically, use `SUDO=1` (see below).
+
+> [!NOTE]
+> When choosing to bypass Rake, ensure running tests from `test/`.
 
 ## Apache 2 integration test suite usage
 
