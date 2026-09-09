@@ -1,91 +1,65 @@
 # http://EditorConfig.org
 
 root = true
-
-[*]
+trim_trailing_whitespace = true
+insert_final_newline = true
 end_of_line = lf
 charset = utf-8
 
 [bin/*]
-indent_style=space
-indent_size=2
-trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
 
 [dev/*]
-indent_style=space
-indent_size=2
-trim_trailing_whitespace = true
-
-[doc/*.txt]
-indent_style=tab
-indent_size=4
-
-[doc/*/*.txt]
-indent_style=tab
-indent_size=4
+indent_style = space
+indent_size = 2
 
 [*.cpp]
 indent_style = tab
 indent_size = 4
-trim_trailing_whitespace = true
-insert_final_newline = true
 
 [*.c]
 indent_style = tab
 indent_size = 4
-trim_trailing_whitespace = true
-insert_final_newline = true
 
 [*.h]
 indent_style = tab
 indent_size = 4
-trim_trailing_whitespace = true
-insert_final_newline = true
 
 [*.hpp]
 indent_style = tab
 indent_size = 4
-trim_trailing_whitespace = true
-insert_final_newline = true
 
 [*.rb]
 indent_style = space
 indent_size = 2
-trim_trailing_whitespace = true
+
+[*.md]
+indent_style = space
+indent_size = 2
 
 [*.py]
 indent_style = tab
-trim_trailing_whitespace = true
 
 [*.cxxcodebuilder]
 indent_style = space
 indent_size = 2
-trim_trailing_whitespace = true
 
 [config.ru]
 indent_style = space
 indent_size = 2
-trim_trailing_whitespace = true
 
 [Rakefile]
 indent_style = space
 indent_size = 2
-trim_trailing_whitespace = true
 
 [Gemfile]
 indent_style = space
 indent_size = 2
-trim_trailing_whitespace = true
-
-[Jenkinsfile]
-indent_style = space
-indent_size = 2
-trim_trailing_whitespace = true
 
 [*.js]
 indent_style = tab
 indent_size = 4
-trim_trailing_whitespace = true
 
 [src/nginx_module/*.c]
 indent_style = space
@@ -136,4 +110,3 @@ trim_trailing_whitespace = false
 [resources/templates/standalone/config.erb]
 indent_style = space
 indent_size = 4
-trim_trailing_whitespace = true
