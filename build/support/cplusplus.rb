@@ -82,7 +82,7 @@ end
 
 def generate_compilation_task_dependencies(source, options = nil)
   result = [ source ]
-  if dependencies = CXX_DEPENDENCY_MAP[source]
+  if (dependencies = CXX_DEPENDENCY_MAP[source])
     result.concat(dependencies)
   end
   options = maybe_eval_lambda(options)

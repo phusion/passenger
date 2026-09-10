@@ -293,26 +293,40 @@ task 'test:cxx' => cxx_test_dependencies do
   end
 end
 
-file("test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" => generate_compilation_task_dependencies('test/cxx/TestSupport.h')) do
+cxx_test_support_deps = generate_compilation_task_dependencies('test/cxx/TestSupport.h')
+file("test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" => cxx_test_support_deps) do
   target = "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}"
   flags = build_compiler_flags_from_options_or_flags(
     include_paths: test_cxx_include_paths,
     flags: [
       "-x c++-header",
-      PlatformInfo.cxx_is_clang? ? "-Xclang -emit-pch" : nil,
+      PlatformInfo.cxx_is_clang? ? "-Xclang -emit-pch -Xclang -fno-pch-timestamp" : nil,
       basic_test_cxx_flags,
     ].compact.flatten
   )
   ensure_target_directory_exists(target)
-  # The compiler cache does not invalidate this precompiled header when a
-  # header it includes changes -- the generated Constants.h among them -- so it
-  # can hand every test object a PCH built from headers that no longer exist.
-  # It surfaces as a newly added constant being "not declared in this scope" in
-  # the test build only, while the agent, which uses no PCH, compiles against
-  # the same header perfectly well.
+
+  # Need for CCACHE_EXTRAFILES:
+  # Macro definition changes (most notably in Constants.h) may not properly invalidate
+  # compiler caches. This is because compiler caches use the preprocessed output (like
+  # gcc -E) as cache key. This output does not contain unexpanded macro definitions, but
+  # the resulting precompiled header *does*. So a change in Constants.h might trigger a
+  # cache hit when recompiling the precompiled header, resulting in users of the
+  # precompiled headers to get stale Constants.h macro definitions.
   #
-  # So build it for real every time. It is one compilation, and the objects
-  # that consume it stay cached as before.
-  run_compiler("CCACHE_RECACHE=1 SCCACHE_RECACHE=1 #{cxx} -o #{target} " \
-    "#{EXTRA_PRE_CXXFLAGS} #{flags} #{extra_cxxflags} -c test/cxx/TestSupport.h")
+  # Known issue with ccache, affects sccache too:
+  # https://github.com/ccache/ccache/issues/1686
+  #
+  # One possible fix is to skip caching when compiling precompiled headers
+  # CCACHE_RECACHE=1.
+  #
+  # We've chosen a softer approach that allows more cachability: setting
+  # CCACHE_EXTRAFILES to all transitive includes, so that their full
+  # contents are used in the cache keys. This allows caching when dependencies
+  # have been merely touched, or when reverting to previous contents.
+  #
+  # Note: sccache does not support caching precompiled headers at all, so no issues there.
+
+  run_compiler("env CCACHE_EXTRAFILES=#{Shellwords.escape cxx_test_support_deps.join(':')}" \
+    " #{cxx} -o #{target} #{EXTRA_PRE_CXXFLAGS} #{flags} #{extra_cxxflags} -c test/cxx/TestSupport.h")
 end
