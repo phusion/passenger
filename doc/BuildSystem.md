@@ -34,6 +34,7 @@ Customize the build system with environment variables. Boolean options can be se
 - `EXTRA_PRE_LDFLAGS` and `EXTRA_LDFLAGS`: insert additional flags to C/C++ compiler linking invocations. One for before our own flags, one for after.
 - `EXTRA_PRE_C_LDFLAGS` and `EXTRA_C_LDFLAGS`: ditto, but only applies to C compiler linking invocations.
 - `EXTRA_PRE_CXX_LDFLAGS` and `EXTRA_CXX_LDFLAGS`: ditto, but only applies to C++ compiler linking invocations.
+- `USE_CCACHE=<bool>` (default: false): wrap compiler invocations in ccache. See also [ccache setup instructions](DevEnvironmentSetup.md#build-caching).
 - `USE_ASAN=<bool>` (default: false): compile with AddressSanitizer.
 - `USE_UBSAN=<bool>` (default: false): compile with UndefinedBehaviorSanitizer.
 - `OPTIMIZE=<bool>` (default: false): compile with optimizations.

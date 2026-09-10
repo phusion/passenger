@@ -3,14 +3,15 @@
 ## Basic requirements
 
 - A C/C++ compiler toolchain
-    - Ubuntu: `apt install build-essential`
+  - Ubuntu: `apt install build-essential`
 - Ruby, including development headers
-    - Ubuntu: `apt install ruby ruby-dev`
+  - Ubuntu: `apt install ruby ruby-dev`
 - For working on Node.js support: Node.js and NPM
-    - Ubuntu: `apt install nodejs`
+  - Ubuntu: `apt install nodejs`
 - For working on the Apache module: Apache and its development headers
-    - Ubuntu: `apt install apache2 apache2-dev`
+  - Ubuntu: `apt install apache2 apache2-dev`
 - For working on the Nginx module: Nginx and its source code
+  - Ubuntu: `apt install nginx-dev` (sources end up in /usr/share/nginx/src)
 
 ## Setup test suites
 

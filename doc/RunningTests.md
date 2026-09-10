@@ -64,3 +64,25 @@ Some tests, such as the ones about privilege lowering, require root. To run comp
 ```bash
 rake test:cxx SUDO=1
 ```
+
+## Example `test:cxx` output
+
+Output format is modified from the original Tut test framework.
+
+```
+SystemTools_ProcessMetricsCollectorTest:
+  1... ✔
+  2... ✔
+  3... ✗
+  4... skipped
+
+VariantMapTest:
+  1... ✔
+  8... skipped
+
+---> group: SystemTools_ProcessMetricsCollectorTest, test: test<3>
+     problem: assertion failed
+     failed assertion: "PSS is correct"
+
+tests summary: failures:1 ok:851
+```

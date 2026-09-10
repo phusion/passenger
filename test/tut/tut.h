@@ -862,6 +862,30 @@ void ensure_gt(const char* msg, const Q& a, const T& b)
 }
 
 /**
+ * Tests that A < B.
+ * Throws if false.
+ *
+ * NB: both T and Q must have operator << defined somewhere, or
+ * client code will not compile at all!
+ */
+template <class T, class Q>
+void ensure_lt(const char* msg, const Q& a, const T& b)
+{
+    if (!(a < b))
+    {
+        std::stringstream ss;
+        ss << (msg ? msg : "")
+            << (msg ? ":" : "")
+            << " expected '"
+            << a
+            << "' to be less than '"
+            << b
+            << '\'';
+        throw failure(ss.str().c_str());
+    }
+}
+
+/**
  * Tests two objects for being at most in given distance one from another.
  * Borders are excluded.
  * Throws if false.
@@ -1371,4 +1395,3 @@ inline int handle_seh_(DWORD excode)
 }
 
 #endif
-

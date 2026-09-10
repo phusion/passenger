@@ -50,7 +50,7 @@ Before starting work:
 
 Write version control commit messages and PR descriptions for human reviewers. Apply the documentation principles, but optimize specifically for reducing the mental effort needed to understand and review the diff.
 
-Describe changes at the level of intent, behavior, and design rather than code mechanics. Ground inferred intent and design in the request, conversation, tests, and contrast with previous behavior; do not invent unsupported motivation. If missing context could materially change the message, ask focused questions. Otherwise, write the best grounded message available.
+Describe changes at the level of intent, behavior, and design rather than code mechanics. Ground inferred intent and design in the request, conversation, tests, relevant repository history, and contrast with previous behavior. Do not invent unsupported motivation or put unresolved uncertainty about intent into the message. When intent is materially unclear, inspect related history; if focused research does not resolve an ambiguity that could materially change the message, ask focused questions. Otherwise, write the best grounded message available.
 
 Scale the explanation to the review burden. For large or conceptually broad diffs, start with enough high-level context to orient the reviewer: what the change does, how the main parts fit together, and what to expect. This is useful even when it could eventually be inferred from the diff. For small, self-explanatory diffs, avoid a redundant summary unless there is useful non-obvious context.
 

@@ -4,9 +4,9 @@
 
 - [Basic architecture overview](BasicArchitectureOverview.md)
 - [Development environment setup](DevEnvironmentSetup.md) — Prerequisites for C++, Ruby, Node.js, Apache, and Nginx work; test setup; clangd, ccache, and debugger configuration.
-- [Build system](BuildSystem.md) — How it works, how to compile various parts of Passenger. Rake targets for Apache and Nginx integration, output and compiler/linker settings, sanitizers, optimization, and vendored libev/libuv controls.
-- [Running tests](RunningTests.md) — Ruby, Node.js, C++/oxt, integration, and packaging test suites; selecting C++ groups or test numbers; debugger and Valgrind support; and root-only tests.
-- [Writing C++ tests](WritingCxxTests.md) — How C++ tests are structured, how our testing framework (forked tut) works
+- [Build system](BuildSystem.md) — How it works, how to compile various parts of Passenger. Rake targets for Apache and Nginx integration, output and compiler/linker settings, sanitizers, optimization, and vendored libev/libuv controls. Recommended Rake flags for concurrent building.
+- [Running tests](RunningTests.md) — Ruby, Node.js, C++/oxt, integration, and packaging test suites; selecting C++ groups or test numbers; debugger and Valgrind support; and root-only tests; safely running test suites directly (bypassing Rake); example test suite outputs.
+- [Writing C++ tests](WritingCxxTests.md) — How C++ tests are structured; how our testing framework (forked tut) works; available assertions.
   - [C++ mocking strategy](CxxMockingStrategy.md)
 
 ## Best practices
