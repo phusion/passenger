@@ -45,6 +45,8 @@ Increase PassengerLogLevel to print more debugging messages.
 
 Recompile Phusion Passenger with the environment variable `USE_ASAN=1` to enable support for AddressSanitizer.
 
+On GCC, you should set the environment variable `ASAN_OPTIONS=detect_stack_use_after_return=1` too when running binaries.
+
 ## Simulating system call failures
 
 Error conditions are sometimes hard to test. Things like network errors are usually hard to simulate using real equipment. In order to facilitate with error testing, we've developed a system call failure simulation framework, inspired by sqlite's failure test suite. You specify which system call errors should be simulated, and with what probability they should occur. By running normal tests multiple times you can see how Phusion Passenger behaves under these simulated error conditions.

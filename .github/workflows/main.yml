@@ -6,6 +6,7 @@ env:
   DEFAULT_RUBY_VERSION: 3.3
   BUNDLE_CLEAN: true
   USE_ASAN: true
+  ASAN_OPTIONS: detect_stack_use_after_return=1
 
 on:
   push: {}
