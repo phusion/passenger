@@ -24,6 +24,13 @@ rake something FOO=123
 export FOO=123 && rake something
 ```
 
+You can persist environment variables in `config.rb`. This file is automatically loaded by Rake.
+
+```ruby
+# config.rb
+ENV['FOO'] = '123'
+```
+
 ## Customization
 
 Customize the build system with environment variables. Boolean options can be set to true, false, 0 or 1.

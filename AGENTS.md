@@ -96,3 +96,9 @@ Writing guidelines (in addition to "Documentation style"):
 - Must reflect current behavior rather than idealized goal. If they differ, document the divergence.
 
 Update the handbook in the same change when architecture, flows, major concepts, constraints, patterns, decisions, or subsystems change.
+
+## Rules for avoiding caveats
+
+- When bypassing Rake:
+  - Run tests with cwd `test/`
+  - Manually set env vars defined in config.rb (if any). This file is normally loaded during Rake startup.
