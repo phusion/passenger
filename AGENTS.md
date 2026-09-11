@@ -25,7 +25,7 @@ Before starting work:
 
 - Prefer using internal utility library.
   - Prefer oxt/system_calls.hpp wrappers (e.g. oxt::open) over direct syscalls. If no wrapper available, loop until no EINTR.
-  - Consult Utils.h (general utils), IOUtils.h (I/O), FileTools/*.h (file operations).
+  - Consult Utils.h (general utils), IOUtils.h (I/O), `FileTools/*.h` (file operations).
   - Prefer FileDescriptor or safelyClose() over close().
 - Mind security: see SecureTempFileHandling.md; prefer safeReadFile() for reading files.
 
@@ -96,6 +96,12 @@ Writing guidelines (in addition to "Documentation style"):
 - Must reflect current behavior rather than idealized goal. If they differ, document the divergence.
 
 Update the handbook in the same change when architecture, flows, major concepts, constraints, patterns, decisions, or subsystems change.
+
+## OpenAI Codex harness
+
+If running under OpenAI Codex harness, read and follow these before starting work:
+
+- `.agents/skills/codex-subagent-delegation/SKILL.md` — governs subagent delegation
 
 ## Rules for avoiding caveats
 
