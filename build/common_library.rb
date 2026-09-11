@@ -56,10 +56,8 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
     define_cxx_object_compilation_task(
       object_file,
       source_file,
-      lambda { {
-        include_paths: CXX_SUPPORTLIB_INCLUDE_PATHS,
-        flags: [ optimize, maybe_eval_lambda(extra_compiler_flags) ],
-      } }
+      include_paths: CXX_SUPPORTLIB_INCLUDE_PATHS,
+      flags: -> { [ optimize, maybe_eval_lambda(extra_compiler_flags) ] }
     )
   end
 
@@ -74,10 +72,8 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
     define_cxx_object_compilation_task(
       object_file,
       source_file,
-      lambda { {
-        include_paths: CXX_SUPPORTLIB_INCLUDE_PATHS,
-        flags: [ optimize, maybe_eval_lambda(extra_compiler_flags) ],
-      } }
+      include_paths: CXX_SUPPORTLIB_INCLUDE_PATHS,
+      flags: -> { [ optimize, maybe_eval_lambda(extra_compiler_flags) ] }
     )
   end
 

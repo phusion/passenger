@@ -74,25 +74,21 @@ APACHE2_OBJECTS.each_pair do |object, source|
     define_c_object_compilation_task(
       object,
       source,
-      lambda { {
-        include_paths: [
-          "src/agent",
-          *CXX_SUPPORTLIB_INCLUDE_PATHS,
-        ],
-        flags: apache2_cflags,
-      } }
+      include_paths: [
+        "src/agent",
+        *CXX_SUPPORTLIB_INCLUDE_PATHS,
+      ],
+      flags: -> { apache2_cflags }
     )
   else
     define_cxx_object_compilation_task(
       object,
       source,
-      lambda { {
-        include_paths: [
-          "src/agent",
-          *CXX_SUPPORTLIB_INCLUDE_PATHS,
-        ],
-        flags: apache2_cxxflags,
-      } }
+      include_paths: [
+        "src/agent",
+        *CXX_SUPPORTLIB_INCLUDE_PATHS,
+      ],
+      flags: -> { apache2_cxxflags }
     )
   end
 end

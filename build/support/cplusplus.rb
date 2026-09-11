@@ -24,29 +24,33 @@
 
 # Rake functions for compiling/linking C++ stuff.
 
-def run_compiler(*command)
-  PhusionPassenger.require_passenger_lib 'utils/ansi_colors' if !defined?(PhusionPassenger::Utils::AnsiColors)
-  show_command = command.join(' ')
+def run_compiler(*command, environment: {})
+  environment = maybe_eval_lambda(environment) || {}
+  environment = environment.transform_keys(&:to_s).transform_values(&:to_s)
+  environment_display = environment.map do |name, value|
+    "#{name}=#{Shellwords.escape(value)}"
+  end
+  show_command = (environment_display + command).join(' ')
   puts show_command
-  if !system(*command)
+  if !system(environment, *command)
     colors = PhusionPassenger::Utils::AnsiColors.new
     if $? && $?.exitstatus == 4
       # This probably means the compiler ran out of memory.
-      msg = "<b>" +
-            "-----------------------------------------------\n" +
-            "Your compiler failed with the exit status 4. This " +
-            "probably means that it ran out of memory. To solve " +
-            "this problem, try increasing your swap space: " +
-            "https://www.digitalocean.com/community/articles/how-to-add-swap-on-ubuntu-12-04" +
+      msg = "<b>" \
+            "-----------------------------------------------\n" \
+            "Your compiler failed with the exit status 4. This " \
+            "probably means that it ran out of memory. To solve " \
+            "this problem, try increasing your swap space: " \
+            "https://www.digitalocean.com/community/articles/how-to-add-swap-on-ubuntu-12-04" \
             "</b>"
       fail(colors.ansi_colorize(msg))
     elsif $? && $?.termsig == 9
       msg = "<b>" +
-            "-----------------------------------------------\n" +
-            "Your compiler was killed by the operating system. This " +
-            "probably means that it ran out of memory. To solve " +
-            "this problem, try increasing your swap space: " +
-            "https://www.digitalocean.com/community/articles/how-to-add-swap-on-ubuntu-12-04" +
+            "-----------------------------------------------\n" \
+            "Your compiler was killed by the operating system. This " \
+            "probably means that it ran out of memory. To solve " \
+            "this problem, try increasing your swap space: " \
+            "https://www.digitalocean.com/community/articles/how-to-add-swap-on-ubuntu-12-04" \
             "</b>"
       fail(colors.ansi_colorize(msg))
     else
@@ -55,67 +59,54 @@ def run_compiler(*command)
   end
 end
 
-def build_compiler_flags_from_options_or_flags(options_or_flags)
-  if options_or_flags.is_a?(Hash)
-    result = []
-    options = options_or_flags
+def build_compiler_flags(include_paths: [], flags: [])
+  result = []
 
-    (options[:include_paths] || []).each do |path|
-      result << "-I#{path}"
-    end
-
-    if flags = options[:flags]
-      result.concat([ flags ].flatten)
-    end
-
-    result.flatten.reject { |x| x.nil? || x.empty? }.join(" ")
-  elsif options_or_flags.is_a?(String)
-    options_or_flags
-  elsif options_or_flags.respond_to?(:call)
-    build_compiler_flags_from_options_or_flags(options_or_flags.call)
-  elsif options_or_flags.nil?
-    ""
-  else
-    raise ArgumentError, "Invalid argument type: #{options_or_flags.inspect}"
+  (maybe_eval_lambda(include_paths) || []).each do |path|
+    result << "-I#{path}"
   end
+
+  result.concat([ maybe_eval_lambda(flags) ].flatten)
+  result.flatten.reject { |x| x.nil? || x.empty? }.join(" ")
 end
 
-def generate_compilation_task_dependencies(source, options = nil)
+def generate_compilation_task_dependencies(source, deps: [])
   result = [ source ]
   if (dependencies = CXX_DEPENDENCY_MAP[source])
     result.concat(dependencies)
   end
-  options = maybe_eval_lambda(options)
-  if options && options[:deps]
-    result.concat([ options[:deps] ].flatten.compact)
-  end
+  result.concat([ maybe_eval_lambda(deps) ].flatten.compact)
   result
 end
 
-def compile_c(object, source, options_or_flags = nil)
-  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+def compile_c(object, source, environment: {}, include_paths: [], flags: [])
+  flags = build_compiler_flags(include_paths: include_paths, flags: flags)
   ensure_target_directory_exists(object)
-  run_compiler("#{cc} -o #{object} #{EXTRA_PRE_CFLAGS} #{flags} #{extra_cflags} -c #{source}")
+  run_compiler("#{cc} -o #{object} #{EXTRA_PRE_CFLAGS} #{flags} #{extra_cflags} -c #{source}",
+    environment: environment)
 end
 
-def compile_cxx(object, source, options_or_flags = nil)
-  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+def compile_cxx(object, source, environment: {}, include_paths: [], flags: [])
+  flags = build_compiler_flags(include_paths: include_paths, flags: flags)
   ensure_target_directory_exists(object)
-  run_compiler("#{cxx} -o #{object} #{EXTRA_PRE_CXXFLAGS} #{flags} #{extra_cxxflags} -c #{source}")
+  run_compiler("#{cxx} -o #{object} #{EXTRA_PRE_CXXFLAGS} #{flags} #{extra_cxxflags} -c #{source}",
+    environment: environment)
 end
 
-def create_c_executable(target, objects, options_or_flags = nil)
+def create_c_executable(target, objects, environment: {}, flags: [])
   objects = [ objects ].flatten.join(" ")
-  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+  flags = build_compiler_flags(flags: flags)
   ensure_target_directory_exists(target)
-  run_compiler("#{cc} -o #{target} #{objects} #{EXTRA_PRE_C_LDFLAGS} #{flags} #{extra_c_ldflags}")
+  run_compiler("#{cc} -o #{target} #{objects} #{EXTRA_PRE_C_LDFLAGS} #{flags} #{extra_c_ldflags}",
+    environment: environment)
 end
 
-def create_cxx_executable(target, objects, options_or_flags = nil)
+def create_cxx_executable(target, objects, environment: {}, flags: [])
   objects = [ objects ].flatten.join(" ")
-  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+  flags = build_compiler_flags(flags: flags)
   ensure_target_directory_exists(target)
-  run_compiler("#{cxx} -o #{target} #{objects} #{EXTRA_PRE_CXX_LDFLAGS} #{flags} #{extra_cxx_ldflags}")
+  run_compiler("#{cxx} -o #{target} #{objects} #{EXTRA_PRE_CXX_LDFLAGS} #{flags} #{extra_cxx_ldflags}",
+    environment: environment)
 end
 
 def create_static_library(target, objects)
@@ -132,7 +123,7 @@ def create_static_library(target, objects)
   sh "ranlib #{target}"
 end
 
-def create_shared_library(target, objects, options_or_flags = nil)
+def create_shared_library(target, objects, environment: {}, flags: [])
   if PlatformInfo.os_name_simple == "macosx"
     shlib_flag = "-flat_namespace -bundle -undefined dynamic_lookup"
   else
@@ -144,29 +135,30 @@ def create_shared_library(target, objects, options_or_flags = nil)
     fPIC = "-fPIC"
   end
   objects = [ objects ].flatten.join(" ")
-  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+  flags = build_compiler_flags(flags: flags)
   ensure_target_directory_exists(target)
-  run_compiler("#{cxx} #{shlib_flag} #{objects} #{fPIC} -o #{target} #{flags}")
+  run_compiler("#{cxx} #{shlib_flag} #{objects} #{fPIC} -o #{target} #{flags}",
+    environment: environment)
 end
 
-def define_c_object_compilation_task(object, source, options_or_flags = nil)
-  options = options_or_flags if options_or_flags.is_a?(Hash) || options_or_flags.respond_to?(:call)
-  file(object => generate_compilation_task_dependencies(source, options)) do
-    compile_c(object, source, options_or_flags)
+def define_c_object_compilation_task(object, source, environment: {}, include_paths: [], flags: [], deps: [])
+  file(object => generate_compilation_task_dependencies(source, deps: deps)) do
+    compile_c(object, source, environment: environment, include_paths: include_paths, flags: flags)
   end
 end
 
-def define_cxx_object_compilation_task(object, source, options_or_flags = nil)
-  options = options_or_flags if options_or_flags.is_a?(Hash) || options_or_flags.respond_to?(:call)
-  file(object => generate_compilation_task_dependencies(source, options)) do
-    compile_cxx(object, source, options_or_flags)
+def define_cxx_object_compilation_task(object, source, environment: {}, include_paths: [], flags: [], deps: [])
+  file(object => generate_compilation_task_dependencies(source, deps: deps)) do
+    compile_cxx(object, source, environment: environment, include_paths: include_paths, flags: flags)
   end
 end
 
-def define_c_or_cxx_object_compilation_task(object, source, options_or_flags = nil)
+def define_c_or_cxx_object_compilation_task(object, source, environment: {}, include_paths: [], flags: [], deps: [])
   if source =~ /\.c$/
-    define_c_object_compilation_task(object, source, options_or_flags)
+    define_c_object_compilation_task(object, source,
+      environment: environment, include_paths: include_paths, flags: flags, deps: deps)
   else
-    define_cxx_object_compilation_task(object, source, options_or_flags)
+    define_cxx_object_compilation_task(object, source,
+      environment: environment, include_paths: include_paths, flags: flags, deps: deps)
   end
 end

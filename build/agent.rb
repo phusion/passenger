@@ -91,20 +91,18 @@ AGENT_OBJECTS.each_pair do |object, source|
   define_cxx_object_compilation_task(
     object,
     source,
-    lambda { {
-      include_paths: [
-        "src/agent",
-        *CXX_SUPPORTLIB_INCLUDE_PATHS,
-      ],
-      flags: [
-        agent_cflags,
-        libev_cflags,
-        libuv_cflags,
-        PlatformInfo.curl_flags,
-        PlatformInfo.openssl_extra_cflags,
-        PlatformInfo.zlib_flags,
-      ],
-    } }
+    include_paths: [
+      "src/agent",
+      *CXX_SUPPORTLIB_INCLUDE_PATHS,
+    ],
+    flags: -> { [
+      agent_cflags,
+      libev_cflags,
+      libuv_cflags,
+      PlatformInfo.curl_flags,
+      PlatformInfo.openssl_extra_cflags,
+      PlatformInfo.zlib_flags,
+    ] }
   )
 end
 

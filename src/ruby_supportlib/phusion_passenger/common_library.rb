@@ -152,15 +152,13 @@ private
     define_c_or_cxx_object_compilation_task(
       object_file,
       source_file,
-      lambda { {
-        include_paths: CXX_SUPPORTLIB_INCLUDE_PATHS,
-        flags: [
-          libev_cflags,
-          libuv_cflags,
-          optimize,
-          "#{maybe_eval_lambda(extra_compiler_flags)} #{options[:cflags]}".strip,
-        ],
-      } }
+      include_paths: CXX_SUPPORTLIB_INCLUDE_PATHS,
+      flags: -> { [
+        libev_cflags,
+        libuv_cflags,
+        optimize,
+        "#{maybe_eval_lambda(extra_compiler_flags)} #{options[:cflags]}".strip,
+      ] }
     )
   end
 

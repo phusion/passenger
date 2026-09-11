@@ -190,11 +190,9 @@ TEST_CXX_OBJECTS.each_pair do |object, source|
   define_cxx_object_compilation_task(
     object,
     source,
-    lambda { {
-      include_paths: test_cxx_include_paths,
-      flags: test_cxx_flags,
-      deps: "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}",
-    } }
+    include_paths: -> { test_cxx_include_paths },
+    flags: -> { test_cxx_flags },
+    deps: -> { "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" }
   )
 end
 
@@ -296,16 +294,6 @@ end
 cxx_test_support_deps = generate_compilation_task_dependencies('test/cxx/TestSupport.h')
 file("test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" => cxx_test_support_deps) do
   target = "test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}"
-  flags = build_compiler_flags_from_options_or_flags(
-    include_paths: test_cxx_include_paths,
-    flags: [
-      "-x c++-header",
-      PlatformInfo.cxx_is_clang? ? "-Xclang -emit-pch -Xclang -fno-pch-timestamp" : nil,
-      basic_test_cxx_flags,
-    ].compact.flatten
-  )
-  ensure_target_directory_exists(target)
-
   # Need for CCACHE_EXTRAFILES:
   # Macro definition changes (most notably in Constants.h) may not properly invalidate
   # compiler caches. This is because compiler caches use the preprocessed output (like
@@ -327,6 +315,15 @@ file("test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" => cx
   #
   # Note: sccache does not support caching precompiled headers at all, so no issues there.
 
-  run_compiler("env CCACHE_EXTRAFILES=#{Shellwords.escape cxx_test_support_deps.join(':')}" \
-    " #{cxx} -o #{target} #{EXTRA_PRE_CXXFLAGS} #{flags} #{extra_cxxflags} -c test/cxx/TestSupport.h")
+  compile_cxx(target,
+    'test/cxx/TestSupport.h',
+    environment: {
+      'CCACHE_EXTRAFILES' => cxx_test_support_deps.join(':'),
+    },
+    include_paths: test_cxx_include_paths,
+    flags: [
+      "-x c++-header",
+      PlatformInfo.cxx_is_clang? ? "-Xclang -emit-pch -Xclang -fno-pch-timestamp" : nil,
+      basic_test_cxx_flags,
+    ].compact.flatten)
 end
