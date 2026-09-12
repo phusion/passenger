@@ -9,7 +9,7 @@ Release 6.2.1 (Not yet released)
  * Upgrade vendored libev from 4.23 to 4.33.
  * Fix OpenSSL deprecation warnings. Closes GH-2673.
  * [Debian] Drop Debian 11 Bullseye (EOL 2026-08-31).
- * 
+ * Fix reporting of application output printed during smart spawning preloader startup.
 
 
 Release 6.2.0

@@ -116,7 +116,8 @@ private:
 	void initializeStdchannelsCapturing() {
 		if (stdoutAndErrFd != -1) {
 			stdoutAndErrCapturer = boost::make_shared<BackgroundIOCapturer>(
-				stdoutAndErrFd, pid, "output", alreadyReadStdoutAndErrData);
+				stdoutAndErrFd, pid, config->appGroupName, config->logFile,
+				"output", alreadyReadStdoutAndErrData);
 			stdoutAndErrCapturer->setEndReachedCallback(boost::bind(
 				&HandshakePerform::wakeupEventLoop, this));
 			stdoutAndErrCapturer->start();
