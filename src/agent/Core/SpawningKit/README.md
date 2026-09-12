@@ -528,9 +528,9 @@ The error report is presented in two ways:
  1. In the terminal or in log files.
  2. In an HTML page.
 
-The summary is only meant to be displayed in the terminal or in the log files as a one-liner. It can contain basic details (such as the OS error code) but is not meant to contain finer details such as the subprocess stdout/stderr output, the environment variable dump, etc.
+The summary is a one-line field used by the HTML error page and other structured consumers. It can contain basic details (such as the OS error code) but is not meant to contain finer details such as the subprocess stdout/stderr output or the environment variable dump. `SpawnException::what()` provides the plain-text representation for terminals, logs, and exception consumers. It starts with the summary and, when subprocess stdout or stderr is available, adds up to 8 KB of that output in an indented block. For larger output it includes the first and last 4 KB and marks how many bytes were omitted. The complete output remains available in the detailed HTML error page.
 
-Everything else is meant to be displayed in an HTML page. The HTML page explicitly does not include the summary, so the summary must not contain any information that isn't available in all the other fields.
+The remaining report details are meant to be displayed in an HTML page. The HTML page explicitly does not include the summary, so the summary must not contain any information that isn't available in all the other fields.
 
 The advanced problem details are only displayed in the HTML page if one does not explicitly supply a problem description. See "Generating an error report" for more information.
 

@@ -284,13 +284,19 @@ namespace tut {
 			P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
 		}
 
-		writeExact(p.second, "hi\n");
+		writeExact(p.second, "first line\nsecond line\n");
 
 		try {
 			performer.execute();
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
-			ensure_equals(e.getStdoutAndErrData(), "hi\n");
+			ensure_equals(e.getSummary(), "An internal error occurred while spawning an application process: oh no!");
+			ensure_equals(e.getStdoutAndErrData(), "first line\nsecond line\n");
+			ensure_equals(StaticString(e.what()),
+				"An internal error occurred while spawning an application process: oh no!\n"
+				"Subprocess output:\n"
+				"    first line\n"
+				"    second line");
 		}
 	}
 
@@ -359,6 +365,75 @@ namespace tut {
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e.getSummary(),
 				"Cannot open 'properties.json'"));
+		}
+	}
+
+	TEST_METHOD(21) {
+		set_test_name("SpawnException what() removes a trailing CRLF from subprocess output");
+
+		Pipe p = createPipe(__FILE__, __LINE__);
+		CrashingDebugSupport debugSupport;
+		init(SPAWN_DIRECTLY);
+		HandshakePerform performer(*session, pid, FileDescriptor(), p.first,
+			"first line\r\nsecond line\r\n");
+		performer.debugSupport = &debugSupport;
+
+		try {
+			performer.execute();
+			fail("SpawnException expected");
+		} catch (const SpawnException &e) {
+			ensure_equals(StaticString(e.what()),
+				"An internal error occurred while spawning an application process: oh no!\n"
+				"Subprocess output:\n"
+				"    first line\r\n"
+				"    second line");
+		}
+	}
+
+	TEST_METHOD(22) {
+		set_test_name("SpawnException what() does not truncate 8 KB of subprocess output");
+
+		string output(4096, 'a');
+		output.append(4096, 'z');
+		Pipe p = createPipe(__FILE__, __LINE__);
+		CrashingDebugSupport debugSupport;
+		init(SPAWN_DIRECTLY);
+		HandshakePerform performer(*session, pid, FileDescriptor(), p.first, output);
+		performer.debugSupport = &debugSupport;
+
+		try {
+			performer.execute();
+			fail("SpawnException expected");
+		} catch (const SpawnException &e) {
+			string expected = e.getSummary() + "\nSubprocess output:\n    " + output;
+			ensure_equals(string(e.what()), expected);
+			ensure("Output is not marked as truncated",
+				!containsSubstring(e.what(), "[...truncated "));
+		}
+	}
+
+	TEST_METHOD(23) {
+		set_test_name("SpawnException what() keeps the first and last 4 KB of larger subprocess output");
+
+		string output(4096, 'a');
+		output.append(37, 'x');
+		output.append(4096, 'z');
+		Pipe p = createPipe(__FILE__, __LINE__);
+		CrashingDebugSupport debugSupport;
+		init(SPAWN_DIRECTLY);
+		HandshakePerform performer(*session, pid, FileDescriptor(), p.first, output);
+		performer.debugSupport = &debugSupport;
+
+		try {
+			performer.execute();
+			fail("SpawnException expected");
+		} catch (const SpawnException &e) {
+			string expected = e.getSummary() + "\nSubprocess output:\n    "
+				+ string(4096, 'a')
+				+ "\n    [...truncated 37 bytes...]\n    "
+				+ string(4096, 'z');
+			ensure_equals(string(e.what()), expected);
+			ensure_equals(e.getStdoutAndErrData(), output);
 		}
 	}
 

@@ -10,6 +10,7 @@ Release 6.2.1 (Not yet released)
  * Fix OpenSSL deprecation warnings. Closes GH-2673.
  * [Debian] Drop Debian 11 Bullseye (EOL 2026-08-31).
  * Fix reporting of application output printed during smart spawning preloader startup.
+ * Include captured subprocess output in application spawn failure messages in logs, allowing easier troubleshooting without reading the HTML report.
 
 
 Release 6.2.0

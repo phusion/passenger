@@ -91,6 +91,7 @@ private:
 	string problemDescription;
 	string solutionDescription;
 	string stdoutAndErrData;
+	string whatMessage;
 	string id;
 
 	EnvDump parentProcessEnvDump;
@@ -186,6 +187,56 @@ private:
 			message.append(advancedProblemDetails);
 		}
 		return message;
+	}
+
+	static string createWhatMessage(const string &summary,
+		const string &stdoutAndErrData)
+	{
+		static const size_t OUTPUT_CHUNK_SIZE = 4 * 1024;
+		static const size_t MAX_OUTPUT_SIZE = OUTPUT_CHUNK_SIZE * 2;
+
+		// HandshakePerform uses this sentinel when no output capture channel exists.
+		if (summary.empty() || stdoutAndErrData.empty()
+		 || stdoutAndErrData == "(not available)")
+		{
+			return summary;
+		}
+
+		string output;
+		if (stdoutAndErrData.size() > MAX_OUTPUT_SIZE) {
+			output.reserve(MAX_OUTPUT_SIZE + 64);
+			output.append(stdoutAndErrData, 0, OUTPUT_CHUNK_SIZE);
+			output.append("\n[...truncated ");
+			output.append(toString(stdoutAndErrData.size() - MAX_OUTPUT_SIZE));
+			output.append(" bytes...]\n");
+			output.append(stdoutAndErrData, stdoutAndErrData.size() - OUTPUT_CHUNK_SIZE,
+				OUTPUT_CHUNK_SIZE);
+		} else {
+			output = stdoutAndErrData;
+		}
+
+		if (!output.empty() && output[output.size() - 1] == '\n') {
+			output.erase(output.size() - 1);
+			if (!output.empty() && output[output.size() - 1] == '\r') {
+				output.erase(output.size() - 1);
+			}
+		}
+
+		string message;
+		message.reserve(summary.size() + output.size() + 32);
+		message.append(summary);
+		message.append("\nSubprocess output:\n    ");
+		for (string::const_iterator it = output.begin(); it != output.end(); it++) {
+			message.push_back(*it);
+			if (*it == '\n' && it + 1 != output.end()) {
+				message.append("    ");
+			}
+		}
+		return message;
+	}
+
+	void updateWhatMessage() {
+		whatMessage = createWhatMessage(summary, stdoutAndErrData);
 	}
 
 	static string createDefaultProblemDescription(ErrorCategory category,
@@ -791,6 +842,7 @@ public:
 	{
 		assert(_journey.getFirstFailedStep() != UNKNOWN_JOURNEY_STEP);
 		config.internStrings();
+		updateWhatMessage();
 	}
 
 	SpawnException(const std::exception &originalException,
@@ -805,13 +857,19 @@ public:
 	{
 		assert(_journey.getFirstFailedStep() != UNKNOWN_JOURNEY_STEP);
 		config.internStrings();
+		updateWhatMessage();
 	}
 
 	virtual ~SpawnException() throw() {}
 
 
+	/**
+	 * A plain-text representation of the error for terminals, logs and exception consumers.
+	 * Includes subprocess output if available, though limited to a fixed size by truncating
+	 * in the middle.
+	 */
 	virtual const char *what() const throw() {
-		return summary.c_str();
+		return whatMessage.c_str();
 	}
 
 	ErrorCategory getErrorCategory() const {
@@ -833,6 +891,7 @@ public:
 
 	void setSummary(const string &value) {
 		summary = value;
+		updateWhatMessage();
 	}
 
 	const string &getAdvancedProblemDetails() const {
@@ -865,6 +924,7 @@ public:
 
 	void setStdoutAndErrData(const string &value) {
 		stdoutAndErrData = value;
+		updateWhatMessage();
 	}
 
 	const string &getId() const {
@@ -881,6 +941,7 @@ public:
 			summary = createDefaultSummary(category, journey,
 				advancedProblemDetails);
 		}
+		updateWhatMessage();
 		if (problemDescription.empty()) {
 			problemDescription = createDefaultProblemDescription(
 				category, journey, config, advancedProblemDetails,
