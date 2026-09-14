@@ -1,0 +1,40 @@
+name: Copilot Setup Steps
+
+on:
+  workflow_dispatch:
+
+jobs:
+  copilot-setup-steps:
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    # Be sure to mirror environment variables under the "copilot" environment in Github repo settings
+    env: {}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        timeout-minutes: 1
+        with:
+          submodules: true
+
+      - uses: ruby/setup-ruby@0cb964fd540e0a24c900370abf38a33466142735
+        timeout-minutes: 2
+        with:
+          ruby-version: 3.3
+          bundler-cache: true
+        env:
+          BUNDLE_CLEAN: true
+
+      - name: Setup bundle gem path
+        run: ./dev/ci/setup-bundle-gem-path
+
+      - name: Setup dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gdb libcurl4-openssl-dev
+        timeout-minutes: 2
+
+      - name: Setup misc
+        run: |
+          set -x
+          sudo chmod 755 "$HOME"
+          cp test/config.json.github-ci-linux test/config.json
