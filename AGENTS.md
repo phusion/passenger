@@ -2,7 +2,7 @@ This is the codebase for the Phusion Passenger application server. Mostly C++14 
 
 Before starting work:
 
-- read the table of contents in `./doc/DevHandbook.md` to discover available developer documentation. Read relevant documents as needed for the task.
+- read the table of contents in `./doc/DevHandbook.md` to discover available internal developer documentation. Read relevant documents as needed for the task.
 - read `./doc/BasicArchitectureOverview.md` to learn foundational knowledge that aids you in determining research directions.
 
 ## Coding guidelines
@@ -101,8 +101,9 @@ Content coverage:
 - Important or non-obvious design decisions
 - Important subsystems
 
-Writing guidelines (in addition to "Documentation style"):
+Writing guidelines:
 
+- Use the documentation principles.
 - Use `doc/DevHandbook.md` as a concise, keyword-rich topic index and skill router.
 - Give each major topic one canonical document and each document one primary topic.
   - A topic is major when changing it safely requires a distinct mental model because it has its own concepts, constraints, failure modes, platform behavior, or reasons to change. Code-module boundaries alone do not determine document boundaries.
