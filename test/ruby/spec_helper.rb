@@ -104,7 +104,7 @@ RSpec.configure do |config|
   end
 
   config.mock_with :rspec do |mocks|
-    mocks.syntax = [ :should, :receive ]
+    mocks.syntax = [ :should, :receive, :expect ]
     mocks.yield_receiver_to_any_instance_implementation_blocks = false
   end
 

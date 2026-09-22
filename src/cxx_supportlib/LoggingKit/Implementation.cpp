@@ -744,6 +744,7 @@ Schema::Schema() {
 	add("file_descriptor_log_target", ANY_TYPE, OPTIONAL)
 		.setInspectFilter(filterTargetFd);
 	add("redirect_stderr", BOOL_TYPE, OPTIONAL, true);
+	add("redirect_stdout", BOOL_TYPE, OPTIONAL, true);
 	add("app_output_log_level", STRING_TYPE, OPTIONAL, DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME);
 	add("buffer_logs", BOOL_TYPE, OPTIONAL, false);
 	add("disable_log_prefix", BOOL_TYPE, OPTIONAL, false);
@@ -869,6 +870,15 @@ void
 ConfigRealization::apply(const ConfigKit::Store &config, ConfigRealization *oldConfigRlz)
 	BOOST_NOEXCEPT_OR_NOTHROW
 {
+	if (config["redirect_stdout"].asBool()) {
+		int ret = syscalls::dup2(targetFd, STDOUT_FILENO);
+		if (ret == -1) {
+			int e = errno;
+			P_ERROR("Error redirecting logging target to stdout: "
+				<< strerror(e) << " (errno=" << e << ")");
+		}
+	}
+
 	if (config["redirect_stderr"].asBool()) {
 		int ret = syscalls::dup2(targetFd, STDERR_FILENO);
 		if (ret == -1) {
