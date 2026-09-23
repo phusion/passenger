@@ -60,6 +60,11 @@ module PhusionPassenger
             "was not configured with a log file") do
             options[:ignore_logs_not_available] = true
           end
+          opts.on("--ignore-passenger-not-running", "Exit successfully if #{PROGRAM_NAME}#{nl}" +
+            "is not currently running. The default is to#{nl}" +
+            "exit with an error") do
+            options[:ignore_passenger_not_running] = true
+          end
           opts.on("--instance NAME", String, "The #{PROGRAM_NAME} instance to select") do |value|
             options[:instance] = value
           end

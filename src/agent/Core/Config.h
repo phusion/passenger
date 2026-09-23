@@ -404,6 +404,7 @@ public:
 		loggingKit.translator.finalize();
 		addSubSchema(loggingKit.schema, loggingKit.translator);
 		erase("redirect_stderr");
+		erase("redirect_stdout");
 		erase("buffer_logs");
 
 		// Add subschema: controller

@@ -55,6 +55,7 @@ using namespace std;
  *   file_descriptor_log_target   any       -   -
  *   level                        string    -   default("notice")
  *   redirect_stderr              boolean   -   default(true)
+ *   redirect_stdout              boolean   -   default(true)
  *   target                       any       -   default({"stderr": true})
  *
  * END
