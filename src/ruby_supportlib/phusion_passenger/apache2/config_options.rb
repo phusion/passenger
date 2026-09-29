@@ -582,15 +582,6 @@ APACHE2_CONFIGURATION_OPTIONS = [
     header: nil,
   },
   {
-    name: 'PassengerAllowUpgrade',
-    type: :flag,
-    context: :location,
-    htaccess_context: [ 'OR_ALL' ],
-    default: true,
-    desc: 'Whether to tunnel protocol upgrades, such as WebSocket handshakes, to the application.',
-    header: nil,
-  },
-  {
     name: 'PassengerUpgradeIdleTimeout',
     type: :integer,
     context: :location,

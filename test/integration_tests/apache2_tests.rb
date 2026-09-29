@@ -294,12 +294,9 @@ describe 'Apache 2 module' do
       @apache2 << 'PassengerResponseBufferHighWatermark 1048576'
       @apache2.set_vhost('1.passenger.test', "#{@stub.full_app_root}/public")
       @apache2.set_vhost('2.passenger.test', "#{@stub.full_app_root}/public") do |vhost|
-        vhost << 'PassengerAllowUpgrade off'
-      end
-      @apache2.set_vhost('3.passenger.test', "#{@stub.full_app_root}/public") do |vhost|
         vhost << 'PassengerUpgradeIdleTimeout 2'
       end
-      @apache2.set_vhost('4.passenger.test', "#{@stub.full_app_root}/public") do |vhost|
+      @apache2.set_vhost('3.passenger.test', "#{@stub.full_app_root}/public") do |vhost|
         vhost << 'PassengerUpgradeIdleTimeout 2'
         # Bounds the writes towards the client as well, so that a stalled
         # pipeline is torn down quickly enough to assert on.
@@ -319,7 +316,7 @@ describe 'Apache 2 module' do
       begin
         status_line.should == 'HTTP/1.1 101 Switching Protocols'
         headers['upgrade'].should == 'raw'
-        headers['connection'].should match(/upgrade/i)
+        headers['connection'].should == 'Upgrade'
         # What follows a 101 is an opaque byte stream, so the web server must
         # not describe it as an HTTP message body.
         headers.should_not have_key('content-length')
@@ -406,7 +403,7 @@ describe 'Apache 2 module' do
 
     it 'gives up on a client that stops reading rather than holding the worker' do
       socket, status_line, = start_upgrade('/switch_protocol_stream_echo',
-        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '4.passenger.test')
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '3.passenger.test')
       begin
         status_line.should == 'HTTP/1.1 101 Switching Protocols'
 
@@ -459,7 +456,7 @@ describe 'Apache 2 module' do
 
     it 'closes an upgraded connection that stays idle longer than PassengerUpgradeIdleTimeout' do
       socket, status_line, = start_upgrade('/switch_protocol',
-        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '3.passenger.test')
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '2.passenger.test')
       begin
         status_line.should == 'HTTP/1.1 101 Switching Protocols'
         started = Time.now
@@ -477,7 +474,7 @@ describe 'Apache 2 module' do
 
     it 'does not close an upgraded connection that keeps sending' do
       socket, status_line, = start_upgrade('/switch_protocol',
-        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '3.passenger.test')
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '2.passenger.test')
       begin
         status_line.should == 'HTTP/1.1 101 Switching Protocols'
         # Three times the configured timeout, so traffic really has to reset
@@ -535,16 +532,39 @@ describe 'Apache 2 module' do
       end
     end
 
-    it 'does not tunnel when PassengerAllowUpgrade is off' do
-      socket, _, headers = start_upgrade('/switch_protocol',
-        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '2.passenger.test')
+    it 'refuses a 101 that switches to a protocol the client did not ask for' do
+      socket, status_line, = start_upgrade('/switch_protocol_with_headers?upgrade=something-else',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
       begin
-        # Without the tunnel the response is framed as an ordinary HTTP
-        # message body, which is precisely what an upgraded stream must not
-        # be, and nothing reads the client side of the connection.
-        headers.key?('transfer-encoding').should be true
-        socket.write("hello\n")
-        read_available(socket, 1024, 1).should_not include('Echo: hello')
+        status_line.should == 'HTTP/1.1 502 Bad Gateway'
+      ensure
+        socket.close
+      end
+    end
+
+    it 'refuses a 101 that does not say which protocol it switches to' do
+      socket, status_line, = start_upgrade('/switch_protocol_with_headers?upgrade=',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 502 Bad Gateway'
+      ensure
+        socket.close
+      end
+    end
+
+    it 'strips hop-by-hop headers from the 101' do
+      socket, status_line, headers = start_upgrade(
+        '/switch_protocol_with_headers?upgrade=raw&Keep-Alive=timeout%3D5&X-End-To-End=yes',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+        # Keep-Alive describes the connection between the application and
+        # Passenger, not the one to the client.
+        headers.should_not have_key('keep-alive')
+        headers['x-end-to-end'].should == 'yes'
+        headers['connection'].should == 'Upgrade'
+        headers['upgrade'].should == 'raw'
+        read_available(socket, 3).should == "ok\n"
       ensure
         socket.close
       end

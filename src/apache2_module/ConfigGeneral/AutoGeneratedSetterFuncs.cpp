@@ -70,19 +70,6 @@ cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, const char *arg)
 }
 
 static const char *
-cmd_passenger_allow_upgrade(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->mAllowUpgradeSourceFile = cmd->directive->filename;
-	config->mAllowUpgradeSourceLine = cmd->directive->line_num;
-	config->mAllowUpgradeExplicitlySet = true;
-	config->mAllowUpgrade =
-		(arg != NULL) ?
-		ENABLED :
-		DISABLED;
-	return NULL;
-}
-
-static const char *
 cmd_passenger_analytics_log_group(cmd_parms *cmd, void *pcfg, const char *arg) {
 	fprintf(stderr, "WARNING: The 'PassengerAnalyticsLogGroup' option is obsolete. Please remove this option from your configuration file.\n");
 	fflush(stderr);

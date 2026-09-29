@@ -122,6 +122,34 @@ app = lambda do |env|
     ensure
       io.close
     end
+  when '/switch_protocol_with_headers'
+    # Switches protocols with response headers chosen by the query string:
+    # `upgrade` sets the Upgrade header (omitted when empty), and every other
+    # parameter is sent as a header of its own.
+    params = CGI.parse(env['QUERY_STRING'])
+    env['rack.hijack'].call
+    io = env['rack.hijack_io']
+    begin
+      io.write("HTTP/1.1 101 Switching Protocols\r\n")
+      upgrade = params.delete('upgrade')&.first
+      if upgrade && !upgrade.empty?
+        io.write("Upgrade: #{upgrade}\r\n")
+        io.write("Connection: Upgrade\r\n")
+      else
+        # Without an Upgrade header the core does not recognise the switch,
+        # takes this for an ordinary response, and would put the hijacked
+        # (and about to be closed) connection back into its keep-alive pool
+        # for the next request to trip over.
+        io.write("Connection: close\r\n")
+      end
+      params.each_pair { |name, values| io.write("#{name}: #{values.first}\r\n") }
+      io.write("\r\n")
+      io.write("ok\n")
+      io.flush
+    rescue Errno::ECONNRESET, Errno::EPIPE
+    ensure
+      io.close
+    end
   when '/switch_protocol_and_close'
     # Switches protocols, says one thing and hangs up.
     env['rack.hijack'].call

@@ -50,30 +50,37 @@ before a byte reaches the client. It is bounded at 128 KB.
 
 If the status is 101, `tunnelUpgradedConnection()` takes over:
 
-1. The response headers are copied into `r->headers_out` and written out with
-   `ap_send_interim_response()`. That function writes directly to the
-   connection's output filters, bypassing the HTTP header filter, which is
-   what we want: the 101 is the last thing on this connection that is HTTP.
-   `Content-Length` and `Transfer-Encoding` are dropped on the way, because
-   what follows the 101 is not a message body.
-2. The request's filter chains are replaced by the connection's
+1. The 101 is checked against the request and cleaned up, following what
+   mod_proxy_http does with a 101 from a backend. It must name, in its
+   `Upgrade` header, only protocols the client asked for; otherwise the
+   client gets a 502 rather than a tunnel speaking a protocol it did not
+   expect, and nothing has been sent yet that would prevent that. Hop-by-hop
+   headers are dropped — the standard ones and whatever the application's
+   own `Connection` header lists — as are `Content-Length` and
+   `Transfer-Encoding`, since a 101 has no body. `Connection: Upgrade` and
+   `Upgrade` are then set afresh.
+2. The `reqtimeout` input filter is removed. This has to come before the
+   next step, because removing a connection filter only updates the
+   connection's list. In practice mod_reqtimeout is inert here — it arms no
+   deadline for a request that has no body — but an armed deadline would have
+   no meaning once the request is over, and mod_proxy_wstunnel removes it for
+   the same reason.
+3. The request's filter chains are replaced by the connection's
    (`r->output_filters = c->output_filters` and friends). This is what keeps
    the HTTP protocol filters away from the tunneled bytes. It also means the
    request finalisation that Apache performs after the handler returns has
    nothing left to write.
-3. `c->keepalive` is set to `AP_CONN_CLOSE`. This does two jobs: Apache must
+4. `c->keepalive` is set to `AP_CONN_CLOSE`. This does two jobs: Apache must
    not look for another request on this connection, and — less obviously —
    `ap_discard_request_body()`, which `ap_finalize_request_protocol()` calls
    after the handler returns, skips its blocking read only when the
    connection is marked for closing. Without it the worker would sit in a
    read on a finished connection until Apache's `Timeout` expired.
-4. The `reqtimeout` input filter is removed, before the filter chains are
-   swapped, because removing a connection filter only updates the
-   connection's list. In practice mod_reqtimeout is inert here — it arms no
-   deadline for a request that has no body — but an armed deadline would have
-   no meaning once the request is over, and mod_proxy_wstunnel removes it for
-   the same reason.
-5. `pumpUpgradedConnection()` shuttles bytes until one side goes away.
+5. The headers are written out with `ap_send_interim_response()`. That
+   function writes directly to the connection's output filters, bypassing
+   the HTTP header filter, which is what we want: the 101 is the last thing
+   on this connection that is HTTP.
+6. `pumpUpgradedConnection()` shuttles bytes until one side goes away.
 
 The handler then returns `OK`. It must not return an error status after this
 point: the 101 has gone out and the HTTP filters are gone with it, so there is
@@ -161,10 +168,10 @@ forever in that state.
 
 ## Configuration
 
-`PassengerAllowUpgrade` (default on) turns the tunnel off per location.
-Switching it off restores the old behaviour, which is to say a WebSocket
-handshake that does not work; it exists as an escape hatch, not as a
-supported mode.
+There is deliberately no option to turn tunneling off. Apache can already
+refuse upgrades itself — by denying the location, or by conditioning on the
+`Upgrade` header — and Passenger avoids options for what the web server can
+do on its own.
 
 `PassengerUpgradeIdleTimeout` (default 60 seconds; 0 means never) closes a
 tunnel that has seen no traffic in either direction for that many seconds.
@@ -178,9 +185,11 @@ near it; one that can be silent for longer needs the value raised.
 
 **One Apache worker per open connection.** A tunneled connection occupies the
 worker thread — or, under the prefork MPM, the whole process — for its entire
-lifetime. This is inherent to handling the connection inside a request
-handler; Apache's own mod_proxy_wstunnel has the same property, and not even
-the event MPM can release the thread. `MaxRequestWorkers` is therefore the
+lifetime. This is inherent to handling the connection inside a synchronous
+request handler; mod_proxy_wstunnel and mod_proxy_http in every 2.4 release
+have the same property. (httpd trunk's mod_proxy_http can instead suspend a
+tunnel onto the event MPM with `ProxyAsyncDelay`, which is the model to
+follow if this ever needs lifting.) `MaxRequestWorkers` is therefore the
 ceiling on concurrently open WebSockets, and it has to be sized for the
 expected number of connections rather than for the request rate. Nginx and
 Standalone do not tie a connection to a worker thread this way.
@@ -199,7 +208,10 @@ mod_http2 has supported WebSockets over HTTP/2 since httpd 2.4.55, through
 RFC 8441 extended CONNECT and the `H2WebSockets` directive. That directive is
 off by default, and with it off a browser negotiates WebSockets over
 HTTP/1.1, which works. Turning it on makes the handshake arrive over HTTP/2
-instead, where it will not.
+instead, where it will not. httpd 2.4.58 added `ap_get_pollfd_from_conn()`,
+through which mod_http2 hands out a pollable descriptor for a secondary
+connection; mod_proxy's tunnel uses it for exactly this, and it is the way to
+add HTTP/2 support here.
 
 **HTTP/1.0 clients do not get a tunnel** either. HTTP/1.0 has no upgrade
 mechanism, and Apache refuses to write an interim response to such a client.
@@ -223,19 +235,15 @@ nothing about the application's language, so duplicating the endpoints into
 the Python and Node stubs would exercise the same code twice.
 
 The parsing helpers (`findHeaderBlockEnd()`, `parseResponseStatusCode()`,
-`applyUpgradeResponseHeaders()`) have no unit tests: they are private members
-in `Hooks.cpp`, and `test/cxx` neither builds against the Apache headers nor
-has any Apache module tests to extend. They are covered indirectly by the
-integration examples.
+`parseUpgradeResponseHeaders()`, `finalizeUpgradeResponseHeaders()`) have no
+unit tests: they are private members in `Hooks.cpp`, and `test/cxx` neither
+builds against the Apache headers nor has any Apache module tests to extend.
+They are covered indirectly by the integration examples.
+
+The suite is plaintext only, so the mod_ssl path — the whole reason client
+I/O goes through the filter chain — is not covered by it.
 
 Note that an application that switches protocols over a hijacked connection
 must write a real status line. A CGI-style `Status: 101 Switching Protocols`
 header is not enough for the core to recognise the switch, and the request
 fails with a 502 instead.
-
-`dev/e2e/apache-websocket/` builds the module and runs these tests in a
-container, and additionally offers a demo that drives a real WebSocket client
-against a real echo application, over plain HTTP and over TLS. The TLS pass is
-the only coverage of the mod_ssl path, which is the whole reason client I/O
-goes through the filter chain; the integration suite is plaintext only. See
-its README.

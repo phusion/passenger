@@ -706,7 +706,7 @@ private:
 			string earlyResponse;
 			size_t earlyResponseHeaderSize = string::npos;
 
-			if (shouldTunnelUpgrade(r, config)) {
+			if (shouldTunnelUpgrade(r)) {
 				UPDATE_TRACE_POINT();
 				earlyResponse = readResponseHeaderBlock(conn, earlyResponseHeaderSize);
 				if (earlyResponseHeaderSize != string::npos
@@ -1374,15 +1374,14 @@ private:
 	 * request that owns one and whose client speaks a protocol in which an
 	 * upgrade is meaningful.
 	 */
-	bool shouldTunnelUpgrade(request_rec *r, DirConfig *config) const {
+	bool shouldTunnelUpgrade(request_rec *r) const {
 		#ifndef PASSENGER_APACHE_SUPPORTS_UPGRADE_TUNNELING
 			return false;
 		#else
 			const char *upgrade = apr_table_get(r->headers_in, "Upgrade");
 			const char *connection = apr_table_get(r->headers_in, "Connection");
 
-			return config->getAllowUpgrade()
-				&& upgrade != NULL
+			return upgrade != NULL
 				&& *upgrade != '\0'
 				&& connection != NULL
 				&& connectionUpgradeFlagSet(connection)
@@ -1509,15 +1508,11 @@ private:
 	}
 
 	/**
-	 * Copies the application's response headers into `r` so that Apache can
-	 * write them out as part of the 101 response.
-	 *
-	 * Framing headers are dropped: an upgraded connection carries an opaque
-	 * byte stream rather than a message body, so a Content-Length or
-	 * Transfer-Encoding would misdescribe what follows.
+	 * Parses the response headers in the header block at the start of `data`
+	 * into `headers`, skipping the status line.
 	 */
-	void applyUpgradeResponseHeaders(request_rec *r, const string &data,
-		size_t headerBlockSize)
+	void parseUpgradeResponseHeaders(apr_pool_t *pool, apr_table_t *headers,
+		const string &data, size_t headerBlockSize)
 	{
 		size_t pos = data.find('\n');
 		if (pos == string::npos) {
@@ -1549,9 +1544,9 @@ private:
 					valueStart++;
 				}
 
-				const char *name = apr_pstrmemdup(r->pool, data.data() + pos,
+				const char *name = apr_pstrmemdup(pool, data.data() + pos,
 					colon - pos);
-				const char *value = apr_pstrmemdup(r->pool,
+				const char *value = apr_pstrmemdup(pool,
 					data.data() + valueStart, lineEnd - valueStart);
 
 				/* Unlike the normal response path, nothing downstream of here
@@ -1560,16 +1555,94 @@ private:
 				 */
 				if (colon > pos
 				 && strpbrk(name, "\r\n") == NULL
-				 && strpbrk(value, "\r\n") == NULL
-				 && strcasecmp(name, "Content-Length") != 0
-				 && strcasecmp(name, "Transfer-Encoding") != 0)
+				 && strpbrk(value, "\r\n") == NULL)
 				{
-					apr_table_addn(r->headers_out, name, value);
+					apr_table_addn(headers, name, value);
 				}
 			}
 
 			pos = eol + 1;
 		}
+	}
+
+	/** Whether the comma-separated header value `list` contains `token`. */
+	static bool headerListContains(apr_pool_t *pool, const char *list,
+		const char *token)
+	{
+		char *copy = apr_pstrdup(pool, list);
+		char *state;
+
+		for (char *item = apr_strtok(copy, ", \t", &state); item != NULL;
+		     item = apr_strtok(NULL, ", \t", &state))
+		{
+			if (strcasecmp(item, token) == 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	static int collectHeaderListTokens(void *rec, const char *key, const char *value) {
+		vector<string> *tokens = (vector<string> *) rec;
+		string copy(value);
+		char *state;
+
+		for (char *item = apr_strtok(&copy[0], ", \t", &state); item != NULL;
+		     item = apr_strtok(NULL, ", \t", &state))
+		{
+			tokens->push_back(item);
+		}
+		return 1;
+	}
+
+	/**
+	 * Checks the application's 101 against the request and reduces its
+	 * headers to what may be sent to the client, the way mod_proxy_http
+	 * treats a 101 from a backend. Returns the protocol the application
+	 * switched to, or NULL if the 101 is not an acceptable answer to the
+	 * request.
+	 */
+	const char *finalizeUpgradeResponseHeaders(request_rec *r, apr_table_t *headers) {
+		const char *requested = apr_table_get(r->headers_in, "Upgrade");
+		const char *upgrade = apr_table_get(headers, "Upgrade");
+		vector<string> tokens;
+
+		/* RFC 9110 section 7.8: a 101 names the protocols it switches to, and
+		 * those must be among the ones the client asked for. Anything else
+		 * means we would tunnel a protocol the client is not expecting.
+		 */
+		if (upgrade == NULL || *upgrade == '\0') {
+			return NULL;
+		}
+		upgrade = apr_pstrdup(r->pool, upgrade);
+		collectHeaderListTokens(&tokens, "Upgrade", upgrade);
+		for (vector<string>::const_iterator it = tokens.begin(); it != tokens.end(); it++) {
+			if (!headerListContains(r->pool, requested, it->c_str())) {
+				return NULL;
+			}
+		}
+
+		/* Hop-by-hop headers describe the connection between the application
+		 * and us, not the one to the client: the standard ones, and whatever
+		 * the application listed in its own Connection header. A 101 carries
+		 * no body either, so no framing header may describe one.
+		 */
+		static const char * const hopByHop[] = {
+			"Connection", "Keep-Alive", "Proxy-Connection", "TE", "Trailer",
+			"Transfer-Encoding", "Upgrade", "Content-Length", NULL
+		};
+		tokens.clear();
+		apr_table_do(collectHeaderListTokens, &tokens, headers, "Connection", NULL);
+		for (vector<string>::const_iterator it = tokens.begin(); it != tokens.end(); it++) {
+			apr_table_unset(headers, it->c_str());
+		}
+		for (const char * const *name = hopByHop; *name != NULL; name++) {
+			apr_table_unset(headers, *name);
+		}
+
+		apr_table_setn(headers, "Connection", "Upgrade");
+		apr_table_setn(headers, "Upgrade", upgrade);
+		return upgrade;
 	}
 
 	/**
@@ -1889,10 +1962,25 @@ private:
 		TRACE_POINT();
 		conn_rec *c = r->connection;
 		apr_bucket_brigade *bb = apr_brigade_create(r->pool, c->bucket_alloc);
+		apr_table_t *headers = apr_table_make(r->pool, 8);
+
+		/* Nothing has been sent to the client yet, so an unacceptable 101 can
+		 * still be answered with an ordinary error response.
+		 */
+		parseUpgradeResponseHeaders(r->pool, headers, earlyResponse, headerBlockSize);
+		if (finalizeUpgradeResponseHeaders(r, headers) == NULL) {
+			const char *requested = apr_table_get(r->headers_in, "Upgrade");
+			const char *offered = apr_table_get(headers, "Upgrade");
+			P_ERROR("The application answered an upgrade request for \""
+				<< requested << "\" with 101 Switching Protocols, but to \""
+				<< (offered != NULL ? offered : "(no Upgrade header)")
+				<< "\"; refusing to tunnel the connection");
+			return HTTP_BAD_GATEWAY;
+		}
 
 		r->status = HTTP_SWITCHING_PROTOCOLS;
 		r->status_line = getStatusCodeAndReasonPhrase(HTTP_SWITCHING_PROTOCOLS);
-		applyUpgradeResponseHeaders(r, earlyResponse, headerBlockSize);
+		r->headers_out = headers;
 
 		/* mod_reqtimeout enforces deadlines on reads through the connection
 		 * filter chain, which is the chain the tunnel reads from. It is inert
