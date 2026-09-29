@@ -888,6 +888,11 @@
          "has_default_value" : "static",
          "type" : "boolean"
       },
+      "redirect_stdout" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
       "target" : {
          "default_value" : {
             "stderr" : true
