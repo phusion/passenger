@@ -1,11 +1,12 @@
 Release 7.0.0 (Not yet released)
 -------------
+ * [Apache] Support WebSockets and other protocol upgrades, over HTTP/1.1 and Apache 2.4 or later. Each open connection occupies an Apache worker for its lifetime, so MaxRequestWorkers bounds how many can be open at once. The new PassengerUpgradeIdleTimeout option closes a connection that has been idle for 60 seconds, as Nginx and mod_proxy_wstunnel also do by default; raise it for applications that can be silent for longer, or set 0 to disable it. Closes GH-1202.
+ * [Ruby] Increase minimum supported Ruby to 3.0.
  * 
 
 
 Release 6.2.1 (Not yet released)
 -------------
- * [Apache] Support WebSockets and other protocol upgrades, over HTTP/1.1 and Apache 2.4 or later. Each open connection occupies an Apache worker for its lifetime, so MaxRequestWorkers bounds how many can be open at once. The new PassengerUpgradeIdleTimeout option closes a connection that has been idle for 60 seconds, as Nginx and mod_proxy_wstunnel also do by default; raise it for applications that can be silent for longer, or set 0 to disable it. Closes GH-1202.
  * Improve SELinux compatibility. Closes GH-2630 & GH-2670.
  * Improve header parsing resilience. Closes GH-2646.
  * [Ruby] Improve Frozen String compatibility. GH-2659.
