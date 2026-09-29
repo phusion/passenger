@@ -581,6 +581,25 @@ APACHE2_CONFIGURATION_OPTIONS = [
     desc: "Whether to support encoded slashes in the URL",
     header: nil,
   },
+  {
+    name: 'PassengerAllowUpgrade',
+    type: :flag,
+    context: :location,
+    htaccess_context: [ 'OR_ALL' ],
+    default: true,
+    desc: 'Whether to tunnel protocol upgrades, such as WebSocket handshakes, to the application.',
+    header: nil,
+  },
+  {
+    name: 'PassengerUpgradeIdleTimeout',
+    type: :integer,
+    context: :location,
+    htaccess_context: [ 'OR_ALL' ],
+    min_value: 0,
+    default: 60,
+    desc: 'The number of seconds an upgraded connection, such as a WebSocket, may be idle before it is closed. 0 means never.',
+    header: nil,
+  },
 
 
   ##### Enterprise options (placeholders in OSS) #####

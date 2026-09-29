@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Runs the WebSocket demo: starts Apache with mod_passenger in front of the
+# echo application in websocket-demo/, drives it with a WebSocket client, and
+# shuts everything down again. Meant to be run inside the container started by
+# ./run; see README.md.
+set -euo pipefail
+
+SELFDIR=$(cd "$(dirname "$0")" && pwd)
+PASSENGER_ROOT=$(cd "$SELFDIR/../../.." && pwd)
+PORT=${PORT:-3000}
+TLS_PORT=${TLS_PORT:-3443}
+
+WORKDIR=$(mktemp -d /tmp/passenger-ws-demo-XXXXXX)
+httpd_pid=
+cleanup() {
+	if [[ -n "$httpd_pid" ]]; then
+		kill "$httpd_pid" 2>/dev/null || true
+		wait "$httpd_pid" 2>/dev/null || true
+	fi
+	rm -rf "$WORKDIR"
+}
+trap cleanup EXIT TERM
+trap 'cleanup; exit 130' INT
+
+# The application is copied out of the source tree so that a demo run leaves
+# nothing behind in it.
+APPROOT="$WORKDIR/app"
+mkdir -p "$APPROOT/public" "$APPROOT/tmp"
+cp "$SELFDIR/websocket-demo/config.ru" "$APPROOT/"
+
+openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+	-subj '/CN=localhost' \
+	-keyout "$WORKDIR/server.key" -out "$WORKDIR/server.crt" 2>/dev/null
+
+sed -e "s|@PORT@|$PORT|g" \
+    -e "s|@TLS_PORT@|$TLS_PORT|g" \
+    -e "s|@WORKDIR@|$WORKDIR|g" \
+    -e "s|@APPROOT@|$APPROOT|g" \
+    -e "s|@PASSENGER_ROOT@|$PASSENGER_ROOT|g" \
+    "$SELFDIR/websocket-demo/httpd.conf.template" > "$WORKDIR/httpd.conf"
+
+show_error_log() {
+	echo "==> Apache error log"
+	cat "$WORKDIR/error.log" 2>/dev/null || true
+}
+
+echo "==> Starting Apache on port $PORT"
+# -DFOREGROUND keeps Apache attached to this script, so that it dies with it
+# rather than being left behind as a daemon.
+httpd -f "$WORKDIR/httpd.conf" -DFOREGROUND &
+httpd_pid=$!
+
+for _ in $(seq 1 50); do
+	if ! kill -0 "$httpd_pid" 2>/dev/null; then
+		echo "Apache exited during startup" >&2
+		show_error_log
+		exit 1
+	fi
+	if ruby -rsocket -e 'TCPSocket.new("127.0.0.1", Integer(ARGV[0])).close' "$PORT" 2>/dev/null; then
+		break
+	fi
+	sleep 0.2
+done
+
+status=0
+
+echo "==> Running the WebSocket client over plain HTTP"
+set +e
+ruby "$SELFDIR/websocket-demo/client.rb" 127.0.0.1 "$PORT"
+status=$?
+set -e
+
+if [[ $status -eq 0 ]]; then
+	echo
+	echo "==> Running the WebSocket client over TLS"
+	set +e
+	ruby "$SELFDIR/websocket-demo/client.rb" 127.0.0.1 "$TLS_PORT" --tls
+	status=$?
+	set -e
+fi
+
+if [[ $status -ne 0 ]]; then
+	show_error_log
+fi
+
+exit $status

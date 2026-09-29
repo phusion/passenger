@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Runs inside the container started by ./run. Prepares the environment, then
+# hands over to container-build-and-test as an unprivileged user.
+set -euo pipefail
+
+SELFDIR=$(cd "$(dirname "$0")" && pwd)
+cd /passenger
+
+# The test suite runs application processes as an unprivileged user and needs a
+# writable HOME. Apache itself is started by the suite on a high port, so
+# nothing here needs root.
+export HOME=/home/app
+chown -R app:app /bundle /passenger/buildout /passenger/node_modules "$HOME"
+
+# test/config.json lives in the bind-mounted source tree and names accounts
+# that exist on Rocky Linux but not on a macOS host, so a copy left behind
+# would break a later test run outside the container. Remove it again unless
+# it was already there.
+created_config=
+cleanup() {
+	if [[ -n "$created_config" ]]; then
+		rm -f test/config.json
+	fi
+}
+trap cleanup EXIT INT TERM
+
+if [[ ! -e test/config.json ]]; then
+	# The constraints these names have to satisfy are documented in
+	# test/config.json.example.
+	cat > test/config.json <<-'EOF'
+	{
+	  "normal_user_1": "games",
+	  "normal_user_2": "daemon",
+	  "default_user": "bin",
+	  "normal_group_1": "daemon",
+	  "normal_group_2": "man",
+	  "default_group": "games",
+
+	  "nonexistant_user": "xxxxxxxxxxxxxxxxxxx",
+	  "nonexistant_group": "xxxxxxxxxxxxxxxxxxx",
+	  "nonexistant_uid": 9999,
+	  "nonexistant_gid": 9999
+	}
+	EOF
+	chown app:app test/config.json
+	created_config=yes
+	echo "--> Wrote test/config.json (removed again on exit)"
+fi
+
+if [[ "${ALL:-0}" = 1 ]]; then
+	RSPEC_ARGS=("$@")
+else
+	RSPEC_ARGS=(-e 'protocol upgrades' "$@")
+fi
+
+setpriv --reuid app --regid app --init-groups --inh-caps=-all --no-new-privs \
+	env HOME="$HOME" \
+	    BUNDLE_PATH=/bundle \
+	    BUNDLE_FROZEN=true \
+	    LC_ALL=C.UTF-8 \
+	    COMPILE_CONCURRENCY="${COMPILE_CONCURRENCY:-4}" \
+	    SHELL_ONLY="${SHELL_ONLY:-0}" \
+	    DEMO="${DEMO:-0}" \
+	"$SELFDIR/container-build-and-test" "${RSPEC_ARGS[@]}"

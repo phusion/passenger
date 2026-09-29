@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Builds Passenger's Apache module in a Rocky Linux container and runs the
+# Apache integration tests against it. See README.md.
+set -euo pipefail
+
+SELFDIR=$(cd "$(dirname "$0")" && pwd)
+PASSENGER_ROOT=$(cd "$SELFDIR/../../.." && pwd)
+
+IMAGE=passenger-e2e-apache-websocket
+BUILDOUT_VOLUME=passenger-e2e-apache-websocket-buildout
+BUNDLE_VOLUME=passenger-e2e-apache-websocket-bundle
+NODE_MODULES_VOLUME=passenger-e2e-apache-websocket-node-modules
+
+if tty -s; then
+	TTY_ARGS=(-t -i)
+else
+	TTY_ARGS=()
+fi
+
+# The test suite addresses its virtual hosts by name. /etc/hosts is managed by
+# Docker at container start, so these cannot be baked into the image.
+HOST_ARGS=(--add-host "passenger.test:127.0.0.1")
+for i in 1 2 3 4 5 6 7 8 9; do
+	HOST_ARGS+=(--add-host "$i.passenger.test:127.0.0.1")
+done
+
+docker build --tag "$IMAGE" "$SELFDIR"
+
+# Build products and gems go into volumes rather than into the mounted source
+# tree, so that a container run and a build on the host cannot overwrite each
+# other's binaries.
+# --init gives the container an init process that forwards signals, so that
+# interrupting this script actually tears the container down rather than
+# leaving it behind with Apache still listening.
+exec docker run --rm --init "${TTY_ARGS[@]}" "${HOST_ARGS[@]}" \
+	--volume "$PASSENGER_ROOT:/passenger" \
+	--volume "$BUILDOUT_VOLUME:/passenger/buildout" \
+	--volume "$BUNDLE_VOLUME:/bundle" \
+	--volume "$NODE_MODULES_VOLUME:/passenger/node_modules" \
+	--env "COMPILE_CONCURRENCY=${COMPILE_CONCURRENCY:-4}" \
+	--env "ALL=${ALL:-0}" \
+	--env "DEMO=${DEMO:-0}" \
+	--env "SHELL_ONLY=${SHELL_ONLY:-0}" \
+	"$IMAGE" \
+	/passenger/dev/e2e/apache-websocket/container-entrypoint "$@"

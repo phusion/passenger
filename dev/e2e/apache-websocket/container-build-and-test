@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Builds the Apache module and runs the tests. Started by container-entrypoint
+# as the unprivileged "app" user; arguments are passed on to rspec.
+set -euo pipefail
+
+SELFDIR=$(cd "$(dirname "$0")" && pwd)
+cd /passenger
+
+echo "==> Installing gems"
+# BUNDLE_FROZEN, set by the entrypoint, keeps Bundler from rewriting the
+# tracked Gemfile.lock in the mounted source tree.
+bundle install --quiet
+
+# The Node.js examples of the Apache suite run applications that load
+# Passenger's Node loader, which needs these. --no-package-lock keeps npm from
+# rewriting the tracked lockfile.
+if [[ ! -d /passenger/node_modules/express ]]; then
+	echo "==> Installing Node.js packages"
+	npm install --silent --no-audit --no-fund --no-package-lock
+fi
+
+echo "==> Building the Apache module"
+bundle exec rake apache2 -j"${COMPILE_CONCURRENCY:-4}"
+
+if [[ "${SHELL_ONLY:-0}" = 1 ]]; then
+	exec bash -l
+fi
+
+if [[ "${DEMO:-0}" = 1 ]]; then
+	exec "$SELFDIR/run-websocket-demo"
+fi
+
+echo "==> Running the Apache integration tests"
+cd test
+exec bundle exec rspec -c -f d --tty integration_tests/apache2_tests.rb "$@"

@@ -70,6 +70,19 @@ cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, const char *arg)
 }
 
 static const char *
+cmd_passenger_allow_upgrade(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->mAllowUpgradeSourceFile = cmd->directive->filename;
+	config->mAllowUpgradeSourceLine = cmd->directive->line_num;
+	config->mAllowUpgradeExplicitlySet = true;
+	config->mAllowUpgrade =
+		(arg != NULL) ?
+		ENABLED :
+		DISABLED;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_analytics_log_group(cmd_parms *cmd, void *pcfg, const char *arg) {
 	fprintf(stderr, "WARNING: The 'PassengerAnalyticsLogGroup' option is obsolete. Please remove this option from your configuration file.\n");
 	fflush(stderr);
@@ -953,6 +966,15 @@ cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.turbocachingExplicitlySet = true;
 	serverConfig.turbocaching = arg != NULL;
 	return NULL;
+}
+
+static const char *
+cmd_passenger_upgrade_idle_timeout(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->mUpgradeIdleTimeoutSourceFile = cmd->directive->filename;
+	config->mUpgradeIdleTimeoutSourceLine = cmd->directive->line_num;
+	config->mUpgradeIdleTimeoutExplicitlySet = true;
+	return setIntConfig(cmd, arg, config->mUpgradeIdleTimeout, 0);
 }
 
 static const char *

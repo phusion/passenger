@@ -24,6 +24,10 @@ Packaging-specific test suites:
 
 ## Apache 2 integration test suite usage
 
+On a host without Apache and its development headers — a macOS workstation,
+typically — `dev/e2e/apache-websocket/` builds the module and runs this suite
+in a container. See its README.
+
 To run specific tests, use either the `E` or `LOC` environment variables:
 
 ```bash
