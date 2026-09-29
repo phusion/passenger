@@ -956,6 +956,15 @@ cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_upgrade_idle_timeout(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->mUpgradeIdleTimeoutSourceFile = cmd->directive->filename;
+	config->mUpgradeIdleTimeoutSourceLine = cmd->directive->line_num;
+	config->mUpgradeIdleTimeoutExplicitlySet = true;
+	return setIntConfig(cmd, arg, config->mUpgradeIdleTimeout, 0);
+}
+
+static const char *
 cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, const char *arg) {
 	fprintf(stderr, "WARNING: The 'PassengerUseGlobalQueue' option is obsolete: global queueing is now always turned on. Please remove this option from your configuration file.\n");
 	fflush(stderr);
