@@ -1,14 +1,13 @@
 # encoding: binary
 
 require File.expand_path(File.dirname(__FILE__) + '/library')
-require 'cgi'
 
 app = lambda do |env|
   case env['PATH_INFO']
   when '/'
-    params = CGI.parse(env['QUERY_STRING'])
-    if params['sleep_seconds'].first
-      sleep params['sleep_seconds'].first.to_f
+    params = Rack::Utils.parse_query(env['QUERY_STRING'])
+    if params.include?('sleep_seconds')
+      sleep params['sleep_seconds'].to_f
     end
 
     if File.exist?('front_page.txt')
@@ -93,6 +92,17 @@ app = lambda do |env|
     ensure
       io.close
     end
+  when '/allocate_memory'
+    $global_variable = ' ' * (1024 * 1024 * 125)
+    text_response('ok')
+  when '/sleep_until_exists'
+    params = Rack::Utils.parse_query(env['QUERY_STRING'])
+    name = params['name']
+    File.open("waiting_#{name}", 'w')
+    while !File.exist?(name)
+      sleep 0.1
+    end
+    text_response('ok')
   else
     [ 404, { 'Content-Type' => 'text/plain' }, [ 'Unknown URI' ] ]
   end
