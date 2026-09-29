@@ -1,6 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'tmpdir'
 require 'json'
+require 'digest/sha1'
 require 'socket'
 require 'fileutils'
 require 'net/http'
@@ -203,6 +204,370 @@ describe 'Apache 2 module' do
     it 'does not interfere with the root website' do
       @server = "http://1.passenger.test:#{@apache2.port}"
       get('/').should == 'This is the stub directory.'
+    end
+  end
+
+  describe 'protocol upgrades' do
+    # Connects to Apache and sends a request that asks for a protocol upgrade.
+    # Returns the socket -- positioned right after the response header block --
+    # together with the status line and the response headers.
+    def start_upgrade(path, headers, host: '1.passenger.test', pipelined_payload: nil)
+      socket = TCPSocket.new(host, @apache2.port)
+      socket.sync = true
+
+      request = +"GET #{path} HTTP/1.1\r\nHost: #{host}\r\n"
+      headers.each_pair { |name, value| request << "#{name}: #{value}\r\n" }
+      request << "\r\n"
+      request << pipelined_payload if pipelined_payload
+      socket.write(request)
+
+      status_line, response_headers = read_response_head(socket)
+      [ socket, status_line, response_headers ]
+    end
+
+    # Reads one byte at a time, which is the only way not to consume part of
+    # the tunnelled stream that follows the header block.
+    def read_response_head(socket, timeout = 10)
+      deadline = Time.now + timeout
+      head = +''
+
+      until head.end_with?("\r\n\r\n")
+        remaining = deadline - Time.now
+        byte = remaining > 0 ? read_available(socket, 1, remaining) : ''
+        if byte.empty?
+          raise 'The connection closed or stalled before a complete response ' \
+            "header block arrived. Got: #{head.inspect}"
+        end
+        head << byte
+      end
+
+      lines = head.split("\r\n")
+      status_line = lines.shift
+      response_headers = {}
+      lines.each do |line|
+        name, value = line.split(':', 2)
+        response_headers[name.downcase.strip] = value.to_s.strip
+      end
+      [ status_line, response_headers ]
+    end
+
+    # Reads up to `bytes` bytes, giving up after `timeout` seconds rather than
+    # blocking forever, so that a broken tunnel fails the example instead of
+    # hanging the suite.
+    def read_available(socket, bytes, timeout = 10)
+      result = +''.b
+      deadline = Time.now + timeout
+
+      while result.bytesize < bytes
+        remaining = deadline - Time.now
+        break if remaining <= 0 || !socket.wait_readable(remaining)
+
+        chunk = socket.read_nonblock(bytes - result.bytesize, exception: false)
+        break if chunk == :wait_readable || chunk.nil?
+        result << chunk
+      end
+
+      result
+    end
+
+    # Whether the peer closes the connection within `timeout` seconds.
+    # Anything it sends before closing is discarded.
+    def closed_within?(socket, timeout)
+      deadline = Time.now + timeout
+
+      loop do
+        remaining = deadline - Time.now
+        return false if remaining <= 0 || !socket.wait_readable(remaining)
+        return true if socket.read_nonblock(4096, exception: false).nil?
+      end
+    end
+
+    before :all do
+      create_apache2_controller
+      @stub = RackStub.new('rack')
+      # Every tunnelled connection holds an application process for as long as
+      # it is open, so one process per concurrently open tunnel is needed.
+      @apache2 << 'PassengerMaxPoolSize 4'
+      # The default is 128 MB, which is large enough that the core absorbs
+      # anything these examples send rather than applying backpressure. Lower
+      # it so that the saturation example actually exercises a full pipeline.
+      @apache2 << 'PassengerResponseBufferHighWatermark 1048576'
+      @apache2.set_vhost('1.passenger.test', "#{@stub.full_app_root}/public")
+      @apache2.set_vhost('2.passenger.test', "#{@stub.full_app_root}/public") do |vhost|
+        vhost << 'PassengerUpgradeIdleTimeout 2'
+      end
+      @apache2.set_vhost('3.passenger.test', "#{@stub.full_app_root}/public") do |vhost|
+        vhost << 'PassengerUpgradeIdleTimeout 2'
+        # Bounds the writes towards the client as well, so that a stalled
+        # pipeline is torn down quickly enough to assert on.
+        vhost << 'Timeout 5'
+      end
+      @apache2.start
+    end
+
+    after :all do
+      @stub.destroy
+      @apache2.stop if @apache2
+    end
+
+    it 'carries data in both directions once the application has switched protocols' do
+      socket, status_line, headers = start_upgrade('/switch_protocol',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+        headers['upgrade'].should == 'raw'
+        headers['connection'].should == 'Upgrade'
+        # What follows a 101 is an opaque byte stream, so the web server must
+        # not describe it as an HTTP message body.
+        headers.should_not have_key('content-length')
+        headers.should_not have_key('transfer-encoding')
+
+        # Writing after having read proves that both directions are open at the
+        # same time, which is the part that a WebSocket depends on.
+        socket.write("hello\n")
+        read_available(socket, 12).should == "Echo: hello\n"
+        socket.write("again\n")
+        read_available(socket, 12).should == "Echo: again\n"
+      ensure
+        socket.close
+      end
+    end
+
+    it 'recognises the Connection header that browsers actually send' do
+      # Browsers send the upgrade token alongside keep-alive rather than on
+      # its own, so the token list has to be parsed rather than compared.
+      socket, status_line, = start_upgrade('/switch_protocol',
+        { 'Upgrade' => 'raw', 'Connection' => 'keep-alive, Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+        socket.write("hello\n")
+        read_available(socket, 12).should == "Echo: hello\n"
+      ensure
+        socket.close
+      end
+    end
+
+    it 'carries data that the client pipelined behind the upgrade request' do
+      socket, status_line, = start_upgrade('/switch_protocol',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' },
+        pipelined_payload: "pipelined\n")
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+        read_available(socket, 16).should == "Echo: pipelined\n"
+      ensure
+        socket.close
+      end
+    end
+
+    it 'carries payloads larger than the tunnel buffer' do
+      payload = 'x' * (512 * 1024)
+      socket, = start_upgrade('/switch_protocol',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        # The echo starts arriving while we are still writing, so write from
+        # another thread to keep the socket buffers from deadlocking us.
+        writer = Thread.new { socket.write("#{payload}\n") }
+        begin
+          read_available(socket, payload.bytesize + 7, 30).should == "Echo: #{payload}\n"
+        ensure
+          writer.join(5) || writer.kill
+        end
+      ensure
+        socket.close
+      end
+    end
+
+    it 'keeps both directions moving when both are saturated' do
+      # A synchronous echo application reads and writes in lockstep, so it
+      # stops reading as soon as its own write blocks, and every buffer
+      # between the two ends fills up. The pump has to keep servicing both
+      # directions throughout; favouring either one stalls the pipeline.
+      payload = 'x' * (4 * 1024 * 1024)
+      socket, status_line, = start_upgrade('/switch_protocol_stream_echo',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+
+        writer = Thread.new { socket.write(payload) }
+        begin
+          echoed = read_available(socket, payload.bytesize, 60)
+          echoed.bytesize.should == payload.bytesize
+          echoed.should == payload
+        ensure
+          writer.join(10) || writer.kill
+        end
+      ensure
+        socket.close
+      end
+    end
+
+    it 'gives up on a client that stops reading rather than holding the worker' do
+      socket, status_line, = start_upgrade('/switch_protocol_stream_echo',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '3.passenger.test')
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+
+        # Push data in and never read the echo, so that every buffer between
+        # here and the application fills up and the pipeline stalls for good.
+        # A tunnel with an unbounded write in it would hold this worker, and
+        # the application process behind it, until Apache was restarted.
+        chunk = 'x' * (256 * 1024)
+        begin
+          loop { socket.write_nonblock(chunk) }
+        rescue IO::WaitWritable, Errno::EAGAIN, Errno::EPIPE, Errno::ECONNRESET
+        end
+
+        # Do not read during this: reading would drain the pipeline and let
+        # it recover, which is the opposite of what is being tested.
+        sleep 10
+        closed_within?(socket, 30).should be true
+      ensure
+        socket.close
+      end
+    end
+
+    it 'passes a client half close on and keeps forwarding the application output' do
+      socket, = start_upgrade('/switch_protocol',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        socket.write("bye\n")
+        socket.close_write
+
+        read_available(socket, 10).should == "Echo: bye\n"
+        # The application's read loop ends at the forwarded end of stream and
+        # closes, which must reach the client rather than leaving it hanging.
+        closed_within?(socket, 10).should be true
+      ensure
+        socket.close
+      end
+    end
+
+    it 'closes the connection when the application closes its end' do
+      socket, status_line, = start_upgrade('/switch_protocol_and_close',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+        read_available(socket, 8).should == "goodbye\n"
+        closed_within?(socket, 10).should be true
+      ensure
+        socket.close
+      end
+    end
+
+    it 'closes an upgraded connection that stays idle longer than PassengerUpgradeIdleTimeout' do
+      socket, status_line, = start_upgrade('/switch_protocol',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '2.passenger.test')
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+        started = Time.now
+        closed_within?(socket, 15).should be true
+
+        elapsed = Time.now - started
+        # The lower bound matters as much as the upper one: a pump that tore
+        # every connection down at once would satisfy the upper bound alone.
+        elapsed.should be >= 1.5
+        elapsed.should be < 6
+      ensure
+        socket.close
+      end
+    end
+
+    it 'does not close an upgraded connection that keeps sending' do
+      socket, status_line, = start_upgrade('/switch_protocol',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' }, host: '2.passenger.test')
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+        # Three times the configured timeout, so traffic really has to reset
+        # the deadline rather than merely delay the first expiry.
+        6.times do |i|
+          sleep 1
+          socket.write("ping #{i}\n")
+          read_available(socket, 13).should == "Echo: ping #{i}\n"
+        end
+      ensure
+        socket.close
+      end
+    end
+
+    it 'preserves the WebSocket handshake headers' do
+      key = [ Array.new(16) { rand(256) }.pack('C*') ].pack('m0')
+      expected_accept = [ Digest::SHA1.digest(
+        "#{key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11") ].pack('m0')
+
+      socket, status_line, headers = start_upgrade('/websocket_handshake', {
+        'Upgrade' => 'websocket',
+        'Connection' => 'Upgrade',
+        'Sec-WebSocket-Version' => '13',
+        'Sec-WebSocket-Key' => key
+      })
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+        headers['upgrade'].should == 'websocket'
+        headers['sec-websocket-accept'].should == expected_accept
+
+        frame = "\x81\x03abc".b
+        socket.write(frame)
+        read_available(socket, frame.bytesize).should == frame
+      ensure
+        socket.close
+      end
+    end
+
+    it 'serves an ordinary response when the application declines the upgrade' do
+      socket, status_line, headers = start_upgrade('/',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 200 OK'
+        read_available(socket, headers['content-length'].to_i).should == 'front page'
+
+        # The declined upgrade reaches the client through a response header
+        # block that the module had to read ahead and hand back. If it handed
+        # back too much or too little, the next response on this connection
+        # is what would show it.
+        socket.write("GET / HTTP/1.1\r\nHost: 1.passenger.test\r\n\r\n")
+        _, second_headers = read_response_head(socket)
+        read_available(socket, second_headers['content-length'].to_i).should == 'front page'
+      ensure
+        socket.close
+      end
+    end
+
+    it 'refuses a 101 that switches to a protocol the client did not ask for' do
+      socket, status_line, = start_upgrade('/switch_protocol_with_headers?upgrade=something-else',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 502 Bad Gateway'
+      ensure
+        socket.close
+      end
+    end
+
+    it 'refuses a 101 that does not say which protocol it switches to' do
+      socket, status_line, = start_upgrade('/switch_protocol_with_headers?upgrade=',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 502 Bad Gateway'
+      ensure
+        socket.close
+      end
+    end
+
+    it 'strips hop-by-hop headers from the 101' do
+      socket, status_line, headers = start_upgrade(
+        '/switch_protocol_with_headers?upgrade=raw&Keep-Alive=timeout%3D5&X-End-To-End=yes',
+        { 'Upgrade' => 'raw', 'Connection' => 'Upgrade' })
+      begin
+        status_line.should == 'HTTP/1.1 101 Switching Protocols'
+        # Keep-Alive describes the connection between the application and
+        # Passenger, not the one to the client.
+        headers.should_not have_key('keep-alive')
+        headers['x-end-to-end'].should == 'yes'
+        headers['connection'].should == 'Upgrade'
+        headers['upgrade'].should == 'raw'
+        read_available(socket, 3).should == "ok\n"
+      ensure
+        socket.close
+      end
     end
   end
 
