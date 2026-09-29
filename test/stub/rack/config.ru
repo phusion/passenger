@@ -2,6 +2,12 @@
 
 require File.expand_path(File.dirname(__FILE__) + '/library')
 
+require 'digest/sha1'
+
+# RFC 6455 section 1.3. A local rather than a constant, because config.ru is
+# evaluated rather than required and may be evaluated more than once.
+websocket_guid = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
+
 app = lambda do |env|
   case env['PATH_INFO']
   when '/'
@@ -80,7 +86,10 @@ app = lambda do |env|
     env['rack.hijack'].call
     io = env['rack.hijack_io']
     begin
-      io.write("Status: 101 Switching Protocols\r\n")
+      # A hijacked connection that switches protocols must announce it with a
+      # real status line; a CGI-style "Status:" header is not enough for
+      # Passenger to recognise the switch.
+      io.write("HTTP/1.1 101 Switching Protocols\r\n")
       io.write("Upgrade: raw\r\n")
       io.write("Connection: Upgrade\r\n")
       io.write("\r\n")
@@ -89,6 +98,96 @@ app = lambda do |env|
         io.write("Echo: #{line}")
         io.flush
       end
+    rescue EOFError, Errno::ECONNRESET, Errno::EPIPE
+    ensure
+      io.close
+    end
+  when '/switch_protocol_stream_echo'
+    # Echoes each chunk as it arrives, rather than a line at a time, so that
+    # the application is writing back while the peer is still sending. That
+    # saturates both directions at once.
+    env['rack.hijack'].call
+    io = env['rack.hijack_io']
+    begin
+      io.write("HTTP/1.1 101 Switching Protocols\r\n")
+      io.write("Upgrade: raw\r\n")
+      io.write("Connection: Upgrade\r\n")
+      io.write("\r\n")
+      io.flush
+      loop do
+        io.write(io.readpartial(16384))
+        io.flush
+      end
+    rescue EOFError, Errno::ECONNRESET, Errno::EPIPE
+    ensure
+      io.close
+    end
+  when '/switch_protocol_with_headers'
+    # Switches protocols with response headers chosen by the query string:
+    # `upgrade` sets the Upgrade header (omitted when empty), and every other
+    # parameter is sent as a header of its own.
+    params = CGI.parse(env['QUERY_STRING'])
+    env['rack.hijack'].call
+    io = env['rack.hijack_io']
+    begin
+      io.write("HTTP/1.1 101 Switching Protocols\r\n")
+      upgrade = params.delete('upgrade')&.first
+      if upgrade && !upgrade.empty?
+        io.write("Upgrade: #{upgrade}\r\n")
+        io.write("Connection: Upgrade\r\n")
+      else
+        # Without an Upgrade header the core does not recognise the switch,
+        # takes this for an ordinary response, and would put the hijacked
+        # (and about to be closed) connection back into its keep-alive pool
+        # for the next request to trip over.
+        io.write("Connection: close\r\n")
+      end
+      params.each_pair { |name, values| io.write("#{name}: #{values.first}\r\n") }
+      io.write("\r\n")
+      io.write("ok\n")
+      io.flush
+    rescue Errno::ECONNRESET, Errno::EPIPE
+    ensure
+      io.close
+    end
+  when '/switch_protocol_and_close'
+    # Switches protocols, says one thing and hangs up.
+    env['rack.hijack'].call
+    io = env['rack.hijack_io']
+    begin
+      io.write("HTTP/1.1 101 Switching Protocols\r\n")
+      io.write("Upgrade: raw\r\n")
+      io.write("Connection: Upgrade\r\n")
+      io.write("\r\n")
+      io.write("goodbye\n")
+      io.flush
+    rescue Errno::ECONNRESET, Errno::EPIPE
+    ensure
+      io.close
+    end
+  when '/websocket_handshake'
+    # Performs a real WebSocket handshake and then echoes bytes back; no frame
+    # parsing.
+    key = env['HTTP_SEC_WEBSOCKET_KEY']
+    if env['HTTP_UPGRADE'].to_s.downcase != 'websocket' || key.nil?
+      return [ 400, { 'Content-Type' => 'text/plain' }, [ 'Not a WebSocket handshake' ] ]
+    end
+
+    accept = [ Digest::SHA1.digest("#{key}#{websocket_guid}") ].pack('m0')
+    env['rack.hijack'].call
+    io = env['rack.hijack_io']
+    begin
+      io.write("HTTP/1.1 101 Switching Protocols\r\n")
+      io.write("Upgrade: websocket\r\n")
+      io.write("Connection: Upgrade\r\n")
+      io.write("Sec-WebSocket-Accept: #{accept}\r\n")
+      io.write("\r\n")
+      io.flush
+      loop do
+        io.write(io.readpartial(16384))
+        io.flush
+      end
+    rescue EOFError, Errno::ECONNRESET, Errno::EPIPE
     ensure
       io.close
     end
