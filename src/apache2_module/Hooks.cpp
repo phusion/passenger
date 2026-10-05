@@ -1292,6 +1292,7 @@ public:
 		Json::Value loggingConfig;
 		loggingConfig["level"] = LoggingKit::Level(serverConfig.logLevel);
 		loggingConfig["redirect_stderr"] = false;
+		loggingConfig["redirect_stdout"] = false;
 		if (!serverConfig.logFile.empty()) {
 			loggingConfig["target"] = serverConfig.logFile.toString();
 		}
@@ -1675,7 +1676,12 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	 */
 	oxt::initialize();
 	SystemTime::initialize();
-	LoggingKit::initialize();
+	LoggingKit::initialize([] {
+		Json::Value config;
+		config["redirect_stderr"] = false;
+		config["redirect_stdout"] = false;
+		return config;
+	}());
 	try {
 		hooks = new Hooks(pconf, plog, ptemp, s);
 		apr_pool_cleanup_register(pconf, NULL,

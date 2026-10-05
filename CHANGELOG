@@ -11,6 +11,7 @@ Release 6.2.1 (Not yet released)
  * [Debian] Drop Debian 11 Bullseye (EOL 2026-08-31).
  * Fix reporting of application output printed during smart spawning preloader startup.
  * Include captured subprocess output in application spawn failure messages in logs, allowing easier troubleshooting without reading the HTML report.
+ * `passenger-config reopen-logs` now reopens both stdout and stderr, and can exit successfully when Passenger is not running by passing `--ignore-passenger-not-running`. Closes GH-2259.
 
 
 Release 6.2.0
