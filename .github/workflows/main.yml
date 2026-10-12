@@ -222,13 +222,13 @@ jobs:
 
   cxx-macos:
     name: C++ tests on macOS
-    runs-on: macos-14
+    runs-on: macos-latest
     timeout-minutes: 10
     env:
       EXTRA_CFLAGS: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
       EXTRA_CXXFLAGS: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
       SCCACHE_AZURE_BLOB_CONTAINER: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
-      SCCACHE_AZURE_KEY_PREFIX: sccache/cxx-macos-14-arm
+      SCCACHE_AZURE_KEY_PREFIX: sccache/cxx-macos-latest-arm
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
@@ -309,7 +309,7 @@ jobs:
             sccache_arch_and_os: x86_64-unknown-linux-musl
             sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
           - name: macOS
-            os: macos-14
+            os: macos-latest
             config_file: test/config.json.github-ci-macos
             rake_concurrency: 4
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
@@ -318,7 +318,7 @@ jobs:
             # That in turn requires disabling SIP, which is not possible on Github Actions.
             address_sanitizer: false
             sccache_arch_and_os: aarch64-apple-darwin
-            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+            sccache_azure_key_prefix: sccache/cxx-macos-latest-arm
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     env:
@@ -473,12 +473,12 @@ jobs:
             sccache_arch_and_os: x86_64-unknown-linux-musl
             sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
           - name: macOS
-            os: macos-14
+            os: macos-latest
             config_file: test/config.json.github-ci-macos
             rake_concurrency: 4
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
             sccache_arch_and_os: aarch64-apple-darwin
-            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+            sccache_azure_key_prefix: sccache/cxx-macos-latest-arm
     runs-on: ${{ matrix.os }}
     env:
       EXTRA_CFLAGS: ${{ matrix.extra_cflags }}
@@ -574,10 +574,10 @@ jobs:
             sccache_arch_and_os: x86_64-unknown-linux-musl
             sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
           - name: macOS
-            os: macos-14
+            os: macos-latest
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
             sccache_arch_and_os: aarch64-apple-darwin
-            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+            sccache_azure_key_prefix: sccache/cxx-macos-latest-arm
     runs-on: ${{ matrix.os }}
     env:
       EXTRA_CFLAGS: ${{ matrix.extra_cflags }}
@@ -659,11 +659,11 @@ jobs:
             sccache_arch_and_os: x86_64-unknown-linux-musl
             sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
           - name: macOS
-            os: macos-14
+            os: macos-latest
             rake_concurrency: 4
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
             sccache_arch_and_os: aarch64-apple-darwin
-            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+            sccache_azure_key_prefix: sccache/cxx-macos-latest-arm
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     env:
@@ -726,12 +726,12 @@ jobs:
             sccache_arch_and_os: x86_64-unknown-linux-musl
             sccache_azure_key_prefix: sccache/cxx-ubuntu-24.04-x86_64
           - name: macOS
-            os: macos-14
+            os: macos-latest
             config_file: test/config.json.github-ci-macos
             rake_concurrency: 4
             extra_cflags: '-I/opt/homebrew/opt/openssl@3/include -fcolor-diagnostics'
             sccache_arch_and_os: aarch64-apple-darwin
-            sccache_azure_key_prefix: sccache/cxx-macos-14-arm
+            sccache_azure_key_prefix: sccache/cxx-macos-latest-arm
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     env:
@@ -794,7 +794,7 @@ jobs:
           - name: Linux
             os: ubuntu-24.04
           - name: macOS
-            os: macos-14
+            os: macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -826,7 +826,7 @@ jobs:
 
   homebrew_packaging:
     name: Homebrew packaging tests
-    runs-on: macos-14
+    runs-on: macos-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
