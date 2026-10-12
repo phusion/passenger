@@ -1,0 +1,18 @@
+name: Azure cache deletion workflow (Main)
+
+on: workflow_dispatch
+
+jobs:
+  delete:
+    name: Delete sccache cache from azure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Delete cache
+        run: ./dev/ci/delete-cache-az-blob-storage
+        timeout-minutes: 5
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_CI_STORAGE_CONNECTION_STRING }}
+          CONTAINER_NAME: ${{ vars.SCCACHE_AZURE_BLOB_CONTAINER }}
+          BLOB_PREFIX: sccache/cxx-ubuntu
