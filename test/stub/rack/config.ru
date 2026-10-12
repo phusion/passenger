@@ -126,13 +126,13 @@ app = lambda do |env|
     # Switches protocols with response headers chosen by the query string:
     # `upgrade` sets the Upgrade header (omitted when empty), and every other
     # parameter is sent as a header of its own.
-    params = CGI.parse(env['QUERY_STRING'])
+    params = Rack::Utils.parse_query(env['QUERY_STRING'])
     env['rack.hijack'].call
     io = env['rack.hijack_io']
     begin
       io.write("HTTP/1.1 101 Switching Protocols\r\n")
-      upgrade = params.delete('upgrade')&.first
-      if upgrade && !upgrade.empty?
+      upgrade = params.delete('upgrade') if params.include?('upgrade')
+      unless upgrade.empty?
         io.write("Upgrade: #{upgrade}\r\n")
         io.write("Connection: Upgrade\r\n")
       else
@@ -142,7 +142,7 @@ app = lambda do |env|
         # for the next request to trip over.
         io.write("Connection: close\r\n")
       end
-      params.each_pair { |name, values| io.write("#{name}: #{values.first}\r\n") }
+      params.each_pair { |name, value| io.write("#{name}: #{value}\r\n") }
       io.write("\r\n")
       io.write("ok\n")
       io.flush
