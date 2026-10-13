@@ -37,8 +37,10 @@ if [ "${CI:-false}" = "true" ]; then
         if [ "${GITHUB_ACTIONS:-false}" = "true" ] && [ "$OS" = "macos" ]; then
             brew update
             brew install ccache
-            sudo security authorizationdb write com.apple.trust-settings.admin allow
-            sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$PASSENGER_ROOT/dev/ci/Certificates.cer"
+            # Import the code signing certificate without marking it trusted. Since macOS 15,
+            # admin trust settings can no longer be changed headlessly, and Apple's httpd
+            # accepts a module signed by an untrusted identity whose name matches LoadModule.
+            sudo security import "$PASSENGER_ROOT/dev/ci/Certificates.cer" -k /Library/Keychains/System.keychain
             sudo security import "$PASSENGER_ROOT/dev/ci/Developer.key" -k /Library/Keychains/System.keychain -t priv -A
             sudo security import "$PASSENGER_ROOT/dev/ci/Developer.pub" -k /Library/Keychains/System.keychain -t pub -A
         fi

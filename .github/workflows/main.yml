@@ -366,40 +366,42 @@ jobs:
           exec 2>&1
           set -x
 
-          # Create certificate
+          # Create a self-signed code signing identity. It is deliberately not marked
+          # trusted: since macOS 15, admin trust settings can no longer be changed
+          # headlessly, and Apple's httpd accepts a module signed by an untrusted
+          # identity whose name matches the LoadModule line.
           echo "$OPENSSL_CONFIG" > cert_config.cnf
-          openssl req -new -newkey rsa:2048 -nodes -keyout github-ci.key -out github-ci.csr -config cert_config.cnf
-          openssl x509 -req -in github-ci.csr -signkey github-ci.key -out github-ci.crt -days 3650 -extensions req_ext -extfile cert_config.cnf
+          openssl req -x509 -newkey rsa:2048 -nodes -days 30 -config cert_config.cnf -keyout github-ci.key -out github-ci.crt
+          # These flags work with both LibreSSL (/usr/bin/openssl) and OpenSSL 3.
+          openssl pkcs12 -export -inkey github-ci.key -in github-ci.crt -out github-ci.p12 -passout pass:mypassword \
+            -certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg sha1
 
           # Throw-away keychain
-          sudo security authorizationdb write com.apple.trust-settings.admin allow
           security create-keychain -p mypassword mykeychain.keychain
           security set-keychain-settings -lut 21600 mykeychain.keychain
           security unlock-keychain -p mypassword mykeychain.keychain
 
-          # Import & trust key
-          security import github-ci.key -k mykeychain.keychain -A
-          security set-key-partition-list -S apple-tool:,apple: -k mypassword mykeychain.keychain
-          sudo security add-trusted-cert -d -r trustRoot -k mykeychain.keychain github-ci.crt
+          # Import identity
+          security import github-ci.p12 -k mykeychain.keychain -P mypassword -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k mypassword mykeychain.keychain
           security list-keychain -d user -s mykeychain.keychain
         if: matrix.name == 'macOS'
-        # Sometimes `security add-trusted-cert` freezes indefinitelyl
         timeout-minutes: 1
         env:
           OPENSSL_CONFIG: |
             [ req ]
-            default_bits = 2048
             prompt = no
             default_md = sha256
             distinguished_name = req_distinguished_name
-            req_extensions = req_ext
+            x509_extensions = ext
 
             [ req_distinguished_name ]
             CN = Github CI
 
-            [ req_ext ]
-            keyUsage = critical, digitalSignature, keyEncipherment
-            extendedKeyUsage = codeSigning
+            [ ext ]
+            basicConstraints = critical, CA:false
+            keyUsage = critical, digitalSignature
+            extendedKeyUsage = critical, codeSigning
 
       - name: Setup hosts entries
         run: |
