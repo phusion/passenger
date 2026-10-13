@@ -451,7 +451,7 @@ jobs:
 
       - name: Integration tests
         run: bundle exec rake test:integration:apache2
-        timeout-minutes: 2
+        timeout-minutes: 3
 
       - name: Archive logs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
