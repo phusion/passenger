@@ -1356,7 +1356,7 @@ private:
 	enum ClientReadResult {
 		/** Nothing more to read from the client for now. */
 		CLIENT_READ_IDLE,
-		/** Data was forwarded; the filter chain may be holding more. */
+		/** Data was read; the filter chain may be holding more. */
 		CLIENT_READ_MORE,
 		CLIENT_READ_EOF,
 		CLIENT_READ_ERROR
@@ -1667,37 +1667,29 @@ private:
 	}
 
 	/**
-	 * Writes raw bytes to the Passenger core. Returns false if the core closed
-	 * its end of the connection -- which is how an application signals that it
-	 * is done with the upgraded stream -- or if the write timed out.
+	 * Writes as much client data to the Passenger core as its socket accepts
+	 * right now, and removes what was written from `pending`. Returns false
+	 * if the core closed its end of the connection, which is how an
+	 * application signals that it is done with the upgraded stream.
 	 *
-	 * The timeout is what keeps this bounded. The core applies real
-	 * backpressure to an upgraded connection -- it stops reading from us once
-	 * the application stops consuming, and the application stops consuming
-	 * once the core throttles it for buffering too much response -- which in
-	 * principle closes a cycle that only more reading on our side can break.
-	 * A thread blocked in this write is not reading, and no poll timeout can
-	 * reach it there. See the handbook: the cycle has not been reproduced,
-	 * but an unbounded write in a tunnel is not worth keeping either way.
+	 * The socket is non-blocking while tunneling, so this never waits; see
+	 * pumpUpgradedConnection() for why.
 	 */
-	bool writeToCore(const FileDescriptor &conn, const char *data, size_t size,
-		unsigned long long timeoutUsec)
-	{
-		try {
-			unsigned long long timeout = timeoutUsec;
-			writeExact(conn, data, size, &timeout);
+	bool flushToCore(const FileDescriptor &conn, string &pending) {
+		ssize_t ret = syscalls::write(conn, pending.data(), pending.size());
+		if (ret >= 0) {
+			pending.erase(0, ret);
 			return true;
-		} catch (const TimeoutException &) {
-			P_WARN("Closing an upgraded connection: the " SHORT_PROGRAM_NAME
-				" core stopped accepting data from the client for "
-				<< (timeoutUsec / 1000000) << " seconds");
+		}
+
+		int e = errno;
+		if (e == EAGAIN || e == EWOULDBLOCK) {
+			return true;
+		} else if (e == EPIPE || e == ECONNRESET) {
 			return false;
-		} catch (const SystemException &e) {
-			if (e.code() == EPIPE || e.code() == ECONNRESET) {
-				return false;
-			} else {
-				throw;
-			}
+		} else {
+			throw SystemException("Error writing to the " SHORT_PROGRAM_NAME
+				" core while tunneling an upgraded connection", e);
 		}
 	}
 
@@ -1716,6 +1708,8 @@ private:
 			return writeToClient(r, bb, buf, ret);
 		} else if (ret == 0) {
 			return false;
+		} else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			return true;
 		} else {
 			char errbuf[128];
 			P_DEBUG("Error reading from the " SHORT_PROGRAM_NAME " core while"
@@ -1726,17 +1720,18 @@ private:
 	}
 
 	/**
-	 * Forwards one read's worth of client input to the core.
+	 * Reads one read's worth of client input and appends it to `pending`,
+	 * the data still to be written to the core.
 	 *
-	 * Deliberately one read and not a drain: the write to the core blocks, so
-	 * a loop here would keep the other direction waiting for as long as the
-	 * client kept talking. The caller keeps calling while the result is
-	 * CLIENT_READ_MORE, interleaving the directions, which is also how the
-	 * bytes mod_ssl has decrypted but not yet handed over -- and which poll()
-	 * therefore cannot see -- get picked up.
+	 * Deliberately one read and not a drain: the caller has to keep the other
+	 * direction moving in between, and must not read more until the core has
+	 * accepted `pending`. The caller keeps calling while the result is
+	 * CLIENT_READ_MORE, which is also how the bytes mod_ssl has decrypted but
+	 * not yet handed over -- and which poll() therefore cannot see -- get
+	 * picked up.
 	 */
-	ClientReadResult forwardClientDataToCore(request_rec *r, apr_bucket_brigade *bb,
-		const FileDescriptor &conn, unsigned long long writeTimeoutUsec)
+	ClientReadResult readClientData(request_rec *r, apr_bucket_brigade *bb,
+		string &pending)
 	{
 		conn_rec *c = r->connection;
 		apr_status_t rv = ap_get_brigade(c->input_filters, bb, AP_MODE_READBYTES,
@@ -1772,12 +1767,7 @@ private:
 						break;
 					}
 					if (len > 0) {
-						if (!writeToCore(conn, data, len, writeTimeoutUsec)) {
-							P_DEBUG("The " SHORT_PROGRAM_NAME " core stopped"
-								" accepting data from the client");
-							result = CLIENT_READ_ERROR;
-							break;
-						}
+						pending.append(data, len);
 						result = CLIENT_READ_MORE;
 					}
 				}
@@ -1799,6 +1789,15 @@ private:
 	 * The two sockets are only polled for readiness here; the actual client
 	 * I/O goes through Apache's connection filter chain, so that mod_ssl and
 	 * anything else installed there keeps working.
+	 *
+	 * Writes to the core never block. The core applies backpressure to an
+	 * upgraded connection: it stops reading from us while the application is
+	 * not consuming, and the application may be waiting for the core to
+	 * accept its output, which the core only does once we read what it has
+	 * buffered for the client. A blocking write to the core would therefore
+	 * deadlock. Instead, client data that the core does not accept yet stays
+	 * in a pending buffer, and until the core has taken it all the pump stops
+	 * reading from the client but keeps forwarding core output.
 	 */
 	void pumpUpgradedConnection(request_rec *r, DirConfig *config,
 		const FileDescriptor &conn, apr_bucket_brigade *outputBrigade)
@@ -1818,18 +1817,15 @@ private:
 			: -1;
 
 		/* Two situations must not be allowed to last forever even when no
-		 * idle timeout is configured: a write to the core that the core has
-		 * stopped accepting, and a half-closed client whose application then
-		 * goes quiet. Neither is visible to the poll timeout. Apache's own
-		 * Timeout is the natural bound, and is already what writes towards
-		 * the client are subject to.
+		 * idle timeout is configured: client data that the core has stopped
+		 * accepting, and a half-closed client whose application then goes
+		 * quiet. Apache's own Timeout is the natural bound, and is already
+		 * what writes towards the client are subject to.
 		 */
-		unsigned long long fallbackTimeoutUsec = (idleTimeout > 0)
-			? (unsigned long long) idleTimeout * 1000000
-			: (unsigned long long) r->server->timeout;
-		int halfClosedPollTimeout = (pollTimeout > 0)
+		int stalledPollTimeout = (pollTimeout > 0)
 			? pollTimeout
-			: (int) std::min(fallbackTimeoutUsec / 1000, (unsigned long long) INT_MAX);
+			: (int) std::min((unsigned long long) r->server->timeout / 1000,
+				(unsigned long long) INT_MAX);
 
 		if (apr_os_sock_get(&clientFd, ap_get_conn_socket(c)) != APR_SUCCESS) {
 			P_ERROR("Cannot obtain the client socket for tunneling an upgraded"
@@ -1837,9 +1833,11 @@ private:
 			return;
 		}
 
+		setNonBlocking(conn);
 		fds[CORE].fd = conn;
-		fds[CLIENT].fd = clientFd;
 
+		/* Client data that the core has not accepted yet. */
+		string pendingToCore;
 		/* Whether the client may still have data waiting for us that poll()
 		 * will not report: either pipelined behind the handshake, or sitting
 		 * decrypted in mod_ssl's buffer. True to begin with, because the
@@ -1859,10 +1857,26 @@ private:
 		 * below is what reaps an abandoned connection.
 		 */
 		bool readClient = true;
+		bool coreWriteShutdown = false;
 
 		while (true) {
-			fds[CORE].events = POLLIN;
+			/* Pass the end of the client's stream on, but only once
+			 * everything it sent before has reached the core. Keep
+			 * forwarding whatever the application still has to say.
+			 */
+			if (!readClient && pendingToCore.empty() && !coreWriteShutdown) {
+				syscalls::shutdown(conn, SHUT_WR);
+				coreWriteShutdown = true;
+			}
+
+			bool waitingForCore = !pendingToCore.empty();
+			fds[CORE].events = waitingForCore ? (POLLIN | POLLOUT) : POLLIN;
 			fds[CORE].revents = 0;
+			/* While waiting for the core, leave the client out of the poll
+			 * set: we would not read from it anyway, and a hangup that it
+			 * keeps reporting would make poll() return immediately.
+			 */
+			fds[CLIENT].fd = waitingForCore ? -1 : clientFd;
 			fds[CLIENT].events = readClient ? POLLIN : 0;
 			fds[CLIENT].revents = 0;
 
@@ -1870,22 +1884,43 @@ private:
 			 * still want to know whether the core has something for us first,
 			 * so that neither direction can starve the other.
 			 */
-			int timeout = readClient ? pollTimeout : halfClosedPollTimeout;
-			int ret = syscalls::poll(fds, 2, clientMayHaveMore ? 0 : timeout);
+			int timeout;
+			if (waitingForCore || !readClient) {
+				timeout = stalledPollTimeout;
+			} else if (clientMayHaveMore) {
+				timeout = 0;
+			} else {
+				timeout = pollTimeout;
+			}
+
+			int ret = syscalls::poll(fds, 2, timeout);
 			if (ret == -1) {
 				char errbuf[128];
 				P_ERROR("Error while tunneling an upgraded connection: poll() failed: "
 					<< apr_strerror(APR_FROM_OS_ERROR(errno), errbuf, sizeof(errbuf)));
 				return;
-			} else if (ret == 0 && !clientMayHaveMore) {
-				P_DEBUG("Closing an upgraded connection that has been idle for "
-					<< (timeout / 1000) << " seconds");
+			} else if (ret == 0 && timeout != 0) {
+				if (waitingForCore) {
+					P_WARN("Closing an upgraded connection: the " SHORT_PROGRAM_NAME
+						" core stopped accepting data from the client for "
+						<< (timeout / 1000) << " seconds");
+				} else {
+					P_DEBUG("Closing an upgraded connection that has been idle for "
+						<< (timeout / 1000) << " seconds");
+				}
 				return;
 			}
 
-			if (fds[CORE].revents != 0
+			if ((fds[CORE].revents & ~POLLOUT) != 0
 			 && !forwardCoreDataToClient(r, outputBrigade, conn))
 			{
+				return;
+			}
+			if ((fds[CORE].revents & POLLOUT)
+			 && !flushToCore(conn, pendingToCore))
+			{
+				P_DEBUG("The " SHORT_PROGRAM_NAME " core stopped accepting"
+					" data from the client");
 				return;
 			}
 
@@ -1893,6 +1928,9 @@ private:
 				P_DEBUG("Client connection failed while tunneling an upgraded"
 					" connection");
 				return;
+			}
+			if (!pendingToCore.empty()) {
+				continue;
 			}
 			if (!readClient) {
 				if (fds[CLIENT].revents & POLLHUP) {
@@ -1903,10 +1941,13 @@ private:
 			}
 
 			if (clientMayHaveMore || fds[CLIENT].revents != 0) {
-				switch (forwardClientDataToCore(r, inputBrigade, conn,
-					fallbackTimeoutUsec))
-				{
+				switch (readClientData(r, inputBrigade, pendingToCore)) {
 				case CLIENT_READ_MORE:
+					if (!flushToCore(conn, pendingToCore)) {
+						P_DEBUG("The " SHORT_PROGRAM_NAME " core stopped"
+							" accepting data from the client");
+						return;
+					}
 					clientMayHaveMore = true;
 					noProgressPolls = 0;
 					break;
@@ -1915,7 +1956,6 @@ private:
 					 * client side, however the filter chain reported it.
 					 */
 					if (fds[CLIENT].revents & POLLHUP) {
-						syscalls::shutdown(conn, SHUT_WR);
 						readClient = false;
 					} else if (fds[CLIENT].revents != 0
 						    && ++noProgressPolls >= MAX_NO_PROGRESS_POLLS)
@@ -1933,10 +1973,6 @@ private:
 					clientMayHaveMore = false;
 					break;
 				case CLIENT_READ_EOF:
-					/* Pass the end of the stream on, but keep forwarding
-					 * whatever the application still has to say.
-					 */
-					syscalls::shutdown(conn, SHUT_WR);
 					readClient = false;
 					clientMayHaveMore = false;
 					break;

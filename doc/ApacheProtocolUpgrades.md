@@ -109,34 +109,36 @@ picked up promptly without either direction postponing the other.
 The reason for that shape rather than a simple drain is fairness: a loop on
 one side would keep the other waiting for as long as its peer kept talking.
 
-Interleaving alone does not make the pump safe, though, because both writes
-block, and a thread inside a write is a thread no poll timeout can reach.
+Interleaving alone does not make the pump safe, though, because a thread
+inside a blocking write is a thread that is not reading, and no poll timeout
+can reach it there.
 
-`writeToClient()` is bounded already: it blocks in `ap_pass_brigade()` on the
-connection filter chain, which is subject to Apache's `Timeout` and marks the
-connection aborted when that expires. `writeToCore()` therefore takes an
-explicit timeout too — `PassengerUpgradeIdleTimeout` when it is set, Apache's
-`Timeout` otherwise — so that the tunnel has no unbounded blocking call left
-in it. mod_proxy_wstunnel relies on socket timeouts in the same way.
-
-The specific thing that bound guards against is a cycle in the backpressure:
-the core stops reading from the tunnel once the application stops consuming
-(`processClientDataWhenUpgraded()` in `ServerKit/HttpServer.h`), and the
-application stops consuming once the core throttles it for buffering more
-than `PassengerResponseBufferHighWatermark` of response
+That matters because of a cycle in the backpressure. The core stops reading
+from the tunnel once the application stops consuming
+(`processClientDataWhenUpgraded()` in `ServerKit/HttpServer.h`). The
+application stops consuming once it is itself stuck writing, which happens
+when the core throttles it for buffering more than
+`PassengerResponseBufferHighWatermark` of response
 (`maybeThrottleAppSource()` in `Controller/ForwardResponse.cpp`). Only more
-reading on the tunnel's side can break that, which is exactly what a thread
-blocked in the write is not doing.
+reading on the tunnel's side breaks that cycle. A synchronous echo
+application with both directions saturated is enough to close it. On macOS
+it happened readily, because local sockets there buffer only about 8 KB, so
+the pump read core output in small pieces while writing client data in
+32 KB pieces, and the core's response buffer filled up.
 
-That cycle has not been reproduced. Every attempt — a synchronous echo
-application, a lowered `PassengerResponseBufferHighWatermark`, a client that
-stops reading entirely — ended with `writeToClient()` hitting its own bound
-first, because the congestion that stops the core from accepting also stops
-the client from accepting. So treat the timeout as insurance against an
-unbounded syscall rather than as the fix for an observed hang. Giving the
-core socket non-blocking writes with a pending-write buffer and `POLLOUT`
-would break the cycle rather than time out of it, and is the shape to reach
-for if this ever proves insufficient.
+So writes to the core never block. The socket to the core is non-blocking
+while tunneling. Client data that the core does not accept straight away
+stays in a pending buffer. Until the core has taken all of it, the pump polls
+the core for `POLLOUT` as well as `POLLIN`, stops reading the client, and keeps
+forwarding core output, which is what lets the core resume. Not reading the
+client meanwhile keeps the buffer to at most one client read, and pushes the
+backpressure on to the client.
+
+`writeToClient()` still blocks, but it is bounded: it blocks in
+`ap_pass_brigade()` on the connection filter chain, which is subject to
+Apache's `Timeout` and marks the connection aborted when that expires. A core
+that does not accept anything, and sends nothing either, is reaped by the
+same timeout that applies to a half-closed client (see below).
 
 ### Half close
 
@@ -195,8 +197,8 @@ expected number of connections rather than for the request rate. Nginx and
 Standalone do not tie a connection to a worker thread this way.
 
 **Setting `PassengerUpgradeIdleTimeout 0` removes the only bound on an idle
-tunnel.** The two other ways a worker could be held indefinitely — a stalled
-write to the core, and an abandoned half-closed client — fall back to
+tunnel.** The two other ways a worker could be held indefinitely — client data
+that the core has stopped accepting, and an abandoned half-closed client — fall back to
 Apache's `Timeout` regardless. A merely idle connection does not: with the
 timeout switched off the pump waits in `poll()` for as long as the peer keeps
 the socket open, including a peer that has gone away without TCP noticing.
