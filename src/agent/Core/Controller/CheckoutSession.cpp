@@ -252,9 +252,8 @@ Controller::onSessionSocketConnected(EV_P_ ev_io *io, int revents) {
 	TRACE_POINT();
 
     ev_io_stop(self->getLoop(), io);
-	if (req->connectedWatcherTimout.active) {
-		ev_timer_stop(self->getLoop(), &req->connectedWatcherTimout);
-	}
+	// Also stops the timer if it has expired but its callback hasn't run yet.
+	ev_timer_stop(self->getLoop(), &req->connectedWatcherTimout);
 
 	if (revents & EV_WRITE) {
 		// Socket connect finished

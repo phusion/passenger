@@ -125,8 +125,10 @@ Controller::reinitializeRequest(Client *client, Request *req) {
 	// appSink and appSource are initialized in Controller::checkoutSession().
 
 
-	req->connectedWatcher.active = false;
-	req->connectedWatcherTimout.active = false;
+	// Initialize the session socket connect watchers so that they can always be
+	// stopped safely, even if this request never starts connecting to the app.
+	ev_init(&req->connectedWatcher, onSessionSocketConnected);
+	ev_init(&req->connectedWatcherTimout, onSessionSocketConnectTimeout);
 
 	req->startedAt = 0;
 	req->state = Request::ANALYZING_REQUEST;
@@ -160,12 +162,13 @@ Controller::reinitializeRequest(Client *client, Request *req) {
 
 void
 Controller::deinitializeRequest(Client *client, Request *req) {
-	if (req->connectedWatcher.active) {
-		ev_io_stop(getLoop(), &req->connectedWatcher);
-	}
-	if (req->connectedWatcherTimout.active) {
-		ev_timer_stop(getLoop(), &req->connectedWatcherTimout);
-	}
+	// Stop unconditionally instead of checking whether the watchers are active:
+	// a timer that has expired is no longer active, but may still be pending (queued
+	// to have its callback invoked later in the current event loop iteration).
+	// Stopping also removes it from that queue, so that libev doesn't touch this
+	// request after it has been deinitialized and possibly freed.
+	ev_io_stop(getLoop(), &req->connectedWatcher);
+	ev_timer_stop(getLoop(), &req->connectedWatcherTimout);
 
 	req->session.reset();
 	req->config.reset();
