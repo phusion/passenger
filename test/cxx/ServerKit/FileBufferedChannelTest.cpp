@@ -220,6 +220,23 @@ namespace tut {
 		void _setChannelDataCallback(FileBufferedChannel::DataCallback callback) {
 			channel.setDataCallback(callback);
 		}
+
+		// Feeds a buffer that merely wraps caller-owned memory, like HttpServer does
+		// with response bodies allocated from a request's memory pool. Once the reader
+		// has passed the data on, the memory is freed, like HttpServer does when it
+		// resets the pool at the end of the request.
+		void feedCallerOwnedDataAndFreeItOncePassedOn(const string &data) {
+			bg.safe->runSync(boost::bind(
+				&ServerKit_FileBufferedChannelTest::_feedCallerOwnedDataAndFreeItOncePassedOn,
+				this, data));
+		}
+
+		void _feedCallerOwnedDataAndFreeItOncePassedOn(string data) {
+			char *memory = new char[data.size()];
+			memcpy(memory, data.data(), data.size());
+			channel.feed(memory, data.size());
+			delete[] memory;
+		}
 	};
 
 	DEFINE_TEST_GROUP_WITH_LIMIT(ServerKit_FileBufferedChannelTest, 100);
@@ -1253,6 +1270,43 @@ namespace tut {
 		EVENTUALLY(5,
 			LOCK();
 			result = log.find("Error: ") == 0;
+		);
+	}
+
+	TEST_METHOD(51) {
+		set_test_name("In the in-file mode, buffers that wrap caller-owned memory are "
+			"still moved to the file after the caller freed that memory, so the "
+			"writer must not read from the caller's memory");
+
+		// Detecting the use-after-free requires AddressSanitizer or Valgrind,
+		// which CI uses for the C++ tests.
+		//
+		// This is deterministic: the buffer file is created in the background, but
+		// its completion is processed on the event loop, which is busy with
+		// feeding and freeing until the data has been freed. Only then can the
+		// writer start moving the buffer to the file.
+		Json::Value config;
+		vector<ConfigKit::Error> errors;
+		config["file_buffered_channel_threshold"] = 1;
+		// Prevent the reader from discarding the queued buffer (by switching back
+		// to the in-memory mode) once it has passed all data on.
+		config["file_buffered_channel_auto_truncate_file"] = false;
+		ensure(context.configure(config, errors));
+
+		startLoop();
+
+		feedCallerOwnedDataAndFreeItOncePassedOn("hello");
+		{
+			// The data was passed on before it was freed.
+			LOCK();
+			ensure_equals(log, "Data: hello\n");
+		}
+		ensure_equals(getChannelMode(), FileBufferedChannel::IN_FILE_MODE);
+
+		// Wait until the writer has moved the buffer to the file.
+		EVENTUALLY(5,
+			result = getChannelWriterState() == FileBufferedChannel::WS_INACTIVE
+				&& getChannelBytesBuffered() == 0;
 		);
 	}
 }

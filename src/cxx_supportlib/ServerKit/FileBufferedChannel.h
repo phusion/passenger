@@ -486,6 +486,53 @@ private:
 		FBC_DEBUG("pushBuffer() completed: nbuffers = " << nbuffers << ", bytesBuffered = " << bytesBuffered);
 	}
 
+	/**
+	 * Like `pushBuffer()`, but if `buffer` merely wraps memory owned by the caller
+	 * (i.e. it has no mbuf_block that keeps its memory alive), then the data is first
+	 * copied into mbufs from the pool. Large buffers are split over multiple mbufs.
+	 *
+	 * Must be used for all buffers queued in the in-file mode. There, buffers stay
+	 * queued until the writer has moved them to the file, which may be long after the
+	 * reader has passed them to the underlying channel. Callers (e.g. HttpServer
+	 * writing a response body from the request's memory pool) only guarantee that
+	 * such memory stays valid until the reader has passed it on.
+	 */
+	void pushBufferWithOwnedMemory(const MemoryKit::mbuf &buffer) {
+		if (buffer.mbuf_block != NULL || buffer.empty()) {
+			pushBuffer(buffer);
+			return;
+		}
+
+		size_t chunkSize = MemoryKit::mbuf_pool_data_size(&ctx->mbuf_pool);
+		const char *pos = buffer.start;
+		while (pos < buffer.end) {
+			size_t size = std::min<size_t>(buffer.end - pos, chunkSize);
+			MemoryKit::mbuf copy = MemoryKit::mbuf_get(&ctx->mbuf_pool);
+			memcpy(copy.start, pos, size);
+			pushBuffer(MemoryKit::mbuf(copy, 0, size));
+			pos += size;
+		}
+	}
+
+	/**
+	 * Called when switching to the in-file mode: ensures that buffers that were
+	 * queued during the in-memory mode don't reference caller-owned memory either.
+	 * See `pushBufferWithOwnedMemory()` for why.
+	 */
+	void takeOwnershipOfQueuedBuffers() {
+		deque<MemoryKit::mbuf> buffers;
+		if (nbuffers > 0) {
+			buffers.push_back(firstBuffer);
+			buffers.insert(buffers.end(), moreBuffers.begin(), moreBuffers.end());
+		}
+		clearBuffers(false);
+
+		deque<MemoryKit::mbuf>::const_iterator it, end = buffers.end();
+		for (it = buffers.begin(); it != end; it++) {
+			pushBufferWithOwnedMemory(*it);
+		}
+	}
+
 	void popBuffer() {
 		assert(bytesBuffered >= firstBuffer.size());
 		bytesBuffered -= firstBuffer.size();
@@ -836,6 +883,7 @@ private:
 		P_ASSERT_EQ(inFileMode, 0);
 
 		FBC_DEBUG("Switching to in-file mode");
+		takeOwnershipOfQueuedBuffers();
 		mode = IN_FILE_MODE;
 		inFileMode = boost::make_shared<InFileMode>(ctx->libuv);
 		createBufferFile();
@@ -1423,7 +1471,11 @@ public:
 			FBC_DEBUG("Feeding aborted: EOF or error detected");
 			return;
 		}
-		pushBuffer(buffer);
+		if (mode == IN_FILE_MODE) {
+			pushBufferWithOwnedMemory(buffer);
+		} else {
+			pushBuffer(buffer);
+		}
 		if (mode == IN_MEMORY_MODE && passedThreshold()) {
 			switchToInFileMode();
 		} else if (mode == IN_FILE_MODE
