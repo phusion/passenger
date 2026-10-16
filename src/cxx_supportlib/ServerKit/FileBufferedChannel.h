@@ -913,10 +913,21 @@ private:
 
 	struct FileCreationContext: public FileIOContext {
 		string path;
+		/**
+		 * Runs while file creation is postponed by
+		 * `delayInFileModeSwitching`. A pending timer refers to this
+		 * context, so canceling has to stop it (see
+		 * cancelBufferFileCreationDelay()), or the context, and the
+		 * event loop it keeps alive, would remain until the timer fires.
+		 */
+		ev_timer delayTimer;
 
 		FileCreationContext(FileBufferedChannel *self)
 			: FileIOContext(self)
-			{ }
+		{
+			ev_init(&delayTimer, _bufferFileDoneDelaying);
+			delayTimer.data = this;
+		}
 	};
 
 	void createBufferFile() {
@@ -945,21 +956,30 @@ private:
 		} else {
 			FBC_DEBUG("Writer: delaying in-file mode switching for " <<
 				config->delayInFileModeSwitching << "ms");
-			ctx->libev->runAfter(config->delayInFileModeSwitching,
-				boost::bind(_bufferFileDoneDelaying, fcContext));
+			ev_timer_set(&fcContext->delayTimer,
+				config->delayInFileModeSwitching / 1000.0, 0);
+			ev_timer_start(ctx->libev->getLoop(), &fcContext->delayTimer);
 		}
 	}
 
-	static void _bufferFileDoneDelaying(FileCreationContext *fcContext) {
-		if (fcContext->isCanceled()) {
-			// We don't cleanup fcContext->req here because we didn't
-			// start a libuv request.
-			delete fcContext;
-			return;
-		}
+	static void _bufferFileDoneDelaying(EV_P_ ev_timer *timer, int revents) {
+		FileCreationContext *fcContext = static_cast<FileCreationContext *>(timer->data);
+		fcContext->self->bufferFileDoneDelaying(fcContext);
+	}
 
-		FileBufferedChannel *self = fcContext->self;
-		self->bufferFileDoneDelaying(fcContext);
+	/**
+	 * If file creation is still being delayed, stops the delay timer and
+	 * frees the context, which nothing else refers to at that point.
+	 * Returns whether it did so.
+	 */
+	bool cancelBufferFileCreationDelay(FileCreationContext *fcContext) {
+		if (!ev_is_active(&fcContext->delayTimer)) {
+			return false;
+		}
+		ev_timer_stop(ctx->libev->getLoop(), &fcContext->delayTimer);
+		// No libuv request was started yet, so there is nothing else to clean up.
+		delete fcContext;
+		return true;
 	}
 
 	void bufferFileDoneDelaying(FileCreationContext *fcContext) {
@@ -1290,6 +1310,15 @@ private:
 		case WS_INACTIVE:
 			break;
 		case WS_CREATING_FILE:
+			if (inFileMode->writerRequest) {
+				FileCreationContext *fcContext =
+					static_cast<FileCreationContext *>(inFileMode->writerRequest);
+				if (!cancelBufferFileCreationDelay(fcContext)) {
+					fcContext->cancel();
+				}
+				inFileMode->writerRequest = NULL;
+			}
+			break;
 		case WS_MOVING:
 			if (inFileMode->writerRequest) {
 				inFileMode->writerRequest->cancel();
