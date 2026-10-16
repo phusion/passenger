@@ -264,6 +264,16 @@ private:
 		assert(client->currentRequest == req);
 
 		if (req->httpState != Request::WAITING_FOR_REFERENCES) {
+			// This has to happen before httpState is overwritten: httpState is
+			// what tells whether `parserState` holds the header parser.
+			if (req->httpState == Request::PARSING_HEADERS
+			 && req->parserState.headerParser != NULL)
+			{
+				createRequestHeaderParser(this->getContext(), req).discardCurrentHeader();
+				headerParserStatePool.destroy(req->parserState.headerParser);
+				req->parserState.headerParser = NULL;
+			}
+
 			req->httpState = Request::WAITING_FOR_REFERENCES;
 			deinitializeRequest(client, req);
 			assert(req->ended());
@@ -965,13 +975,6 @@ protected:
 	 * after endRequest() is called.
 	 */
 	virtual void deinitializeRequest(Client *client, Request *req) {
-		if (req->httpState == Request::PARSING_HEADERS
-		 && req->parserState.headerParser != NULL)
-		{
-			headerParserStatePool.destroy(req->parserState.headerParser);
-			req->parserState.headerParser = NULL;
-		}
-
 		psg_lstr_deinit(&req->path);
 
 		HeaderTable::Iterator it(req->headers);

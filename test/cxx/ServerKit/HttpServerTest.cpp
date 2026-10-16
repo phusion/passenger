@@ -417,6 +417,22 @@ namespace tut {
 			*result = server->activeClientCount;
 		}
 
+		/**
+		 * The number of mbuf blocks that are still referenced. Once all
+		 * clients are gone, this should drop back to 0: a block that stays
+		 * active is leaked client data.
+		 */
+		unsigned int getActiveMbufBlockCount() {
+			unsigned int result;
+			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::_getActiveMbufBlockCount,
+				this, &result));
+			return result;
+		}
+
+		void _getActiveMbufBlockCount(unsigned int *result) {
+			*result = context.mbuf_pool.nactive_mbuf_blockq;
+		}
+
 		unsigned int getNumRequestsWaitingToStartAcceptingBody() {
 			unsigned int result;
 			bg.safe->runSync(boost::bind(
@@ -2086,5 +2102,41 @@ namespace tut {
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 0;
 		);
+	}
+
+	TEST_METHOD(108) {
+		set_test_name("It releases the client data when it rejects a request "
+			"while parsing a header");
+
+		connectToServer();
+		sendRequest(
+			"GET / HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Host: foo\r\n"
+			"!~Secure: secret\r\n"
+			"\r\n");
+		string response = readAll(fd, 1024).first;
+		ensure(containsSubstring(response, "HTTP/1.0 400 Bad Request\r\n"));
+
+		EVENTUALLY(5,
+			result = getActiveClientCount() == 0;
+		);
+		ensure_equals(getActiveMbufBlockCount(), 0u);
+	}
+
+	TEST_METHOD(109) {
+		set_test_name("It releases the client data when the client disconnects "
+			"while a header is only partially sent");
+
+		connectToServer();
+		sendRequestAndWait(
+			"GET / HTTP/1.1\r\n"
+			"Host: fo");
+		fd.close();
+
+		EVENTUALLY(5,
+			result = getActiveClientCount() == 0;
+		);
+		ensure_equals(getActiveMbufBlockCount(), 0u);
 	}
 }

@@ -479,6 +479,24 @@ public:
 		initializeParser(MessageType());
 		state->state = HttpHeaderParserState::PARSING_NOT_STARTED;
 		state->secureMode = false;
+		state->currentHeader = NULL;
+	}
+
+	/**
+	 * Releases the header that was being parsed, if any. Must be called when
+	 * parsing stops before the headers are complete, whether because of a
+	 * parse error or because the message is abandoned, before the parser
+	 * state is destroyed. Until a header is complete it is not in the
+	 * message's header table, so the message's cleanup doesn't release it,
+	 * and its strings may reference the buffers that it was parsed from.
+	 */
+	void discardCurrentHeader() {
+		if (state->currentHeader != NULL) {
+			psg_lstr_deinit(&state->currentHeader->key);
+			psg_lstr_deinit(&state->currentHeader->origKey);
+			psg_lstr_deinit(&state->currentHeader->val);
+			state->currentHeader = NULL;
+		}
 	}
 
 	size_t feed(const MemoryKit::mbuf &buffer) {
@@ -499,6 +517,7 @@ public:
 		 (llerrno != HPE_OK && !paused) ) {
 			UPDATE_TRACE_POINT();
 			message->httpState = Message::ERROR;
+			discardCurrentHeader();
 			switch (llerrno) {
 			case HPE_CB_HEADER_FIELD_COMPLETE:// does this match? was HPE_CB_header_field in old impl
 			case HPE_CB_HEADERS_COMPLETE:
