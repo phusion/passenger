@@ -272,6 +272,11 @@ describe 'Apache 2 module' do
 
     # Whether the peer closes the connection within `timeout` seconds.
     # Anything it sends before closing is discarded.
+    #
+    # A reset counts as closed. The kernel sends one instead of a FIN when
+    # Apache closes a connection with client data still unread, which is
+    # what happens when it gives up on a stalled tunnel, or when it aborts
+    # a connection after a write to the client timed out.
     def closed_within?(socket, timeout)
       deadline = Time.now + timeout
 
@@ -280,6 +285,8 @@ describe 'Apache 2 module' do
         return false if remaining <= 0 || !socket.wait_readable(remaining)
         return true if socket.read_nonblock(4096, exception: false).nil?
       end
+    rescue Errno::ECONNRESET
+      true
     end
 
     before :all do
