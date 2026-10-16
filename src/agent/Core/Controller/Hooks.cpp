@@ -226,6 +226,7 @@ Controller::deinitializeAppResponse(Client *client, Request *req) {
 	if (resp->httpState == AppResponse::PARSING_HEADERS
 	 && resp->parserState.headerParser != NULL)
 	{
+		createAppResponseHeaderParser(getContext(), req).discardCurrentHeader();
 		getHeaderParserStatePool().destroy(resp->parserState.headerParser);
 		resp->parserState.headerParser = NULL;
 	}
