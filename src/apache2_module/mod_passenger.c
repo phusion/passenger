@@ -28,6 +28,11 @@
 // <IfModule mod_passenger.c> works.
 
 #include <httpd.h>
+// http_config.h defines command_rec differently for C (when designated
+// initializers are available) than for C++. passenger_commands is defined in
+// C++, so make this file see the C++ layout too. Otherwise, link-time
+// optimization warns about the type mismatch.
+#undef AP_HAVE_DESIGNATED_INITIALIZER
 #include <http_config.h>
 
 #ifdef VISIBILITY_ATTRIBUTE_SUPPORTED
