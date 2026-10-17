@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <cstdio>
 #include <cerrno>
+#include <IOTools/IOUtils.h>
 #include <ProcessManagement/Spawn.h>
 #include <SystemTools/ProcessMetricsCollector.h>
 #include <StrIntTools/StrIntUtils.h>
@@ -31,16 +32,39 @@ namespace tut {
 			killChild();
 		}
 
-		pid_t spawnChild(int memoryMb) {
+		/**
+		 * Spawns a child that allocates and touches the given amount of memory,
+		 * and stores its PID in `child`. Returns after the child reports that
+		 * it's done touching the memory.
+		 */
+		void spawnChild(int memoryMb) {
 			string memoryMbStr = toString(memoryMb);
 			const char *command[] = {
 				"../buildout/test/allocate_memory",
 				memoryMbStr.c_str(),
 				NULL
 			};
+			Pipe p = createPipe(__FILE__, __LINE__);
+			int childStdout = p.second;
 			SubprocessInfo info;
-			runCommand(command, info, false);
-			return info.pid;
+			runCommand(command, info, false, true, [childStdout]() {
+				dup2(childStdout, STDOUT_FILENO);
+			});
+			p.second.close();
+			// Set before waiting, so that the destructor kills the child
+			// if waiting fails.
+			child = info.pid;
+
+			// Generous because ASAN slows down the child.
+			unsigned long long timeout = 30 * 1000000;
+			char buf[sizeof("ready\n") - 1];
+			try {
+				readExact(p.first, buf, sizeof(buf), &timeout);
+			} catch (const TimeoutException &) {
+				fail("Child did not report readiness within 30 seconds");
+			}
+			ensure_equals("Child reports readiness",
+				string(buf, sizeof(buf)), string("ready\n"));
 		}
 
 		void killChild() {
@@ -108,27 +132,32 @@ namespace tut {
 		// Sanitizer runtimes add process memory outside the requested allocation.
 		// Measure using an otherwise identical child so that this overhead cancels out.
 		ssize_t baselinePss, baselinePrivateDirty, baselineSwap;
-		child = spawnChild(100);
-		usleep(500000);
+		spawnChild(100);
 		collector.measureRealMemory(child, baselinePss,
 			baselinePrivateDirty, baselineSwap);
 		killChild();
 
-		child = spawnChild(150);
-		usleep(500000);
+		spawnChild(150);
 		collector.measureRealMemory(child, pss, privateDirty, swap);
+
+		// Appended to failure messages, because the differences alone don't
+		// show which measurement is off.
+		string measurements = " (pss=" + toString(pss)
+			+ ", baselinePss=" + toString(baselinePss)
+			+ ", privateDirty=" + toString(privateDirty)
+			+ ", baselinePrivateDirty=" + toString(baselinePrivateDirty) + ")";
 
 		#ifdef __APPLE__
 			if (geteuid() == 0) {
-				ensure_gt("PSS is correct: more than 50 MB allocated", pss - baselinePss, 50000);
+				ensure_gt(("PSS is correct: more than 50 MB allocated" + measurements).c_str(), pss - baselinePss, 50000);
 				#ifdef USING_ASAN
-					ensure_lt("PSS is correct: less than 60 MB allocated", pss - baselinePss, 70000);
+					ensure_lt(("PSS is correct: less than 70 MB allocated" + measurements).c_str(), pss - baselinePss, 70000);
 				#else
-					ensure_lt("PSS is correct: less than 60 MB allocated", pss - baselinePss, 60000);
+					ensure_lt(("PSS is correct: less than 60 MB allocated" + measurements).c_str(), pss - baselinePss, 60000);
 				#endif
 
-				ensure_gt("Private dirty is correct: more than 50 MB allocated", privateDirty - baselinePrivateDirty, 50000);
-				ensure_lt("Private dirty is correct: less than 60 MB allocated", privateDirty - baselinePrivateDirty, 60000);
+				ensure_gt(("Private dirty is correct: more than 50 MB allocated" + measurements).c_str(), privateDirty - baselinePrivateDirty, 50000);
+				ensure_lt(("Private dirty is correct: less than 60 MB allocated" + measurements).c_str(), privateDirty - baselinePrivateDirty, 60000);
 			} else {
 				ensure_equals("PSS is cannot be measured without root privileges", pss, (ssize_t) -1);
 				ensure_equals("Private dirty is cannot be measured without root privileges", privateDirty, (ssize_t) -1);
@@ -136,8 +165,8 @@ namespace tut {
 			ensure_equals("Swap measurement unsupported (expected)", swap, (ssize_t) -1);
 		#else
 			if (pss != -1 && baselinePss != -1) {
-				ensure_gt("PSS is correct: more than 50 MB allocated", pss - baselinePss, 50000);
-				ensure_lt("PSS is correct: less than 60 MB allocated", pss - baselinePss, 60000);
+				ensure_gt(("PSS is correct: more than 50 MB allocated" + measurements).c_str(), pss - baselinePss, 50000);
+				ensure_lt(("PSS is correct: less than 60 MB allocated" + measurements).c_str(), pss - baselinePss, 60000);
 			} else {
 				#ifdef __linux__ // Allow measurement failure/non-implementation on other platforms
 					fail(("PSS testing failed because one of the values is -1: pss="
@@ -146,8 +175,8 @@ namespace tut {
 			}
 
 			if (privateDirty != -1 && baselinePrivateDirty != -1) {
-				ensure_gt("Private dirty is correct: more than 50 MB allocated", privateDirty - baselinePrivateDirty, 50000);
-				ensure_lt("Private dirty is correct: less than 60 MB allocated", privateDirty - baselinePrivateDirty, 60000);
+				ensure_gt(("Private dirty is correct: more than 50 MB allocated" + measurements).c_str(), privateDirty - baselinePrivateDirty, 50000);
+				ensure_lt(("Private dirty is correct: less than 60 MB allocated" + measurements).c_str(), privateDirty - baselinePrivateDirty, 60000);
 			} else {
 				#ifdef __linux__ // Allow measurement failure/non-implementation on other platforms
 					fail(("Private dirty testing failed because one of the values is -1: privateDirty="
