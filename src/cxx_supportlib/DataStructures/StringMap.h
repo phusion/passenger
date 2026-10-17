@@ -71,11 +71,6 @@ public:
 			: it(_it)
 			{ }
 
-		const_iterator &operator=(const const_iterator &value) {
-			it = value.it;
-			return *this;
-		}
-
 		const_iterator &operator++() {
 			it++;
 			return *this;
@@ -114,11 +109,6 @@ public:
 		iterator(const InternalIterator &_it)
 			: it(_it)
 			{ }
-
-		iterator &operator=(const iterator &value) {
-			it = value.it;
-			return *this;
-		}
 
 		iterator &operator++() {
 			it++;

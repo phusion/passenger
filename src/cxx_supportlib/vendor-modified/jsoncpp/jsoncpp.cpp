@@ -73,6 +73,14 @@ license you like.
 
 
 
+// Passenger: silence GCC warnings in upstream jsoncpp code: intentional switch
+// fallthroughs, and false positives about swapping default-constructed Values.
+// -Wpragmas is ignored first because older GCC versions don't know all of these.
+#if defined(__GNUC__) && !defined(__clang__)
+	#pragma GCC diagnostic ignored "-Wpragmas"
+	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+	#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 #include <jsoncpp/json.h>
 
 #ifndef JSON_IS_AMALGAMATION

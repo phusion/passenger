@@ -32,6 +32,15 @@
 #  pragma warning(disable:4913)
 #endif
 
+// Passenger: iterator declares a defaulted copy assignment operator but relies on
+// the implicit copy constructor, which Clang flags as deprecated.
+#if defined(__clang__)
+#  pragma clang diagnostic push
+#  if __has_warning("-Wdeprecated-copy")
+#    pragma clang diagnostic ignored "-Wdeprecated-copy"
+#  endif
+#endif
+
 namespace boost {
 
 namespace cb_details {
@@ -486,6 +495,10 @@ inline void uninitialized_fill_n_with_alloc(ForwardIterator first, Diff n, const
 
 #if defined(_MSC_VER)
 #  pragma warning(pop)
+#endif
+
+#if defined(__clang__)
+#  pragma clang diagnostic pop
 #endif
 
 #endif // #if !defined(BOOST_CIRCULAR_BUFFER_DETAILS_HPP)
