@@ -35,6 +35,9 @@
 	#include <sys/types.h>
 #endif
 #include "../spin_lock.hpp"
+// Defines OXT_BACKTRACE_IS_ENABLED, which determines thread_local_context's layout.
+// Every translation unit must see the same layout.
+#include "../backtrace.hpp"
 
 namespace oxt {
 
