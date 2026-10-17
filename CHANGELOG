@@ -14,6 +14,20 @@ Release 6.2.1 (Not yet released)
  * `passenger-config reopen-logs` now reopens both stdout and stderr, and can exit successfully when Passenger is not running by passing `--ignore-passenger-not-running`. Closes GH-2259.
  * Fix an occasional Passenger core crash after serving a large response that Passenger generates itself, such as an application error page. Requests arriving while the core restarted failed with 502 Bad Gateway.
  * Fix a rare Passenger core crash when a request ended at about the same moment as its connection attempt to the application timed out.
+ * [Nginx] Upgrades preferred Nginx to 1.30.6 from 1.30.4.
+ * [Nginx] The preferred PCRE2 version is now 10.49 (previously 10.47).
+ * Changes minimum supported macOS version to 15 Sequoia.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - ccache: 4.13.6 -> 4.14.1
+   - cmake: 4.4.2 -> 4.4.4
+   - curl: 8.21.0 -> 8.23.0
+   - git: 2.55.0 -> 2.56.0
+   - openssl: 3.6.3 -> 3.6.5
+   - pcre2: 10.47 -> 10.49
+   - rubygems: 4.0.18 -> 4.0.23
+   - rubies:
+      - 3.4.10 -> 3.4.11
+      - 4.0.6 -> 4.0.7
 
 
 Release 6.2.0

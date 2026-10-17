@@ -268,7 +268,7 @@ private
     new_screen
     puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
 
-    url = "https://github.com/PhilipHazel/pcre2/releases/download/pcre2-#{PREFERRED_PCRE_VERSION}/pcre2-#{PREFERRED_PCRE_VERSION}.tar.gz"
+    url = "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-#{PREFERRED_PCRE_VERSION}/pcre2-#{PREFERRED_PCRE_VERSION}.tar.gz"
     dirname = "pcre2-#{PREFERRED_PCRE_VERSION}"
     tarball = "#{@working_dir}/pcre.tar.gz"
 
