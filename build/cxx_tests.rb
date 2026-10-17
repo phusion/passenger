@@ -323,6 +323,9 @@ file("test/cxx/TestSupport.h.#{PlatformInfo.precompiled_header_extension}" => cx
     include_paths: test_cxx_include_paths,
     flags: [
       "-x c++-header",
+      # sccache keys on preprocessed output, which drops #define lines. Without -dD, changing
+      # only a macro (e.g. a new constant in Constants.h) would hit a stale precompiled header.
+      PlatformInfo.cxx_is_gcc? ? "-dD" : nil,
       PlatformInfo.cxx_is_clang? ? "-Xclang -emit-pch -Xclang -fno-pch-timestamp" : nil,
       basic_test_cxx_flags,
     ].compact.flatten)
