@@ -252,8 +252,12 @@ makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t gro
 	for (rit = paths.rbegin(); rit != paths.rend(); rit++) {
 		current = *rit;
 
+		/* Create the directory accessible only to us. We need to open() it
+		 * below, which requires read permission that the requested mode may
+		 * not grant. The fchmod() below applies the requested mode.
+		 */
 		do {
-			ret = mkdir(current.c_str(), modeBits);
+			ret = mkdir(current.c_str(), S_IRWXU);
 		} while (ret == -1 && errno == EINTR);
 		if (ret == -1) {
 			if (errno == EEXIST) {
@@ -266,9 +270,29 @@ makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t gro
 			}
 		}
 
+		FileDescriptor fd;
+		int options = O_DIRECTORY | O_NOFOLLOW;
+		do {
+			fd.assign(open(current.c_str(), options, modeBits), __FILE__, __LINE__);
+		} while (fd == -1 && errno == EINTR);
+		if (fd == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot open newly created directory, (possible symlink attack) " +
+				current, e, current);
+		}
+		struct stat buf;
+		if (fstat(fd, &buf) == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot stat newly created directory, (possible symlink attack) " +
+				current, e, current);
+		} else if (!S_ISDIR(buf.st_mode)) {
+			throw FileSystemException("Newly created directory was replaced before opening occurred, (possible symlink attack) " +
+				current, ENOTDIR, current);
+		}
+
 		/* Chmod in order to override the umask. */
 		do {
-			ret = chmod(current.c_str(), modeBits);
+			ret = fchmod(fd, modeBits);
 		} while (ret == -1 && errno == EINTR);
 
 		if (owner != USER_NOT_GIVEN && group != GROUP_NOT_GIVEN) {
@@ -279,7 +303,7 @@ makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t gro
 				group = (gid_t) -1; // Don't let chown change file group.
 			}
 			do {
-				ret = lchown(current.c_str(), owner, group);
+				ret = fchown(fd, owner, group);
 			} while (ret == -1 && errno == EINTR);
 			if (ret == -1) {
 				char message[1024];

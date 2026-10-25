@@ -105,6 +105,8 @@ TEST_CXX_OBJECTS = {
     "test/cxx/DataStructures/StringMapTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/FileTools/PathSecurityCheckTest.o" =>
     "test/cxx/FileTools/PathSecurityCheckTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/InstanceDirectoryTest.o" =>
+    "test/cxx/InstanceDirectoryTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/IOTools/MessageSerializationTest.o" =>
     "test/cxx/IOTools/MessageSerializationTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/StaticStringTest.o" =>

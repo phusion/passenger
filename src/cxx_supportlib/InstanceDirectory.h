@@ -92,7 +92,8 @@ private:
 	}
 
 	static bool createPath(const string &registryDir, const string &path) {
-		if (mkdir(path.c_str(), parseModeString("u=rwx,g=rx,o=rx")) == -1) {
+		mode_t permissions = parseModeString("u=rwx,g=rx,o=rx");
+		if (mkdir(path.c_str(), permissions) == -1) {
 			if (errno == EEXIST) {
 				return false;
 			} else {
@@ -101,15 +102,41 @@ private:
 					" instance registry directory " + registryDir, e, registryDir);
 			}
 		}
+		FileDescriptor fd;
+		int options = O_DIRECTORY | O_NOFOLLOW;
+		do {
+			fd.assign(open(path.c_str(), options, permissions), __FILE__, __LINE__);
+		} while (fd == -1 && errno == EINTR);
+		if (fd == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot open newly created instance directory, (possible symlink attack) " +
+				path, e, path);
+		}
+		struct stat buf;
+		if (fstat(fd, &buf) == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot stat newly created instance directory, (possible symlink attack) " +
+				path, e, path);
+		} else if (!S_ISDIR(buf.st_mode)) {
+			throw FileSystemException("Newly created instance directory was replaced before opening occurred, (possible symlink attack) " +
+				path, ENOTDIR, path);
+		}
+		int ret = 0;
 		// Explicitly chmod the directory in case the umask is interfering.
-		if (chmod(path.c_str(), parseModeString("u=rwx,g=rx,o=rx")) == -1) {
+		do {
+			ret = fchmod(fd, permissions);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
 			int e = errno;
 			throw FileSystemException("Cannot set permissions on instance directory " +
 				path, e, path);
 		}
 		// The parent directory may have the setgid bit enabled, so we
 		// explicitly chown it.
-		if (chown(path.c_str(), geteuid(), getegid()) == -1) {
+		do {
+			ret = fchown(fd, geteuid(), getegid());
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
 			int e = errno;
 			throw FileSystemException("Cannot change the permissions of the instance "
 				"directory " + path, e, path);
