@@ -79,8 +79,6 @@ inline const char *llhttp_get_error_description(llhttp_errno_t error) {
 		return "the on_reset callback failed";
 	case HPE_CB_PROTOCOL_COMPLETE:
 		return "the on_protocol_complete callback failed";
-	default:
-		return "unknown error";
 	}
 }
 #endif
