@@ -1,7 +1,7 @@
 #ifndef INCLUDE_LLERRORS_H_
 #define INCLUDE_LLERRORS_H_
 
-#include <ServerKit/llhttp.h>
+#include <llhttp/llhttp.h>
 
 inline const char *llhttp_get_error_description(llhttp_errno_t error) {
 	switch (error) {
@@ -77,6 +77,8 @@ inline const char *llhttp_get_error_description(llhttp_errno_t error) {
 		return "the on_chunk_complete callback failed";
 	case HPE_CB_RESET:
 		return "the on_reset callback failed";
+	case HPE_CB_PROTOCOL_COMPLETE:
+		return "the on_protocol_complete callback failed";
 	default:
 		return "unknown error";
 	}

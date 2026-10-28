@@ -1,6 +1,7 @@
 Release 6.2.2 (Not yet released)
 -------------
  * Harden against symlink attacks on improperly secured instance directories. This is a mitigation, and not intended to replace the use of proper filesystem permissions.
+ * Upgrade llhttp from 9.2.1 -> 9.4.3.
  * 
 
 

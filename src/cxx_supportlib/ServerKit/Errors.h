@@ -27,7 +27,7 @@
 #define _PASSENGER_SERVER_KIT_ERRORS_H_
 
 #include <cstring>
-#include <ServerKit/llhttp.h>
+#include <llhttp/llhttp.h>
 #include <ServerKit/llerrors.h>
 
 namespace Passenger {

@@ -345,16 +345,16 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     source: 'ServerKit/url_parser.c',
     category: :other,
     optimize: :very_heavy
-  define_component 'ServerKit/llhttp.o',
-    source: 'ServerKit/llhttp.c',
+  define_component 'llhttp/llhttp.o',
+    source: 'vendor-copy/llhttp/llhttp.c',
     category: :other,
     optimize: :very_heavy
-  define_component 'ServerKit/llhttp_http.o',
-    source: 'ServerKit/llhttp_http.c',
+  define_component 'llhttp/llhttp_http.o',
+    source: 'vendor-copy/llhttp/http.c',
     category: :other,
     optimize: :very_heavy
-  define_component 'ServerKit/llhttp_api.o',
-    source: 'ServerKit/llhttp_api.c',
+  define_component 'llhttp/llhttp_api.o',
+    source: 'vendor-copy/llhttp/api.c',
     category: :other,
     optimize: :very_heavy
   define_component 'ServerKit/Implementation.o',

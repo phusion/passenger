@@ -28,7 +28,7 @@
 
 #include <DataStructures/LString.h>
 #include <Algorithms/Hasher.h>
-#include <ServerKit/llhttp.h>
+#include <llhttp/llhttp.h>
 #include <ServerKit/HeaderTable.h>
 
 namespace Passenger {
