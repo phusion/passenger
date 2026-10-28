@@ -211,4 +211,25 @@ namespace tut {
 			ensure_equals(session->journey.getFirstFailedStep(), SPAWNING_KIT_PREPARATION);
 		}
 	}
+
+	TEST_METHOD(18) {
+		// Regression test for GH-2445. The Ruby loaders parse args.json with
+		// PhusionPassenger::Utils::JSON, which cannot decode \uXXXX escapes
+		// above U+00FF. jsoncpp 1.9.5 escaped all non-ASCII characters that
+		// way, which made spawning fail whenever an argument contained them.
+		set_test_name("It writes non-ASCII arguments into args.json as raw UTF-8");
+
+		// "é" (2-byte UTF-8), "日本" (3-byte) and "😀" (4-byte, which would
+		// be escaped as a UTF-16 surrogate pair).
+		const string value = "caf\xC3\xA9 \xE6\x97\xA5\xE6\x9C\xAC \xF0\x9F\x98\x80";
+		Json::Value extraArgs;
+		extraArgs["unicode_test_arg"] = value;
+		initAndExec(SPAWN_DIRECTLY, extraArgs);
+
+		string contents = unsafeReadFile(session->workDir->getPath() + "/args.json");
+		ensure("The value is written verbatim",
+			contents.find("\"" + value + "\"") != string::npos);
+		ensure("No \\u escapes are written",
+			contents.find("\\u") == string::npos);
+	}
 }
