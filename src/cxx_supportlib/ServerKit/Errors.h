@@ -52,6 +52,7 @@ enum Error {
 	SECURITY_PASSWORD_DUPLICATE                            = -1016,
 	ERROR_SECURE_HEADER_NOT_ALLOWED                        = -1017,
 	NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD      = -1018,
+	SECURE_HEADER_VALUE_INVALID_ENCODING                   = -1019,
 
 	// HttpServer special errors
 	EARLY_EOF_DETECTED          = -1020,
@@ -91,6 +92,8 @@ getErrorDesc(int errcode) {
 		return "A secure header was provided, but no security password was provided";
 	case NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD:
 		return "A normal header was encountered after the security password header";
+	case SECURE_HEADER_VALUE_INVALID_ENCODING:
+		return "A secure header value has an invalid percent-encoding";
 	case EARLY_EOF_DETECTED:
 		return "The client connection is closed before the request is done processing";
 	default:

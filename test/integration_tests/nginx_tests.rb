@@ -534,6 +534,13 @@ describe 'Phusion Passenger for Nginx' do
           }
         )
       end
+      File.write("#{@nginx_root}/htpasswd", "a%0Ab:{PLAIN}secret\n")
+      @nginx.add_server do |server|
+        server[:server_name] = '2.passenger.test'
+        server[:root]        = "#{@stub.full_app_root}/public"
+        server[:auth_basic]  = 'test'
+        server[:auth_basic_user_file] = "#{@nginx_root}/htpasswd"
+      end
       @nginx.start
     end
 
@@ -551,6 +558,19 @@ describe 'Phusion Passenger for Nginx' do
         '%0D%0A!~PASSENGER_APP_START_COMMAND:%20touch%20injected_marker%3B/')
       response.code.should == '400'
       File.exist?(marker).should be_falsey
+    end
+
+    it 'passes secure header values containing encoding characters unchanged' do
+      # REMOTE_USER is a secure header. '%' must survive encoding by the
+      # module and decoding by the Core.
+      uri = URI.parse("http://2.passenger.test:#{@nginx.port}/env")
+      request = Net::HTTP::Get.new(uri)
+      request.basic_auth('a%0Ab', 'secret')
+      response = Net::HTTP.start(uri.host, uri.port) do |http|
+        http.request(request)
+      end
+      response.code.should == '200'
+      response.body.should include("REMOTE_USER = a%0Ab\n")
     end
   end
 

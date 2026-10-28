@@ -40,6 +40,7 @@
 #include <LoggingKit/LoggingKit.h>
 #include <StrIntTools/StrIntUtils.h>
 #include <Algorithms/Hasher.h>
+#include <SecureHeaderEncoding.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -63,7 +64,41 @@ private:
 	const MemoryKit::mbuf *currentBuffer;
 	llhttp_method_t	requestMethod;
 
-	bool validateHeader(const HttpParseRequest &tag, const Header *header) {
+	/**
+	 * Web server modules percent-encode secure header values so that they
+	 * can't contain CR or LF (see SecureHeaderEncoding.h). This decodes
+	 * `header->val` in place. Returns false if the encoding is invalid.
+	 */
+	bool decodeSecureHeaderValue(Header *header) {
+		const LString::Part *part;
+		bool encoded = false;
+
+		// Fast path: most values don't contain any encoded bytes.
+		for (part = header->val.start; part != NULL && !encoded; part = part->next) {
+			encoded = memchr(part->data, '%', part->size) != NULL;
+		}
+		if (!encoded) {
+			return true;
+		}
+
+		const LString *contiguous = psg_lstr_make_contiguous(&header->val, pool);
+		char *decoded = (char *) psg_pnalloc(pool, contiguous->size);
+		if (OXT_UNLIKELY(decoded == NULL)) {
+			throw std::bad_alloc();
+		}
+		size_t decodedSize = psg_secure_header_value_decode(decoded,
+			contiguous->start->data, contiguous->size);
+		if (decodedSize == (size_t) -1) {
+			return false;
+		}
+
+		psg_lstr_deinit(&header->val);
+		psg_lstr_init(&header->val);
+		psg_lstr_append(&header->val, pool, decoded, decodedSize);
+		return true;
+	}
+
+	bool validateHeader(const HttpParseRequest &tag, Header *header) {
 		if (!state->secureMode) {
 			if (!psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
 				return true;
@@ -91,6 +126,9 @@ private:
 			if (psg_lstr_cmp(&header->key, P_STATIC_STRING("!~"), 2)) {
 				if (header->key.size == 2) {
 					state->secureMode = false;
+				} else if (!decodeSecureHeaderValue(header)) {
+					state->state = HttpHeaderParserState::ERROR_SECURE_HEADER_VALUE_INVALID_ENCODING;
+					return false;
 				}
 				return true;
 			} else {
@@ -533,6 +571,9 @@ public:
 					break;
 				case HttpHeaderParserState::ERROR_NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD:
 					message->aux.parseError = NORMAL_HEADER_NOT_ALLOWED_AFTER_SECURITY_PASSWORD;
+					break;
+				case HttpHeaderParserState::ERROR_SECURE_HEADER_VALUE_INVALID_ENCODING:
+					message->aux.parseError = SECURE_HEADER_VALUE_INVALID_ENCODING;
 					break;
 				default:
 					goto default_error;

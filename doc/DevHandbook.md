@@ -18,6 +18,7 @@
 ## Design decisions & aspects
 
 - [Limited gem dependencies](DesignAspects/LimitedGemDependencies.md) — Runtime Ruby dependency policy for gem and native-package installs, multiple Ruby versions, execution with or without Bundler, OS repository availability, and gemspec versus Gemfile placement.
+- [Secure headers](DesignAspects/SecureHeaders.md) — How web server modules pass trusted request metadata (document root, REMOTE_USER, app options) to the Core as `!~` headers after the Core password; percent-encoding of secure header values against CRLF injection; module/Core version coupling.
 - [No gem activation during Ruby loader initialization](DesignAspects/NoGemActivationDuringRubyLoaderInitialization.md) — No-activation rule for code called before Bundler by the Ruby loaders, including gemified standard-library code and Ruby/C++ reimplementation strategies.
 
 ## Subsystems in C++

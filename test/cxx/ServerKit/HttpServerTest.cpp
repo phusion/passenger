@@ -1636,6 +1636,52 @@ namespace tut {
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 	}
 
+	TEST_METHOD(66) {
+		set_test_name("It percent-decodes secure header values");
+
+		connectToServer();
+		sendRequest(
+			"GET /joo HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Host: foo\r\n"
+			"!~: x\r\n"
+			"!~Secure: a%0D%0Ab%25c\r\n"
+			"\r\n");
+		string response = readAll(fd, 1024).first;
+		ensure(containsSubstring(response, "hello /joo\nSecure: a\r\nb%c"));
+	}
+
+	TEST_METHOD(67) {
+		set_test_name("It rejects secure header values with an invalid percent-encoding");
+
+		connectToServer();
+		sendRequest(
+			"GET / HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Host: foo\r\n"
+			"!~: x\r\n"
+			"!~Secure: 100%\r\n"
+			"\r\n");
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.0 400 Bad Request\r\n"));
+		ensure("(2)", containsSubstring(response,
+			"A secure header value has an invalid percent-encoding"));
+	}
+
+	TEST_METHOD(68) {
+		set_test_name("It does not percent-decode normal headers");
+
+		connectToServer();
+		sendRequest(
+			"GET /joo HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Host: foo\r\n"
+			"Foo: 100%\r\n"
+			"\r\n");
+		string response = readAll(fd, 1024).first;
+		ensure(containsSubstring(response, "hello /joo\nFoo: 100%"));
+	}
+
 
 	/***** Request ending *****/
 
