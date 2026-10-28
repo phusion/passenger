@@ -141,6 +141,8 @@ TEST_CXX_OBJECTS = {
     "test/cxx/StrIntTools/TemplateTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Base64DecodingTest.o" =>
     "test/cxx/Base64DecodingTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/SecureHeaderEncodingTest.o" =>
+    "test/cxx/SecureHeaderEncodingTest.cpp",
 }
 
 let(:basic_test_cxx_flags) do

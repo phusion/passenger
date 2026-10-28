@@ -1078,6 +1078,17 @@ describe 'Apache 2 module' do
       response.code.should == '400'
       File.exist?(marker).should be_falsey
     end
+
+    it 'passes secure header values containing encoding characters unchanged' do
+      # REMOTE_USER is a secure header. '%' must survive encoding by the
+      # module and decoding by the Core.
+      start_web_server_if_necessary
+      response = Net::HTTP.post_form(URI.parse("#{@server}/env"),
+        'httpd_username' => 'a%0Ab',
+        'httpd_password' => 'password')
+      response.code.should == '200'
+      response.body.should include("REMOTE_USER = a%0Ab\n")
+    end
   end
 
   ##### Helper methods #####

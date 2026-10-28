@@ -30,6 +30,7 @@
 #include <cstring>
 #include <boost/function.hpp>
 #include <StaticString.h>
+#include <SecureHeaderEncoding.h>
 
 // The APR headers must come after the Passenger headers.
 // See Hooks.cpp to learn why.
@@ -69,24 +70,36 @@ typedef boost::function<void (
 
 
 /**
- * Whether `value` contains a CR or LF. The request that we send to the Core is
- * a CRLF-delimited HTTP header block. The Core trusts every secure header
- * ("!~" prefix) that comes after the Core password header. So if a
- * request-derived value that we serialize as a secure header contains CR or LF,
- * then the client can inject arbitrary secure headers, such as an app start
- * command. Such values must be rejected.
+ * Whether `value` contains a CR or LF. Secure header values are encoded so
+ * that a CR or LF can't inject other secure headers (see SecureHeaderEncoding.h).
+ * As an extra safeguard, we also reject requests where a request-derived secure
+ * header value contains CR or LF, because no legitimate document root or user
+ * name contains those.
  */
 inline bool
 containsHeaderDelimiter(const char *value) {
 	return value != NULL && strpbrk(value, "\r\n") != NULL;
 }
 
+/**
+ * Appends a secure header value, encoded as described in SecureHeaderEncoding.h
+ * so that it can't contain CR or LF.
+ */
+inline void
+appendSecureHeaderValue(string &headers, const StaticString &value) {
+	size_t pos = headers.size();
+	headers.resize(pos + psg_secure_header_value_encoded_len(value.data(), value.size()));
+	psg_secure_header_value_encode(&headers[pos], value.data(), value.size());
+}
+
+// The addHeader() functions append a secure header.
+
 inline void
 addHeader(string &headers, const StaticString &name, const char *value) {
 	if (value != NULL) {
 		headers.append(name.data(), name.size());
 		headers.append(": ", 2);
-		headers.append(value);
+		appendSecureHeaderValue(headers, value);
 		headers.append("\r\n", 2);
 	}
 }
@@ -96,7 +109,7 @@ addHeader(string &headers, const StaticString &name, const StaticString &value) 
 	if (!value.empty()) {
 		headers.append(name.data(), name.size());
 		headers.append(": ", 2);
-		headers.append(value.data(), value.size());
+		appendSecureHeaderValue(headers, value);
 		headers.append("\r\n", 2);
 	}
 }

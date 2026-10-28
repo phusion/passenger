@@ -1044,12 +1044,12 @@ private:
 		result.append("!~: ", sizeof("!~: ") - 1);
 		result.append(getCorePassword().data(), getCorePassword().size());
 		result.append("\r\n!~DOCUMENT_ROOT: ", sizeof("\r\n!~DOCUMENT_ROOT: ") - 1);
-		result.append(ap_document_root(r));
+		appendSecureHeaderValue(result, ap_document_root(r));
 		result.append("\r\n", 2);
 
 		if (baseURI != NULL) {
 			result.append("!~SCRIPT_NAME: ", sizeof("!~SCRIPT_NAME: ") - 1);
-			result.append(baseURI);
+			appendSecureHeaderValue(result, baseURI);
 			result.append("\r\n", 2);
 		}
 
@@ -1070,11 +1070,10 @@ private:
 		if (config->getAppGroupName().empty()) {
 			result.append("!~PASSENGER_APP_GROUP_NAME: ",
 				sizeof("!~PASSENGER_APP_GROUP_NAME: ") - 1);
-			result.append(mapper.getAppRoot());
+			appendSecureHeaderValue(result, mapper.getAppRoot());
 			if (!config->getAppEnv().empty()) {
 				result.append(" (", 2);
-				result.append(config->getAppEnv().data(),
-					config->getAppEnv().size());
+				appendSecureHeaderValue(result, config->getAppEnv());
 				result.append(")", 1);
 			}
 			result.append("\r\n", 2);
@@ -1137,6 +1136,7 @@ private:
 				throw RuntimeException("Unable to base64 encode environment variables");
 			}
 
+			// Base64 never needs secure header encoding.
 			result.append("!~PASSENGER_ENV_VARS: ", sizeof("!~PASSENGER_ENV_VARS: ") - 1);
 			result.append(envvarsBase64Data, envvarsBase64Len);
 			result.append("\r\n", 2);
