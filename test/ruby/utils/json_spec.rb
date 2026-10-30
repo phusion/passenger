@@ -97,6 +97,26 @@ describe Utils::JSON do
     expect(parse_string('no #{interpolation}')).to eq('no #{interpolation}')
   end
 
+  specify 'non-ASCII \u escapes' do
+    expect(parse_string('caf\u00e9 \u65E5\u672C')).to eq("caf\u00e9 \u65e5\u672c")
+    expect(parse_string('\uD83D\uDE00')).to eq("\u{1F600}")
+  end
+
+  # GH-2445: the loaders read args.json in binary mode, and some JSON
+  # generators escape all non-ASCII characters.
+  specify 'escaped and raw non-ASCII characters in binary input yield the same string' do
+    escaped = Utils::JSON.parse('["caf\u00e9 \uD83D\uDE00"]'.b).first
+    raw = Utils::JSON.parse("[\"caf\u00e9 \u{1F600}\"]".b).first
+    expect(escaped).to eq(raw)
+  end
+
+  specify 'invalid surrogate pairs' do
+    expect { parse_string('\uD83D') }.to raise_error(RuntimeError)
+    expect { parse_string('\uD83Dx') }.to raise_error(RuntimeError)
+    expect { parse_string('\uD83D\u0041') }.to raise_error(RuntimeError)
+    expect { parse_string('\uDE00') }.to raise_error(RuntimeError)
+  end
+
   specify 'hash' do
     expect(PARSED['head'].keys.sort). to eq(%w[label ref repository sha user])
   end

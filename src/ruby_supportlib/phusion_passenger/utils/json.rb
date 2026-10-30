@@ -108,7 +108,7 @@ class JSON
   end
 
   SPEC = { 'b' => "\b", 'f' => "\f", 'n' => "\n", 'r' => "\r", 't' => "\t" }
-  UNI = 'u'; CODE = /[a-fA-F0-9]{4}/
+  UNI = 'u'; CODE = /[a-fA-F0-9]{4}/; UNI_ESC = /\\u/
   STR = /"/; STE = '"'
   ESC = '\\'
 
@@ -117,7 +117,9 @@ class JSON
       str, esc = String.new, false
       while c = s.getch
         if esc
-          str << (c == UNI ? (s.scan(CODE) || error).to_i(16).chr : SPEC[c] || c)
+          # Give decoded characters the input's encoding, so that an escaped
+          # character yields the same string as the raw character would.
+          str << (c == UNI ? unicode_escape.force_encoding(c.encoding) : SPEC[c] || c)
           esc = false
         else
           case c
@@ -129,6 +131,27 @@ class JSON
       end
       str
     end
+  end
+
+  # Decodes a \uXXXX escape (whose "\u" has already been consumed) into a
+  # UTF-8 string. Characters outside the Basic Multilingual Plane, such as
+  # emoji, are escaped as a UTF-16 surrogate pair (e.g. \uD83D\uDE00), which
+  # is combined into a single character here.
+  def unicode_escape
+    code = hex_code
+    if code.between?(0xD800, 0xDBFF)
+      scan(UNI_ESC) || error
+      low = hex_code
+      error unless low.between?(0xDC00, 0xDFFF)
+      code = 0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00)
+    elsif code.between?(0xDC00, 0xDFFF)
+      error
+    end
+    [code].pack('U')
+  end
+
+  def hex_code
+    (scan(CODE) || error).to_i(16)
   end
 
   def error
