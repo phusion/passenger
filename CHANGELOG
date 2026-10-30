@@ -5,6 +5,16 @@ Release 6.2.2 (Not yet released)
  * Harden against secure headers containing header delimiters.
  * Upgrade Boost from 1.90 -> 1.92.
  * Upgrade jsoncpp from 1.8.1 -> 1.9.8.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - ccache: 4.14.1 -> 4.14.2
+   - cmake: 4.4.4 -> 4.4.5
+   - gnupg: 2.5.21 -> 2.5.24
+   - libgcrypt: 1.12.2 -> 1.12.4
+   - libksba: 1.8.0 -> 1.8.1
+   - rubies:
+      - 3.3.12 -> 3.3.13
+      - 3.4.11 -> 3.4.12
+      - 4.0.7 -> 4.0.9
 
 
 Release 6.2.1
