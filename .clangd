@@ -4,3 +4,8 @@ CompileFlags:
     - -DINTELLISENSE
     - -std=gnu++14
     - -ferror-limit=0
+
+If:
+  PathMatch: "src/cxx_supportlib/vendor-modified/jsoncpp/json.h"
+  Diagnostics:
+    Suppress: pragma-pack

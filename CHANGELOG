@@ -4,6 +4,7 @@ Release 6.2.2 (Not yet released)
  * Upgrade llhttp from 9.2.1 -> 9.4.3.
  * Harden against secure headers containing header delimiters.
  * Upgrade Boost from 1.90 -> 1.92.
+ * Upgrade jsoncpp from 1.8.1 -> 1.9.8.
 
 
 Release 6.2.1
