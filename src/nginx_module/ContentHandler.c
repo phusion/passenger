@@ -174,6 +174,20 @@ cleanup_detector_result(void *data) {
     psg_app_type_detector_result_deinit((PsgAppTypeDetectorResult *) data);
 }
 
+/* The request that we send to the Core is a CRLF-delimited HTTP header block.
+ * The Core trusts every secure header ("!~" prefix) that comes after the
+ * Core password header. So if a request-derived value that we serialize as
+ * a secure header contains CR or LF, then the client can inject arbitrary
+ * secure headers, such as an app start command. Such values must be rejected.
+ */
+static int
+contains_header_delimiter(const ngx_str_t *str)
+{
+    return str->len > 0
+        && (memchr(str->data, '\r', str->len) != NULL
+            || memchr(str->data, '\n', str->len) != NULL);
+}
+
 static int
 find_base_uri(ngx_http_request_t *r, const passenger_loc_conf_t *loc,
               ngx_str_t *found_base_uri)
@@ -1038,6 +1052,18 @@ create_request(ngx_http_request_t *r)
     }
     request_size = construct_request_buffer(r, slcf, context, &state, NULL);
 
+    /* We check this here instead of in passenger_content_handler() because
+     * r->headers_in.user may only have been populated just now: it is filled
+     * lazily when something evaluates $remote_user, such as a
+     * passenger_set_header value.
+     */
+    if (contains_header_delimiter(&r->headers_in.user)) {
+        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0,
+            "rejecting request because the authenticated user name "
+            "contains a CR or LF character");
+        return NGX_ERROR;
+    }
+
     b = ngx_create_temp_buf(r->pool, request_size);
     if (b == NULL) {
         return NGX_ERROR;
@@ -1730,6 +1756,15 @@ passenger_content_handler(ngx_http_request_t *r)
          */
         context->public_dir.data = (u_char *) "/";
         context->public_dir.len = 1;
+    }
+    /* The document root can contain request-derived data, e.g. when `root`
+     * contains a variable set from a regex capture of the (URL-decoded) URI.
+     */
+    if (contains_header_delimiter(&context->public_dir)) {
+        ngx_log_error(NGX_LOG_WARN, r->connection->log, 0,
+            "rejecting request because the document root contains "
+            "a CR or LF character");
+        return NGX_HTTP_BAD_REQUEST;
     }
 
     /* If there's a corresponding page cache file for this URL, then serve that

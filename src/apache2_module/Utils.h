@@ -27,6 +27,7 @@
 #define _PASSENGER_APACHE2_MODULE_UTILS_H_
 
 #include <string>
+#include <cstring>
 #include <boost/function.hpp>
 #include <StaticString.h>
 
@@ -66,6 +67,19 @@ typedef boost::function<void (
 	DirConfig *pdconfig, DirConfigContext context
 )> DirConfigTraverser;
 
+
+/**
+ * Whether `value` contains a CR or LF. The request that we send to the Core is
+ * a CRLF-delimited HTTP header block. The Core trusts every secure header
+ * ("!~" prefix) that comes after the Core password header. So if a
+ * request-derived value that we serialize as a secure header contains CR or LF,
+ * then the client can inject arbitrary secure headers, such as an app start
+ * command. Such values must be rejected.
+ */
+inline bool
+containsHeaderDelimiter(const char *value) {
+	return value != NULL && strpbrk(value, "\r\n") != NULL;
+}
 
 inline void
 addHeader(string &headers, const StaticString &name, const char *value) {

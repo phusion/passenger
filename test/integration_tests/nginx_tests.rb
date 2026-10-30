@@ -518,6 +518,42 @@ describe 'Phusion Passenger for Nginx' do
     end
   end
 
+  describe 'secure header injection' do
+    before :all do
+      create_nginx_controller
+      @server = "http://1.passenger.test:#{@nginx.port}"
+      @stub = RackStub.new('rack')
+      @nginx.add_server do |server|
+        server[:server_name] = '1.passenger.test'
+        server[:root]        = "#{@stub.full_app_root}/public"
+        server << %Q(
+          location ~ ^/(?<tenant>[^/]+)/ {
+            root #{@stub.full_app_root}/$tenant/public;
+            passenger_enabled on;
+            passenger_app_root #{@stub.full_app_root};
+          }
+        )
+      end
+      @nginx.start
+    end
+
+    after :all do
+      @stub.destroy
+      @nginx.stop if @nginx
+    end
+
+    it 'rejects a document root containing CR or LF' do
+      # The URI-decoded capture ends up in the document root. Without
+      # protection, the CRLFs would inject secure headers that make the
+      # Core spawn `touch injected_marker` as the app.
+      marker = "#{@stub.full_app_root}/injected_marker"
+      response = get_response('/x%0D%0A!~PASSENGER_APP_TYPE:%20injected' \
+        '%0D%0A!~PASSENGER_APP_START_COMMAND:%20touch%20injected_marker%3B/')
+      response.code.should == '400'
+      File.exist?(marker).should be_falsey
+    end
+  end
+
   ##### Helper methods #####
 
   def start_web_server_if_necessary

@@ -657,6 +657,56 @@ describe 'Apache 2 module' do
     end
   end
 
+  describe 'secure header injection' do
+    before :all do
+      create_apache2_controller
+      modules_dir = PhusionPassenger::PlatformInfo.apache2_modulesdir
+      %w(request session session_cookie auth_form authn_core authn_anon authz_user).each do |name|
+        @apache2 << "LoadModule #{name}_module \"#{modules_dir}/mod_#{name}.so\""
+      end
+      @apache2 << 'PassengerMaxPoolSize 1'
+
+      @stub = RackStub.new('rack')
+      @server = "http://1.passenger.test:#{@apache2.port}"
+      @apache2.set_vhost('1.passenger.test', "#{@stub.full_app_root}/public") do |vhost|
+        # mod_auth_form URL-decodes the submitted user name, and this
+        # mod_authn_anon setup accepts any user name, so the client fully
+        # controls REMOTE_USER.
+        vhost << %Q(
+          <Location />
+            AuthType form
+            AuthName test
+            AuthFormProvider anon
+            Anonymous *
+            Anonymous_MustGiveEmail off
+            Session on
+            SessionCookieName session path=/
+            Require valid-user
+          </Location>
+        )
+      end
+      @apache2.start
+    end
+
+    after :all do
+      @stub.destroy
+      @apache2.stop if @apache2
+    end
+
+    it 'rejects a user name containing CR or LF' do
+      # Without protection, the CRLFs would inject secure headers that make
+      # the Core spawn `touch injected_marker` as the app.
+      marker = "#{@stub.full_app_root}/injected_marker"
+      start_web_server_if_necessary
+      response = Net::HTTP.post_form(URI.parse("#{@server}/"),
+        'httpd_username' => "x\r\n!~PASSENGER_APP_TYPE: injected\r\n" \
+          "!~PASSENGER_APP_START_COMMAND: touch injected_marker",
+        'httpd_password' => 'password')
+      response.code.should == '400'
+      File.exist?(marker).should be_falsey
+    end
+  end
+
   ##### Helper methods #####
 
   def start_web_server_if_necessary

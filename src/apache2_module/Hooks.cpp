@@ -612,6 +612,19 @@ private:
 			return ReportFileSystemError(e).report(r);
 		}
 
+		/* These values can contain request-derived data. For example, the
+		 * document root can be computed by mod_vhost_alias, mod_auth_form
+		 * URL-decodes the user name, and mod_authn_anon can accept any user name.
+		 */
+		if (containsHeaderDelimiter(ap_document_root(r))) {
+			P_WARN("Rejecting request because the document root contains a CR or LF character");
+			return HTTP_BAD_REQUEST;
+		}
+		if (containsHeaderDelimiter(r->user)) {
+			P_WARN("Rejecting request because the authenticated user name contains a CR or LF character");
+			return HTTP_BAD_REQUEST;
+		}
+
 
 		UPDATE_TRACE_POINT();
 		try {
