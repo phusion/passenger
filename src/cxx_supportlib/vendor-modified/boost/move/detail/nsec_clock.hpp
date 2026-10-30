@@ -115,7 +115,7 @@ struct QPFHolder
 template<int Dummy>
 const double QPFHolder<Dummy>::nanosecs_per_tic = get_nsec_per_tic();
 
-inline boost::uint64_t nsec_clock() BOOST_NOEXCEPT
+BOOST_MOVE_FORCEINLINE boost::uint64_t nsec_clock() BOOST_NOEXCEPT
 {
    double nanosecs_per_tic = QPFHolder<0>::nanosecs_per_tic;
    
@@ -132,7 +132,9 @@ inline boost::uint64_t nsec_clock() BOOST_NOEXCEPT
 
 #include <mach/mach_time.h>  // mach_absolute_time, mach_timebase_info_data_t
 
-inline boost::uint64_t nsec_clock() BOOST_NOEXCEPT
+namespace boost { namespace move_detail {
+
+BOOST_MOVE_FORCEINLINE boost::uint64_t nsec_clock() BOOST_NOEXCEPT
 {
    boost::uint64_t count = ::mach_absolute_time();
 
@@ -141,6 +143,8 @@ inline boost::uint64_t nsec_clock() BOOST_NOEXCEPT
    return static_cast<boost::uint64_t>
       ( static_cast<double>(count)*(static_cast<double>(info.numer) / info.denom) );
 }
+
+}}  //namespace boost { namespace move_detail {
 
 #elif defined(BOOST_MOVE_DETAIL_POSIX_API)
 
@@ -158,7 +162,9 @@ inline boost::uint64_t nsec_clock() BOOST_NOEXCEPT
 #     error "No high resolution steady clock in your system, please provide a patch"
 #  endif
 
-inline boost::uint64_t nsec_clock() BOOST_NOEXCEPT
+namespace boost { namespace move_detail {
+
+BOOST_MOVE_FORCEINLINE boost::uint64_t nsec_clock() BOOST_NOEXCEPT
 {
    struct timespec count;
    ::clock_gettime(BOOST_MOVE_DETAIL_CLOCK_MONOTONIC, &count);
@@ -167,6 +173,8 @@ inline boost::uint64_t nsec_clock() BOOST_NOEXCEPT
    r += static_cast<boost::uint64_t>(count.tv_nsec);
    return r;
 }
+
+}}  //namespace boost { namespace move_detail {
 
 #endif  // POSIX
 
@@ -198,7 +206,7 @@ class cpu_timer
    public:
 
       //  constructor
-      cpu_timer() BOOST_NOEXCEPT                                   { start(); }
+      cpu_timer() BOOST_NOEXCEPT : m_is_stopped(true) {}
 
       //  observers
       bool          is_stopped() const BOOST_NOEXCEPT              { return m_is_stopped; }

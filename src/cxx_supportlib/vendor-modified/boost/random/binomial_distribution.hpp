@@ -321,7 +321,7 @@ private:
             IntType k = static_cast<IntType>(floor((2*_u.btrd.a/us + _u.btrd.b)*u + _u.btrd.c));
             if(k < 0 || k > _t) continue;
             v = v*_u.btrd.alpha/(_u.btrd.a/(us*us) + _u.btrd.b);
-            RealType km = abs(k - m);
+            RealType km = abs(static_cast<RealType>(k) - static_cast<RealType>(m));
             if(km <= 15) {
                 RealType f = 1;
                 if(m < k) {

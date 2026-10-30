@@ -1,6 +1,6 @@
 /* Fast open-addressing concurrent hash table.
  *
- * Copyright 2023-2024 Joaquin M Lopez Munoz.
+ * Copyright 2023-2026 Joaquin M Lopez Munoz.
  * Copyright 2024 Braden Ganetsky.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
@@ -697,9 +697,9 @@ public:
   }
 
   /* Optimizations for maps for (k,v) to avoid eagerly constructing value */
-  template <typename K, typename V>
+  template <typename K, typename V, typename Table = concurrent_table>
   BOOST_FORCEINLINE auto emplace(K&& k, V&& v) ->
-    typename std::enable_if<is_emplace_kv_able<concurrent_table, K>::value,
+    typename std::enable_if<is_emplace_kv_able<Table, K>::value,
       bool>::type
   {
     alloc_cted_or_fwded_key_type<type_policy, Allocator, K&&> x(

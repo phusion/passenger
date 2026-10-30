@@ -63,6 +63,22 @@ using boost::move_detail::enable_if_or;
 using boost::move_detail::disable_if_or;
 using boost::move_detail::remove_const;
 
+//Equivalent to C++20 std::type_identity. Its only purpose is to put its
+//template argument in a non-deduced context. It is used for the allocator
+//argument of allocator-extended copy/move constructors so that class template
+//argument deduction is driven by the source container and not by the allocator
+//argument.
+template<typename T>
+struct type_identity
+{
+   typedef T type;
+};
+
+#if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+template<typename T>
+using type_identity_t = typename type_identity<T>::type;
+#endif
+
 template <class FirstType>
 struct select1st
 {

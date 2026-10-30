@@ -54,7 +54,7 @@ class tc_optional_base : public optional_tag
       :
       m_initialized(false)
     {
-      construct(optional_detail::forward<Expr>(expr),tag);
+      construct(optional_detail::forward_<Expr>(expr),tag);
     }
 
     // tc_optional_base& operator= ( tc_optional_base const& ) = default;
@@ -102,7 +102,7 @@ class tc_optional_base : public optional_tag
     template<class Expr, class ExprPtr>
     void assign_expr ( Expr&& expr, ExprPtr const* tag )
     {
-       construct(optional_detail::forward<Expr>(expr),tag);
+       construct(optional_detail::forward_<Expr>(expr),tag);
     }
 
 #endif
@@ -138,14 +138,14 @@ class tc_optional_base : public optional_tag
     template<class... Args>
     void construct ( in_place_init_t, Args&&... args )
     {
-      m_storage = value_type( optional_detail::forward<Args>(args)... ) ;
+      m_storage = value_type( optional_detail::forward_<Args>(args)... ) ;
       m_initialized = true ;
     }
 
     template<class... Args>
     void emplace_assign ( Args&&... args )
     {
-      construct(in_place_init, optional_detail::forward<Args>(args)...);
+      construct(in_place_init, optional_detail::forward_<Args>(args)...);
     }
 
     template<class... Args>
@@ -153,7 +153,7 @@ class tc_optional_base : public optional_tag
       :
       m_initialized(false)
     {
-      construct(in_place_init, optional_detail::forward<Args>(args)...);
+      construct(in_place_init, optional_detail::forward_<Args>(args)...);
     }
 
     template<class... Args>
@@ -162,7 +162,7 @@ class tc_optional_base : public optional_tag
       m_initialized(false)
     {
       if ( cond )
-        construct(in_place_init, optional_detail::forward<Args>(args)...);
+        construct(in_place_init, optional_detail::forward_<Args>(args)...);
     }
 
 #ifndef BOOST_OPTIONAL_NO_INPLACE_FACTORY_SUPPORT
@@ -207,7 +207,7 @@ class tc_optional_base : public optional_tag
     template<class Expr>
     void construct ( Expr&& expr, void const* )
     {
-      m_storage = value_type(optional_detail::forward<Expr>(expr)) ;
+      m_storage = value_type(optional_detail::forward_<Expr>(expr)) ;
       m_initialized = true ;
     }
 
@@ -218,7 +218,7 @@ class tc_optional_base : public optional_tag
     template<class Expr>
     void assign_expr_to_initialized ( Expr&& expr, void const* )
     {
-      assign_value( optional_detail::forward<Expr>(expr) );
+      assign_value( optional_detail::forward_<Expr>(expr) );
     }
 
 #ifdef BOOST_OPTIONAL_WEAK_OVERLOAD_RESOLUTION

@@ -35,6 +35,8 @@
 #include <boost/move/detail/to_raw_pointer.hpp>
 #include <boost/move/detail/force_ptr.hpp>
 #include <boost/container/detail/type_traits.hpp>
+#include <boost/container/detail/node_pool_impl.hpp>
+
 // intrusive
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/intrusive/set.hpp>
@@ -375,6 +377,7 @@ inline void candidate_power_of_2_rt ( std::size_t initial_alignment
                                     , std::size_t &num_subblocks
                                     , std::size_t &real_num_node)
 {
+
    bool overhead_satisfied = false;
    std::size_t num_b_subblock = 0;
    std::size_t total_nodes = 0;
@@ -453,9 +456,27 @@ class private_adaptive_node_pool_impl_common
    typedef typename adaptive_pool_types_t::hdr_offset_holder         hdr_offset_holder;
    typedef private_adaptive_node_pool_impl_common                    this_type;
 
-   BOOST_STATIC_CONSTEXPR size_type MaxAlign = alignment_of<void_pointer>::value;
-   BOOST_STATIC_CONSTEXPR size_type HdrSize  = ((sizeof(block_info_t)-1)/MaxAlign+1)*MaxAlign;
-   BOOST_STATIC_CONSTEXPR size_type HdrOffsetSize = ((sizeof(hdr_offset_holder)-1)/MaxAlign+1)*MaxAlign;
+   //BOOST_STATIC_CONSTEXPR size_type MaxAlign = alignment_of<void_pointer>::value;
+   //BOOST_STATIC_CONSTEXPR size_type HdrSize  = ((sizeof(block_info_t)-1)/MaxAlign+1)*MaxAlign;
+   //BOOST_STATIC_CONSTEXPR size_type HdrOffsetSize = ((sizeof(hdr_offset_holder)-1)/MaxAlign+1)*MaxAlign;
+
+   static size_type get_hdr_size(size_type real_node_align)
+   {  return ((sizeof(block_info_t)-1)/real_node_align+1)*real_node_align;  }
+
+   static size_type get_hdr_off_size(size_type real_node_align)
+   {  return ((sizeof(hdr_offset_holder)-1)/real_node_align+1)*real_node_align;  }
+
+   template<size_type RealNodeAlign>
+   struct get_hdr_size_ct
+   {
+      BOOST_STATIC_CONSTEXPR size_type value = ((sizeof(block_info_t) - 1)/RealNodeAlign + 1)*RealNodeAlign;
+   };
+
+   template<size_type RealNodeAlign>
+   struct get_hdr_off_size_ct
+   {
+      BOOST_STATIC_CONSTEXPR size_type value = ((sizeof(hdr_offset_holder) - 1)/RealNodeAlign + 1)*RealNodeAlign;
+   };
 
    segment_mngr_base_ptr_t             mp_segment_mngr_base;   //Segment manager
    block_container_t                   m_block_container;      //Intrusive block list
@@ -544,6 +565,7 @@ class private_adaptive_node_pool_impl_common
                }
             }
          }
+         (void)total_free_blocks;
          BOOST_ASSERT(total_free_blocks == m_totally_free_blocks);
          BOOST_ASSERT(total_free_nodes >= m_totally_free_blocks*real_num_node);
       }
@@ -644,6 +666,7 @@ class private_adaptive_node_pool_impl_common
                                    , const size_type max_free_blocks
                                    , const size_type real_block_alignment, const size_type real_node_size
                                    , const size_type real_num_node, const size_type num_subblocks
+                                   , const size_type real_node_align
                                    , AlignOnlyTrue)
    {
       (void)num_subblocks;
@@ -660,11 +683,11 @@ class private_adaptive_node_pool_impl_common
          if(!mem_address){
             //In case of error, free memory deallocating all nodes (the new ones allocated
             //in this function plus previously stored nodes in chain).
-            this->priv_deallocate_nodes(chain, max_free_blocks, real_num_node, num_subblocks, real_block_alignment);
+            this->priv_deallocate_nodes(chain, max_free_blocks, real_num_node, num_subblocks, real_block_alignment, real_node_align);
             throw_bad_alloc();
          }
-         block_info_t &c_info = *new(mem_address, boost_container_new_t())block_info_t();
-         mem_address += HdrSize;
+         block_info_t &c_info = *new(mem_address, boost_container_new_t()) block_info_t();
+         mem_address += get_hdr_size(real_node_align);
          this->priv_fill_chain_remaining_to_block(chain, target_elem_in_chain, c_info, mem_address, real_num_node, real_node_size);
          const size_type free_nodes = c_info.free_nodes.size();
          if(free_nodes){
@@ -680,15 +703,18 @@ class private_adaptive_node_pool_impl_common
                                    , const size_type max_free_blocks
                                    , const size_type real_block_alignment, const size_type real_node_size
                                    , const size_type real_num_node, const size_type num_subblocks
+                                   , const size_type real_node_align
                                    , AlignOnlyFalse)
    {
       BOOST_ASSERT(m_block_container.empty());
       BOOST_ASSERT(min_elements > 0);
       const size_type n = (min_elements - 1)/real_num_node + 1;
       const size_type real_block_size = real_block_alignment*num_subblocks - PayloadPerAllocation;
-      const size_type elements_per_subblock_mid = (real_block_alignment - HdrOffsetSize)/real_node_size;
-      const size_type elements_per_subblock_end = (real_block_alignment - HdrOffsetSize - PayloadPerAllocation) / real_node_size;
-      const size_type hdr_subblock_elements = (real_block_alignment - HdrSize - PayloadPerAllocation)/real_node_size;
+      const size_type hdr_size = get_hdr_size(real_node_align);
+      const size_type hdr_off_size = get_hdr_off_size(real_node_align);
+      const size_type elements_per_subblock_mid = (real_block_alignment - hdr_off_size)/real_node_size;
+      const size_type elements_per_subblock_end = (real_block_alignment - hdr_off_size - PayloadPerAllocation) / real_node_size;
+      const size_type hdr_subblock_elements = (real_block_alignment - hdr_size - PayloadPerAllocation)/real_node_size;
       const size_type target_elem_in_chain = chain.size() + min_elements;
 
       for(size_type i = 0; i != n; ++i){
@@ -699,12 +725,12 @@ class private_adaptive_node_pool_impl_common
          if(!mem_address){
             //In case of error, free memory deallocating all nodes (the new ones allocated
             //in this function plus previously stored nodes in chain).
-            this->priv_deallocate_nodes(chain, max_free_blocks, real_num_node, num_subblocks, real_block_alignment);
+            this->priv_deallocate_nodes(chain, max_free_blocks, real_num_node, num_subblocks, real_block_alignment, real_node_align);
             throw_bad_alloc();
          }
          //First initialize header information on the last subblock
          char *hdr_addr = mem_address + real_block_alignment*(num_subblocks-1);
-         block_info_t &c_info = *new(hdr_addr, boost_container_new_t())block_info_t();
+         block_info_t &c_info = *new(hdr_addr, boost_container_new_t()) block_info_t();
          //Some structural checks
          BOOST_ASSERT(static_cast<void*>(&static_cast<hdr_offset_holder&>(c_info).hdr_offset) ==
                       static_cast<void*>(&c_info));   (void)c_info;
@@ -715,10 +741,10 @@ class private_adaptive_node_pool_impl_common
             new(mem_address, boost_container_new_t()) hdr_offset_holder(size_type(hdr_addr - mem_address));
             const size_type elements_per_subblock = (subblock != (maxsubblock - 1)) ? elements_per_subblock_mid : elements_per_subblock_end;
             this->priv_fill_chain_remaining_to_block
-               (chain, target_elem_in_chain, c_info, mem_address + HdrOffsetSize, elements_per_subblock, real_node_size);
+               (chain, target_elem_in_chain, c_info, mem_address + hdr_off_size, elements_per_subblock, real_node_size);
          }
          this->priv_fill_chain_remaining_to_block
-            (chain, target_elem_in_chain, c_info, hdr_addr + HdrSize, hdr_subblock_elements, real_node_size);
+            (chain, target_elem_in_chain, c_info, hdr_addr + hdr_size, hdr_subblock_elements, real_node_size);
          m_totally_free_blocks += static_cast<size_type>(c_info.free_nodes.size() == real_num_node);
          if (c_info.free_nodes.size())
             m_block_container.push_front(c_info);
@@ -727,7 +753,7 @@ class private_adaptive_node_pool_impl_common
 
    //!Allocates array of count elements. Can throw
    void *priv_allocate_node( const size_type max_free_blocks, const size_type real_block_alignment, const size_type real_node_size
-                           , const size_type real_num_node, const size_type num_subblocks)
+                           , const size_type real_num_node, const size_type num_subblocks, const size_type real_node_align)
    {
       this->priv_invariants(real_num_node, num_subblocks, real_block_alignment);
       //If there are no free nodes we allocate a new block
@@ -747,7 +773,7 @@ class private_adaptive_node_pool_impl_common
       else{
          multiallocation_chain chain;
          this->priv_append_from_new_blocks
-            (1, chain, max_free_blocks, real_block_alignment, real_node_size, real_num_node, num_subblocks, IsAlignOnly());
+            (1, chain, max_free_blocks, real_block_alignment, real_node_size, real_num_node, num_subblocks, real_node_align, IsAlignOnly());
          void *node = boost::movelib::to_raw_pointer(chain.pop_front());
          this->priv_invariants(real_num_node, num_subblocks, real_block_alignment);
          return node;
@@ -756,7 +782,7 @@ class private_adaptive_node_pool_impl_common
 
    void priv_allocate_nodes( const size_type n, multiallocation_chain &chain
                            , const size_type max_free_blocks, const size_type real_block_alignment, const size_type real_node_size
-                           , const size_type real_num_node, const size_type num_subblocks)
+                           , const size_type real_num_node, const size_type num_subblocks, const size_type real_node_align)
    {
       size_type i = 0;
       BOOST_CONTAINER_TRY{
@@ -765,7 +791,7 @@ class private_adaptive_node_pool_impl_common
             //If there are no free nodes we allocate all needed blocks
             if (m_block_container.empty()){
                this->priv_append_from_new_blocks
-                  (n - i, chain, max_free_blocks, real_block_alignment, real_node_size, real_num_node, num_subblocks, IsAlignOnly());
+                  (n - i, chain, max_free_blocks, real_block_alignment, real_node_size, real_num_node, num_subblocks, real_node_align, IsAlignOnly());
                BOOST_ASSERT(m_block_container.empty() || (++m_block_container.cbegin() == m_block_container.cend()));
                BOOST_ASSERT(chain.size() == n);
                break;
@@ -800,7 +826,7 @@ class private_adaptive_node_pool_impl_common
          }
       }
       BOOST_CONTAINER_CATCH(...){
-         this->priv_deallocate_nodes(chain, max_free_blocks, real_num_node, num_subblocks, real_block_alignment);
+         this->priv_deallocate_nodes(chain, max_free_blocks, real_num_node, num_subblocks, real_block_alignment, real_node_align);
          this->priv_invariants(real_num_node, num_subblocks, real_block_alignment);
          BOOST_CONTAINER_RETHROW
       }
@@ -811,7 +837,8 @@ class private_adaptive_node_pool_impl_common
    //!Deallocates an array pointed by ptr. Never throws
    void priv_deallocate_node( void *pElem
                             , const size_type max_free_blocks, const size_type real_num_node
-                            , const size_type num_subblocks, const size_type real_block_alignment)
+                            , const size_type num_subblocks, const size_type real_block_alignment
+                            , const size_type /*real_node_align*/)
    {
       this->priv_invariants(real_num_node, num_subblocks, real_block_alignment);
       block_info_t &block_info = *this->priv_block_from_node(pElem, real_block_alignment);
@@ -829,7 +856,8 @@ class private_adaptive_node_pool_impl_common
 
    void priv_deallocate_nodes( multiallocation_chain &nodes
                              , const size_type max_free_blocks, const size_type real_num_node
-                             , const size_type num_subblocks, const size_type real_block_alignment)
+                             , const size_type num_subblocks, const size_type real_block_alignment
+                             , const size_type /*real_node_align*/)
    {
       this->priv_invariants(real_num_node, num_subblocks, real_block_alignment);
       //To take advantage of node locality, wait until two
@@ -978,10 +1006,12 @@ template< class SizeType
         , std::size_t NodesPerBlock
         , std::size_t HdrOffsetSize
         , std::size_t OverheadPercent
+        , std::size_t NodeAlign
         , bool AlignOnly>
 struct calculate_alignment_ct
 {
-   BOOST_STATIC_CONSTEXPR std::size_t alignment     = upper_power_of_2_ct<SizeType, HdrSize + RealNodeSize*NodesPerBlock>::value;
+   BOOST_STATIC_CONSTEXPR std::size_t initial_alignment     = upper_power_of_2_ct<SizeType, HdrSize + RealNodeSize*NodesPerBlock>::value;
+   BOOST_STATIC_CONSTEXPR std::size_t alignment     = NodeAlign > initial_alignment ? NodeAlign : initial_alignment;
    BOOST_STATIC_CONSTEXPR std::size_t num_subblocks = 0;
    BOOST_STATIC_CONSTEXPR std::size_t real_num_node = (alignment - PayloadPerAllocation - HdrSize)/RealNodeSize;
 };
@@ -992,7 +1022,9 @@ template< class SizeType
         , std::size_t RealNodeSize
         , std::size_t NodesPerBlock
         , std::size_t HdrOffsetSize
-        , std::size_t OverheadPercent>
+        , std::size_t OverheadPercent
+        , std::size_t NodeAlign
+        >
 struct calculate_alignment_ct
    < SizeType
    , HdrSize
@@ -1001,10 +1033,14 @@ struct calculate_alignment_ct
    , NodesPerBlock
    , HdrOffsetSize
    , OverheadPercent
+   , NodeAlign
    , false>
 {
+   BOOST_STATIC_CONSTEXPR std::size_t proposed_alignment = upper_power_of_2_ct<SizeType, HdrSize + PayloadPerAllocation + RealNodeSize>::value;
+   BOOST_STATIC_CONSTEXPR std::size_t initial_alignment = NodeAlign > proposed_alignment ? NodeAlign : proposed_alignment;
+
    typedef typename candidate_power_of_2_ct
-      < upper_power_of_2_ct<SizeType, HdrSize + PayloadPerAllocation + RealNodeSize>::value
+      < initial_alignment
       , RealNodeSize
       , PayloadPerAllocation
       , NodesPerBlock
@@ -1029,6 +1065,7 @@ template< class SegmentManagerBase
         , std::size_t NodeSize
         , std::size_t NodesPerBlock
         , std::size_t OverheadPercent
+        , std::size_t InitialNodeAlign
         , unsigned int Flags>
 class private_adaptive_node_pool_impl_ct
    : public private_adaptive_node_pool_impl_common<SegmentManagerBase, Flags>
@@ -1052,15 +1089,17 @@ class private_adaptive_node_pool_impl_ct
    BOOST_STATIC_CONSTEXPR bool AlignOnly      = base_t::AlignOnly;
 
    private:
-   BOOST_STATIC_CONSTEXPR size_type MaxAlign = base_t::MaxAlign;
-   BOOST_STATIC_CONSTEXPR size_type HdrSize  = base_t::HdrSize;
-   BOOST_STATIC_CONSTEXPR size_type HdrOffsetSize = base_t::HdrOffsetSize;
+   BOOST_STATIC_CONSTEXPR size_type VoidPtrAlign = alignment_of<void_pointer>::value;
+   BOOST_STATIC_CONSTEXPR size_type RealNodeAlign = InitialNodeAlign > VoidPtrAlign ? InitialNodeAlign : VoidPtrAlign;
 
-   BOOST_STATIC_CONSTEXPR size_type RealNodeSize = lcm_ct<NodeSize, alignment_of<void_pointer>::value>::value;
+   BOOST_STATIC_CONSTEXPR size_type RealNodePtrAlign = lcm_ct <NodeSize, VoidPtrAlign>::value;
+   BOOST_STATIC_CONSTEXPR size_type RealNodeSize = lcm_ct< RealNodePtrAlign, RealNodeAlign>::value;
+   BOOST_STATIC_CONSTEXPR size_type HdrSize  = base_t::template get_hdr_size_ct<RealNodeAlign>::value;
+   BOOST_STATIC_CONSTEXPR size_type HdrOffsetSize = base_t::template get_hdr_off_size_ct<RealNodeAlign>::value;
 
    typedef calculate_alignment_ct
       < size_type, HdrSize, PayloadPerAllocation
-      , RealNodeSize, NodesPerBlock, HdrOffsetSize, OverheadPercent, AlignOnly> data_t;
+      , RealNodeSize, NodesPerBlock, HdrOffsetSize, OverheadPercent, RealNodeAlign, AlignOnly> data_t;
 
    //Round the size to a power of two value.
    //This is the total memory size (including payload) that we want to
@@ -1088,7 +1127,7 @@ class private_adaptive_node_pool_impl_ct
    void *allocate_node()
    {
       return this->priv_allocate_node
-         (MaxFreeBlocks, data_t::alignment, RealNodeSize, RealNumNode, NumSubBlocks);
+         (MaxFreeBlocks, data_t::alignment, RealNodeSize, RealNumNode, NumSubBlocks, RealNodeAlign);
    }
 
    //!Allocates n nodes.
@@ -1096,19 +1135,19 @@ class private_adaptive_node_pool_impl_ct
    void allocate_nodes(const size_type n, multiallocation_chain &chain)
    {
       this->priv_allocate_nodes
-         (n, chain, MaxFreeBlocks, data_t::alignment, RealNodeSize, RealNumNode, NumSubBlocks);
+         (n, chain, MaxFreeBlocks, data_t::alignment, RealNodeSize, RealNumNode, NumSubBlocks, RealNodeAlign);
    }
 
    //!Deallocates an array pointed by ptr. Never throws
    void deallocate_node(void *pElem)
    {
-      this->priv_deallocate_node(pElem, MaxFreeBlocks, RealNumNode, NumSubBlocks, RealBlockAlignment);
+      this->priv_deallocate_node(pElem, MaxFreeBlocks, RealNumNode, NumSubBlocks, RealBlockAlignment, RealNodeAlign);
    }
 
    //!Deallocates a linked list of nodes. Never throws
    void deallocate_nodes(multiallocation_chain &nodes)
    {
-      this->priv_deallocate_nodes(nodes, MaxFreeBlocks, RealNumNode, NumSubBlocks, data_t::alignment);
+      this->priv_deallocate_nodes(nodes, MaxFreeBlocks, RealNumNode, NumSubBlocks, data_t::alignment, RealNodeAlign);
    }
 
    void deallocate_free_blocks()
@@ -1129,20 +1168,76 @@ struct private_adaptive_node_pool_impl_rt_data
 {
    typedef SizeType size_type;
 
-   private_adaptive_node_pool_impl_rt_data(size_type max_free_blocks, size_type real_node_size)
-      : m_max_free_blocks(max_free_blocks), m_real_node_size(real_node_size)
-      , m_real_block_alignment(), m_num_subblocks(), m_real_num_node()
+   BOOST_STATIC_CONSTEXPR size_type PtrAlign = alignment_of<void*>::value;
+   BOOST_STATIC_CONSTEXPR size_type PtrAlignBits
+      = boost::container::dtl::log2_pow2<PtrAlign>::value;
+
+   typedef packed_3n_bits_ref<PtrAlignBits, size_type> packed_bits_t;
+
+   private_adaptive_node_pool_impl_rt_data(size_type max_free_blocks)
+      : m_max_free_blocks(max_free_blocks)
+      , m_packed_low()
+      , m_real_block_alignment()
+      , m_packed_high1()
+      , m_packed_high2()
    {}
 
-   const size_type m_max_free_blocks;
-   const size_type m_real_node_size;
-   //Round the size to a power of two value.
-   //This is the total memory size (including payload) that we want to
-   //allocate from the general-purpose allocator
-   size_type m_real_block_alignment;
-   size_type m_num_subblocks;
-   //This is the real number of nodes per block
-   size_type m_real_num_node;
+   void set_node_alignment(size_type alignment)
+   {
+      const size_type aligned_multiplier = alignment/PtrAlign;
+      const size_type aligned_shift = log2_ceil<size_type>(aligned_multiplier);
+      return packed_bits().store(aligned_shift);
+   }
+
+   size_type get_node_alignment() const
+   {  return PtrAlign << packed_bits().load();   }
+
+   size_type get_max_free_blocks() const
+   {  return m_max_free_blocks;  }
+
+   size_type get_real_block_alignment() const
+   {  return m_real_block_alignment; }
+
+   size_type get_real_node_size() const
+   {  return packed_bits().low_unpacked();  }
+
+   size_type get_num_subblocks() const
+   {  return packed_bits().high1_unpacked();   }
+
+   size_type get_real_num_node() const
+   {  return packed_bits().high2_unpacked();   }
+
+   void set_real_block_alignment(size_type v)
+   {  m_real_block_alignment = v;   }
+
+   void set_real_node_size(size_type v)
+   {  packed_bits().set_low_unpacked(v);  }
+
+   void set_num_subblocks(size_type v)
+   {  packed_bits().set_high1_unpacked(v);   }
+
+   void set_real_num_node(size_type v)
+   {  packed_bits().set_high2_unpacked(v);   }
+
+private:
+   packed_bits_t packed_bits()
+   {
+      return packed_bits_t(m_packed_low, m_packed_high1, m_packed_high2);
+   }
+
+   const packed_bits_t packed_bits() const
+   {
+      return packed_bits_t(const_cast<size_type&>(m_packed_low),
+         const_cast<size_type&>(m_packed_high1),
+         const_cast<size_type&>(m_packed_high2));
+   }
+
+   //Maintain info from original members before bit-packing, to avoid breaking ABI
+   const size_type m_max_free_blocks;  //No changes
+   size_type m_packed_low;     // stores "m_real_node_size" in low N bits
+   size_type m_real_block_alignment;   //No changes
+   size_type m_packed_high1;   // stores "m_num_subblocks"in high N bits
+   size_type m_packed_high2;   // stores "m_real_num_node" in high N bits
 };
 
 
@@ -1171,8 +1266,11 @@ class private_adaptive_node_pool_impl_rt
    //align_only
    BOOST_STATIC_CONSTEXPR bool AlignOnly      = impl_t::AlignOnly;
 
-   BOOST_STATIC_CONSTEXPR size_type HdrSize  = impl_t::HdrSize;
-   BOOST_STATIC_CONSTEXPR size_type HdrOffsetSize = impl_t::HdrOffsetSize;
+   //BOOST_STATIC_CONSTEXPR size_type HdrSize  = impl_t::HdrSize;
+   //BOOST_STATIC_CONSTEXPR size_type HdrOffsetSize = impl_t::HdrOffsetSize;
+
+   using impl_t::get_hdr_size;
+   using impl_t::get_hdr_off_size;
 
    public:
 
@@ -1186,40 +1284,59 @@ class private_adaptive_node_pool_impl_rt
       , size_type nodes_per_block
       , size_type max_free_blocks
       , unsigned char overhead_percent
+      , size_type node_align
       )
-   :  data_t(max_free_blocks, lcm(node_size, size_type(alignment_of<void_pointer>::value)))
+   :  data_t(max_free_blocks)
    ,  impl_t(segment_mngr_base)
    {
+      if (node_align < alignment_of<void_pointer>::value)
+         node_align = alignment_of<void_pointer>::value;
+      node_size = lcm(node_size, node_align);
+      this->data_t::set_real_node_size(node_size);
+      this->data_t::set_node_alignment(node_align);
+
+      const size_type hdr_size = get_hdr_size(node_align);
       if(AlignOnly){
-         this->m_real_block_alignment = upper_power_of_2(HdrSize + this->m_real_node_size*nodes_per_block);
-         this->m_real_num_node = (this->m_real_block_alignment - PayloadPerAllocation - HdrSize)/this->m_real_node_size;
+         this->data_t::set_real_block_alignment(upper_power_of_2(hdr_size + this->get_real_node_size() * nodes_per_block));
+         this->data_t::set_real_num_node((this->get_real_block_alignment() - PayloadPerAllocation - hdr_size)/this->get_real_node_size());
       }
       else{
-         candidate_power_of_2_rt ( upper_power_of_2(HdrSize + PayloadPerAllocation + this->m_real_node_size)
-                                 , this->m_real_node_size
+         size_type real_block_alignment = 0;
+         size_type num_subblocks = 0;
+         size_type real_num_node = 0;
+         const size_type hdr_off_size = get_hdr_off_size(node_align);
+         size_type initial_alignment = upper_power_of_2(hdr_size + PayloadPerAllocation + this->get_real_node_size());
+         if (initial_alignment < node_align)
+            initial_alignment = node_align;
+         candidate_power_of_2_rt ( initial_alignment
+                                 , this->get_real_node_size()
                                  , PayloadPerAllocation
                                  , nodes_per_block
-                                 , HdrSize
-                                 , HdrOffsetSize
+                                 , hdr_size
+                                 , hdr_off_size
                                  , overhead_percent
-                                 , this->m_real_block_alignment
-                                 , this->m_num_subblocks
-                                 , this->m_real_num_node);
+                                 , real_block_alignment
+                                 , num_subblocks
+                                 , real_num_node);
+         this->data_t::set_real_block_alignment(real_block_alignment);
+         this->data_t::set_num_subblocks(num_subblocks);
+         this->data_t::set_real_num_node(real_num_node);
       }
    }
 
    //!Destructor. Deallocates all allocated blocks. Never throws
    ~private_adaptive_node_pool_impl_rt()
-   {  this->priv_clear(this->m_num_subblocks, this->m_real_block_alignment, this->m_real_num_node);  }
+   {  this->impl_t::priv_clear(this->get_num_subblocks(), this->get_real_block_alignment(), this->get_real_num_node());  }
 
    size_type get_real_num_node() const
-   {  return this->m_real_num_node; }
+   {  return data_t::get_real_num_node(); }
 
    //!Allocates array of count elements. Can throw
    void *allocate_node()
    {
-      return this->priv_allocate_node
-         (this->m_max_free_blocks, this->m_real_block_alignment, this->m_real_node_size, this->m_real_num_node, this->m_num_subblocks);
+      return this->impl_t::priv_allocate_node
+         ( this->get_max_free_blocks(), this->get_real_block_alignment()
+         , this->get_real_node_size(), this->get_real_num_node(), this->get_num_subblocks(), this->get_node_alignment());
    }
 
    //!Allocates n nodes.
@@ -1227,30 +1344,29 @@ class private_adaptive_node_pool_impl_rt
    void allocate_nodes(const size_type n, multiallocation_chain &chain)
    {
 
-      this->priv_allocate_nodes
-         (n, chain, this->m_max_free_blocks, this->m_real_block_alignment, this->m_real_node_size, this->m_real_num_node, this->m_num_subblocks);
+      this->impl_t::priv_allocate_nodes
+         ( n, chain, this->get_max_free_blocks(), this->get_real_block_alignment(), this->get_real_node_size()
+         , this->get_real_num_node(), this->get_num_subblocks(), this->get_node_alignment());
    }
 
    //!Deallocates an array pointed by ptr. Never throws
    void deallocate_node(void *pElem)
    {
-      this->priv_deallocate_node(pElem, this->m_max_free_blocks, this->m_real_num_node, this->m_num_subblocks, this->m_real_block_alignment);
+      this->impl_t::priv_deallocate_node( pElem, this->get_max_free_blocks(), this->get_real_num_node()
+                                        , this->get_num_subblocks(), this->get_real_block_alignment(), this->get_node_alignment());
    }
 
    //!Deallocates a linked list of nodes. Never throws
    void deallocate_nodes(multiallocation_chain &nodes)
    {
-      this->priv_deallocate_nodes(nodes, this->m_max_free_blocks, this->m_real_num_node, this->m_num_subblocks, this->m_real_block_alignment);
+      this->impl_t::priv_deallocate_nodes( nodes, this->get_max_free_blocks(), this->get_real_num_node()
+                                         , this->get_num_subblocks(), this->get_real_block_alignment(), this->get_node_alignment());
    }
 
    void deallocate_free_blocks()
-   {  this->priv_deallocate_free_blocks(0, this->m_real_num_node, this->m_num_subblocks, this->m_real_block_alignment);  }
-
-   //Deprecated, use deallocate_free_blocks
-   void deallocate_free_chunks()
-   {  this->priv_deallocate_free_blocks(0, this->m_real_num_node, this->m_num_subblocks, this->m_real_block_alignment);   }
+   {  this->impl_t::priv_deallocate_free_blocks( 0, this->get_real_num_node(), this->get_num_subblocks()
+                                               , this->get_real_block_alignment());  }
 };
-
 }  //namespace dtl {
 }  //namespace container {
 }  //namespace boost {

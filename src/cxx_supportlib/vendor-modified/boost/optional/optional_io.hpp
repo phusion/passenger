@@ -63,7 +63,7 @@ operator>>(std::basic_istream<CharType, CharTrait>& in, optional<T>& v)
     {
       T x;
       in >> x;
-      v = optional_detail::move(x);
+      v = optional_detail::move_(x);
     }
     else
     {

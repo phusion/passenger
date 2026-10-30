@@ -170,15 +170,23 @@ class generic_hook
    /// @endcond
 
    inline generic_hook() BOOST_NOEXCEPT
+   #if defined(BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING)
+      requires (LinkMode != normal_link)
+   #endif
    {
-      if(hooktags::safemode_or_autounlink){
+      BOOST_IF_CONSTEXPR(hooktags::safemode_or_autounlink){
          node_algorithms::init(this->this_ptr());
       }
    }
 
+   #if !defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) && defined(BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING)
+   //Default destructor for normal links (allows conditional triviality)
+   generic_hook() requires (LinkMode == normal_link) = default;
+   #endif
+
    inline generic_hook(const generic_hook& ) BOOST_NOEXCEPT
    {
-      if(hooktags::safemode_or_autounlink){
+      BOOST_IF_CONSTEXPR(hooktags::safemode_or_autounlink){
          node_algorithms::init(this->this_ptr());
       }
    }
@@ -187,10 +195,18 @@ class generic_hook
    {  return *this;  }
 
    inline ~generic_hook()
+   #if defined(BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING)
+      requires (LinkMode != normal_link)
+   #endif
    {
       destructor_impl
          (*this, detail::link_dispatch<hooktags::link_mode>());
    }
+
+   #if !defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) && defined(BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING)
+   //Default destructor for normal links (allows conditional triviality)
+   ~generic_hook() requires (LinkMode == normal_link) = default;
+   #endif
 
    inline void swap_nodes(generic_hook &other) BOOST_NOEXCEPT
    {

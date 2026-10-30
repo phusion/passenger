@@ -1,7 +1,7 @@
 // Copyright (C) 2003-2004 Jeremy B. Maitin-Shepard.
 // Copyright (C) 2005-2011 Daniel James.
 // Copyright (C) 2022-2023 Christian Mazakas
-// Copyright (C) 2024 Joaquin M Lopez Munoz.
+// Copyright (C) 2024-2026 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -15,6 +15,7 @@
 #pragma once
 #endif
 
+#include <boost/unordered/detail/ranges_support.hpp>
 #include <boost/unordered/detail/serialize_fca_container.hpp>
 #include <boost/unordered/detail/set.hpp>
 #include <boost/unordered/detail/type_traits.hpp>
@@ -88,6 +89,17 @@ namespace boost {
         const hasher& = hasher(), const key_equal& = key_equal(),
         const allocator_type& = allocator_type());
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<T> R
+      >
+      unordered_set(FromRangeT&&, R&&,
+        size_type = boost::unordered::detail::default_bucket_count,
+        const hasher& = hasher(), const key_equal& = key_equal(),
+        const allocator_type& = allocator_type());
+#endif
+
       unordered_set(unordered_set const&);
 
       unordered_set(unordered_set&& other)
@@ -121,6 +133,27 @@ namespace boost {
       template <class InputIt>
       unordered_set(
         InputIt, InputIt, size_type, const hasher&, const allocator_type&);
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template <
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<T> R
+      >
+      unordered_set(FromRangeT&&, R&&, const allocator_type&);
+
+      template <
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<T> R
+      >
+      unordered_set(FromRangeT&&, R&&, size_type, const allocator_type&);
+
+      template <
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<T> R
+      >
+      unordered_set(
+        FromRangeT&&, R&&, size_type, const hasher&, const allocator_type&);
+#endif
 
       unordered_set(std::initializer_list<value_type>, const allocator_type&);
 
@@ -245,6 +278,11 @@ namespace boost {
       }
 
       template <class InputIt> void insert(InputIt, InputIt);
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template <detail::container_compatible_range<T> R>
+      void insert_range(R&&);
+#endif
 
       void insert(std::initializer_list<value_type>);
 
@@ -478,6 +516,25 @@ namespace boost {
       -> unordered_set<typename std::iterator_traits<InputIterator>::value_type,
         Hash, Pred, Allocator>;
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <
+      boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Hash =
+        boost::hash<std::ranges::range_value_t<R> >,
+      class Pred =
+        std::equal_to<std::ranges::range_value_t<R> >,
+      class Allocator = std::allocator<std::ranges::range_value_t<R> >,
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_pred_v<Pred> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    unordered_set(FromRangeT&&, R&&,
+      std::size_t = boost::unordered::detail::default_bucket_count,
+      Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -> unordered_set<std::ranges::range_value_t<R>,
+        Hash, Pred, Allocator>;
+#endif
+
     template <class T, class Hash = boost::hash<T>,
       class Pred = std::equal_to<T>, class Allocator = std::allocator<T>,
       class = std::enable_if_t<detail::is_hash_v<Hash> >,
@@ -507,6 +564,29 @@ namespace boost {
         std::equal_to<typename std::iterator_traits<InputIterator>::value_type>,
         Allocator>;
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Allocator,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    unordered_set(FromRangeT&&, R&&, std::size_t, Allocator)
+      -> unordered_set<std::ranges::range_value_t<R>,
+        boost::hash<std::ranges::range_value_t<R> >,
+        std::equal_to<std::ranges::range_value_t<R> >,
+        Allocator>;
+
+    template <boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Hash, class Allocator,
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    unordered_set(
+      FromRangeT&&, R&&, std::size_t, Hash, Allocator)
+      -> unordered_set<std::ranges::range_value_t<R>,
+        Hash, std::equal_to<std::ranges::range_value_t<R> >,
+        Allocator>;
+#endif
+
     template <class T, class Allocator,
       class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     unordered_set(std::initializer_list<T>, std::size_t, Allocator)
@@ -526,6 +606,18 @@ namespace boost {
         boost::hash<typename std::iterator_traits<InputIterator>::value_type>,
         std::equal_to<typename std::iterator_traits<InputIterator>::value_type>,
         Allocator>;
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Allocator,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    unordered_set(FromRangeT&&, R&&, Allocator)
+      -> unordered_set<std::ranges::range_value_t<R>,
+        boost::hash<std::ranges::range_value_t<R> >,
+        std::equal_to<std::ranges::range_value_t<R> >,
+        Allocator>;
+#endif
 
     template <class T, class Allocator,
       class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
@@ -585,6 +677,18 @@ namespace boost {
         const hasher& = hasher(), const key_equal& = key_equal(),
         const allocator_type& = allocator_type());
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<T> R
+      >
+      unordered_multiset(FromRangeT&&, R&&,
+        size_type = boost::unordered::detail::default_bucket_count,
+        const hasher& = hasher(), const key_equal& = key_equal(),
+        const allocator_type& = allocator_type());
+#endif
+
+
       unordered_multiset(unordered_multiset const&);
 
       unordered_multiset(unordered_multiset&& other)
@@ -619,6 +723,27 @@ namespace boost {
       template <class InputIt>
       unordered_multiset(
         InputIt, InputIt, size_type, const hasher&, const allocator_type&);
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template <
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<T> R
+      >
+      unordered_multiset(FromRangeT&&, R&&, const allocator_type&);
+
+      template <
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<T> R
+      >
+      unordered_multiset(FromRangeT&&, R&&, size_type, const allocator_type&);
+
+      template <
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<T> R
+      >
+      unordered_multiset(
+        FromRangeT&&, R&&, size_type, const hasher&, const allocator_type&);
+#endif
 
       unordered_multiset(
         std::initializer_list<value_type>, const allocator_type&);
@@ -719,6 +844,11 @@ namespace boost {
       }
 
       template <class InputIt> void insert(InputIt, InputIt);
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template <detail::container_compatible_range<T> R>
+      void insert_range(R&&);
+#endif
 
       void insert(std::initializer_list<value_type>);
 
@@ -942,6 +1072,25 @@ namespace boost {
         typename std::iterator_traits<InputIterator>::value_type, Hash, Pred,
         Allocator>;
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <
+      boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Hash =
+        boost::hash<std::ranges::range_value_t<R> >,
+      class Pred =
+        std::equal_to<std::ranges::range_value_t<R> >,
+      class Allocator = std::allocator<std::ranges::range_value_t<R> >,
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_pred_v<Pred> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    unordered_multiset(FromRangeT&&, R&&,
+      std::size_t = boost::unordered::detail::default_bucket_count,
+      Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -> unordered_multiset<std::ranges::range_value_t<R>,
+        Hash, Pred, Allocator>;
+#endif
+
     template <class T, class Hash = boost::hash<T>,
       class Pred = std::equal_to<T>, class Allocator = std::allocator<T>,
       class = std::enable_if_t<detail::is_hash_v<Hash> >,
@@ -973,6 +1122,29 @@ namespace boost {
         std::equal_to<typename std::iterator_traits<InputIterator>::value_type>,
         Allocator>;
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Allocator,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    unordered_multiset(FromRangeT&&, R&&, std::size_t, Allocator)
+      -> unordered_multiset<std::ranges::range_value_t<R>,
+        boost::hash<std::ranges::range_value_t<R> >,
+        std::equal_to<std::ranges::range_value_t<R> >,
+        Allocator>;
+
+    template <boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Hash, class Allocator,
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    unordered_multiset(
+      FromRangeT&&, R&&, std::size_t, Hash, Allocator)
+      -> unordered_multiset<std::ranges::range_value_t<R>,
+        Hash, std::equal_to<std::ranges::range_value_t<R> >,
+        Allocator>;
+#endif
+
     template <class T, class Allocator,
       class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
     unordered_multiset(std::initializer_list<T>, std::size_t, Allocator)
@@ -993,6 +1165,18 @@ namespace boost {
         boost::hash<typename std::iterator_traits<InputIterator>::value_type>,
         std::equal_to<typename std::iterator_traits<InputIterator>::value_type>,
         Allocator>;
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Allocator,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    unordered_multiset(FromRangeT&&, R&&, Allocator)
+      -> unordered_multiset<std::ranges::range_value_t<R>,
+        boost::hash<std::ranges::range_value_t<R> >,
+        std::equal_to<std::ranges::range_value_t<R> >,
+        Allocator>;
+#endif
 
     template <class T, class Allocator,
       class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
@@ -1022,6 +1206,23 @@ namespace boost {
     {
       this->insert(f, l);
     }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <class T, class H, class P, class A>
+    template <
+      detail::convertible_to_from_range_t FromRangeT,
+      detail::container_compatible_range<T> R
+    >
+    unordered_set<T, H, P, A>::unordered_set(FromRangeT&&, R&& rg,
+      size_type n, const hasher& hf, const key_equal& eql,
+      const allocator_type& a)
+        : table_(
+          boost::unordered::detail::initial_size(std::forward<R>(rg), n),
+          hf, eql, a)
+    {
+      this->insert_range(std::forward<R>(rg));
+    }
+#endif
 
     template <class T, class H, class P, class A>
     unordered_set<T, H, P, A>::unordered_set(unordered_set const& other)
@@ -1115,6 +1316,51 @@ namespace boost {
       this->insert(f, l);
     }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <class T, class H, class P, class A>
+    template <
+      detail::convertible_to_from_range_t FromRangeT,
+      detail::container_compatible_range<T> R
+    >
+    unordered_set<T, H, P, A>::unordered_set(
+      FromRangeT&&, R&& rg, const allocator_type& a)
+        : table_(
+            boost::unordered::detail::initial_size(
+              std::forward<R>(rg), detail::default_bucket_count),
+            hasher(), key_equal(), a)
+    {
+      this->insert_range(std::forward<R>(rg));
+    }
+
+    template <class T, class H, class P, class A>
+    template <
+      detail::convertible_to_from_range_t FromRangeT,
+      detail::container_compatible_range<T> R
+    >
+    unordered_set<T, H, P, A>::unordered_set(
+      FromRangeT&&, R&& rg, size_type n, const allocator_type& a)
+        : table_(
+            boost::unordered::detail::initial_size(std::forward<R>(rg), n),
+            hasher(), key_equal(), a)
+    {
+      this->insert_range(std::forward<R>(rg));
+    }
+
+    template <class T, class H, class P, class A>
+    template <
+      detail::convertible_to_from_range_t FromRangeT,
+      detail::container_compatible_range<T> R
+    >
+    unordered_set<T, H, P, A>::unordered_set(FromRangeT&&, R&& rg,
+      size_type n, const hasher& hf, const allocator_type& a)
+        : table_(
+            boost::unordered::detail::initial_size(std::forward<R>(rg), n),
+            hf, key_equal(), a)
+    {
+      this->insert_range(std::forward<R>(rg));
+    }
+#endif
+
     template <class T, class H, class P, class A>
     unordered_set<T, H, P, A>::unordered_set(
       std::initializer_list<value_type> list, const allocator_type& a)
@@ -1186,6 +1432,20 @@ namespace boost {
           table::extractor::extract(*first), first, last);
       }
     }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <class T, class H, class P, class A>
+    template <detail::container_compatible_range<T> R>
+    void unordered_set<T, H, P, A>::insert_range(R&& rg)
+    {
+      auto first = std::ranges::begin(rg);
+      auto last = std::ranges::end(rg);
+      if (first != last) {
+        table_.insert_range_unique(
+          table::extractor::extract(*first), first, last);
+      }
+    }
+#endif
 
     template <class T, class H, class P, class A>
     void unordered_set<T, H, P, A>::insert(
@@ -1420,6 +1680,23 @@ namespace boost {
       this->insert(f, l);
     }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <class T, class H, class P, class A>
+    template <
+      detail::convertible_to_from_range_t FromRangeT,
+      detail::container_compatible_range<T> R
+    >
+    unordered_multiset<T, H, P, A>::unordered_multiset(FromRangeT&&, R&& rg,
+      size_type n, const hasher& hf, const key_equal& eql,
+      const allocator_type& a)
+        : table_(
+          boost::unordered::detail::initial_size(std::forward<R>(rg), n),
+          hf, eql, a)
+    {
+      this->insert_range(std::forward<R>(rg));
+    }
+#endif
+
     template <class T, class H, class P, class A>
     unordered_multiset<T, H, P, A>::unordered_multiset(
       unordered_multiset const& other)
@@ -1513,6 +1790,51 @@ namespace boost {
       this->insert(f, l);
     }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <class T, class H, class P, class A>
+    template <
+      detail::convertible_to_from_range_t FromRangeT,
+      detail::container_compatible_range<T> R
+    >
+    unordered_multiset<T, H, P, A>::unordered_multiset(
+      FromRangeT&&, R&& rg, const allocator_type& a)
+        : table_(
+            boost::unordered::detail::initial_size(
+              std::forward<R>(rg), detail::default_bucket_count),
+            hasher(), key_equal(), a)
+    {
+      this->insert_range(std::forward<R>(rg));
+    }
+
+    template <class T, class H, class P, class A>
+    template <
+      detail::convertible_to_from_range_t FromRangeT,
+      detail::container_compatible_range<T> R
+    >
+    unordered_multiset<T, H, P, A>::unordered_multiset(
+      FromRangeT&&, R&& rg, size_type n, const allocator_type& a)
+        : table_(
+            boost::unordered::detail::initial_size(std::forward<R>(rg), n),
+            hasher(), key_equal(), a)
+    {
+      this->insert_range(std::forward<R>(rg));
+    }
+
+    template <class T, class H, class P, class A>
+    template <
+      detail::convertible_to_from_range_t FromRangeT,
+      detail::container_compatible_range<T> R
+    >
+    unordered_multiset<T, H, P, A>::unordered_multiset(FromRangeT&&, R&& rg,
+      size_type n, const hasher& hf, const allocator_type& a)
+        : table_(
+            boost::unordered::detail::initial_size(std::forward<R>(rg), n),
+            hf, key_equal(), a)
+    {
+      this->insert_range(std::forward<R>(rg));
+    }
+#endif
+
     template <class T, class H, class P, class A>
     unordered_multiset<T, H, P, A>::unordered_multiset(
       std::initializer_list<value_type> list, const allocator_type& a)
@@ -1581,6 +1903,16 @@ namespace boost {
     {
       table_.insert_range_equiv(first, last);
     }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <class T, class H, class P, class A>
+    template <detail::container_compatible_range<T> R>
+    void unordered_multiset<T, H, P, A>::insert_range(R&& rg)
+    {
+      table_.insert_range_equiv(
+        std::ranges::begin(rg), std::ranges::end(rg));
+    }
+#endif
 
     template <class T, class H, class P, class A>
     void unordered_multiset<T, H, P, A>::insert(

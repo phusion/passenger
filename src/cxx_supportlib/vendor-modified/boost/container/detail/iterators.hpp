@@ -248,10 +248,11 @@ class value_init_construct_iterator
 
    //This pseudo-iterator's dereference operations have no sense since value is not
    //constructed until ::boost::container::construct_in_place is called.
-   //So comment them to catch bad uses
-   //const T& operator*() const;
+   // 
    //const T& operator[](difference_type) const;
    //const T* operator->() const;
+   inline const value_init_t& operator*() const
+   {  return value_init;  }
 
    private:
    std::size_t  m_num;

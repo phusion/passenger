@@ -22,7 +22,6 @@
 #endif
 
 #include <boost/intrusive/detail/mpl.hpp>
-#include <boost/intrusive/detail/ebo_functor_holder.hpp>
 #include <boost/intrusive/detail/tree_value_compare.hpp>
 
 

@@ -535,11 +535,22 @@ inline typename dtl::disable_if_memtransfer_copy_constructible<I, F, F>::type
 {
    F back = r;
    BOOST_CONTAINER_TRY{
+      //GCC's value-range analysis issues a spurious -Wmaybe-uninitialized here
+      //when this copy-construct loop is inlined into a fixed-capacity container's
+      //(e.g. static_vector) copy constructor after a near-end single-element
+      //insert: it cannot prove the just-built trailing slot is initialized.
+#if defined(BOOST_GCC) && (BOOST_GCC >= 40600)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
       while (n) {
          --n;
          allocator_traits<Allocator>::construct(a, boost::movelib::iterator_to_raw_pointer(r), *f);
          ++f; ++r;
       }
+#if defined(BOOST_GCC) && (BOOST_GCC >= 40600)
+#pragma GCC diagnostic pop
+#endif
    }
    BOOST_CONTAINER_CATCH(...){
       for (; back != r; ++back){
@@ -1619,7 +1630,7 @@ void expand_backward_forward_and_insert_alloc_move_backward
          //Old values destroyed automatically with "old_values_destroyer"
          //when "old_values_destroyer" goes out of scope unless the have trivial
          //destructor after move.
-         if(trivial_dctr_after_move)
+         BOOST_IF_CONSTEXPR(trivial_dctr_after_move)
             old_values_destroyer.release();
       }
       //raw_before is so big that divides old_end
@@ -1649,7 +1660,7 @@ void expand_backward_forward_and_insert_alloc_move_backward
             remaining_pos = ::boost::container::move_forward_overlapping(remaining_pos, old_finish, old_start);
             (void)remaining_pos;
             //Once moved, avoid calling the destructors if trivial after move
-            if(!trivial_dctr_after_move) {
+            BOOST_IF_CONSTEXPR(!trivial_dctr_after_move) {
                boost::container::destroy_alloc(a, remaining_pos, old_finish);
             }
          }
@@ -1720,7 +1731,7 @@ void expand_backward_forward_and_insert_alloc_move_backward
             B const new_first(make_iterator_uadvance(next, new_1st_range));
             B const p = ::boost::container::move_forward_overlapping(pos, old_finish, new_first);
             (void)p;
-            if(!trivial_dctr_after_move)
+            BOOST_IF_CONSTEXPR(!trivial_dctr_after_move)
                boost::container::destroy_alloc(a, p, old_finish);
          }
       }
@@ -1771,7 +1782,7 @@ void expand_backward_forward_and_insert_alloc_move_backward
                               //trivial_dctr_after_move is true
             //Destroy remaining moved elements from old_end except if they
             //have trivial destructor after being moved
-            if(!trivial_dctr_after_move) {
+            BOOST_IF_CONSTEXPR(!trivial_dctr_after_move) {
                boost::container::destroy_alloc(a, move_end, old_finish);
             }
          }
@@ -1922,7 +1933,7 @@ inline void expand_backward_forward_and_insert_alloc_move_forward
          //Old values destroyed automatically with "old_values_destroyer"
          //when "old_values_destroyer" goes out of scope unless the have trivial
          //destructor after move.
-         if(trivial_dctr_after_move)
+         BOOST_IF_CONSTEXPR(trivial_dctr_after_move)
             old_values_destroyer.release();
       }
       //raw_before is so big that divides old_end
@@ -1948,7 +1959,7 @@ inline void expand_backward_forward_and_insert_alloc_move_forward
          BOOST_ASSERT(old_start != old_finish);
          boost::container::move_backward_overlapping(old_start, pre_pos_raw, old_finish);
          old_values_destroyer.release();
-         if (!trivial_dctr_after_move) {
+         BOOST_IF_CONSTEXPR(!trivial_dctr_after_move) {
             boost::container::destroy_alloc(a, old_start, new_start);
          }
       }
@@ -1987,7 +1998,7 @@ inline void expand_backward_forward_and_insert_alloc_move_forward
          //Destroy remaining moved elements from old_begin except if they
          //have trivial destructor after being moved
          old_values_destroyer.release();
-         if (!trivial_dctr_after_move) {
+         BOOST_IF_CONSTEXPR(!trivial_dctr_after_move) {
             boost::container::destroy_alloc(a, old_start, p);
          }
       }
@@ -2014,9 +2025,8 @@ inline void expand_backward_forward_and_insert_alloc_move_forward
          insertion_proxy.copy_n_and_update(a, new_beg_pos, n);
          B const p = ::boost::container::move_backward_overlapping(old_start, pos, new_beg_pos);
          old_values_destroyer.release();
-
-         if (!trivial_dctr_after_move) {
-            (void)p;
+         (void)p;
+         BOOST_IF_CONSTEXPR(!trivial_dctr_after_move) {
             boost::container::destroy_alloc(a, old_start, p);
          }
       }

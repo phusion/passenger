@@ -47,6 +47,7 @@ template< std::size_t NodeSize
         , std::size_t NodesPerBlock
         , std::size_t MaxFreeBlocks
         , std::size_t OverheadPercent
+        , std::size_t NodeAlign
         >
 class private_adaptive_node_pool
    :  public private_adaptive_node_pool_impl_ct
@@ -55,6 +56,7 @@ class private_adaptive_node_pool
             , NodeSize
             , NodesPerBlock
             , OverheadPercent
+            , NodeAlign
             , unsigned(OverheadPercent == 0)*::boost::container::adaptive_pool_flag::align_only
                | ::boost::container::adaptive_pool_flag::size_ordered
                | ::boost::container::adaptive_pool_flag::address_ordered
@@ -66,6 +68,7 @@ class private_adaptive_node_pool
             , NodeSize
             , NodesPerBlock
             , OverheadPercent
+            , NodeAlign
             , unsigned(OverheadPercent == 0)*::boost::container::adaptive_pool_flag::align_only
                | ::boost::container::adaptive_pool_flag::size_ordered
                | ::boost::container::adaptive_pool_flag::address_ordered
@@ -92,20 +95,21 @@ template< std::size_t NodeSize
         , std::size_t NodesPerBlock
         , std::size_t MaxFreeBlocks
         , std::size_t OverheadPercent
+        , std::size_t NodeAlign = 0
         >
 class shared_adaptive_node_pool
    : public private_adaptive_node_pool
-      <NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent>
+      <NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent, NodeAlign>
 {
  private:
    typedef private_adaptive_node_pool
-      <NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent> private_node_allocator_t;
+      <NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent, NodeAlign> private_adaptive_node_pool_t;
  public:
-   typedef typename private_node_allocator_t::multiallocation_chain multiallocation_chain;
+   typedef typename private_adaptive_node_pool_t::multiallocation_chain multiallocation_chain;
 
    //!Constructor. Never throws
    shared_adaptive_node_pool()
-   : private_node_allocator_t(){}
+   : private_adaptive_node_pool_t(){}
 
    //!Destructor. Deallocates all allocated blocks. Never throws
    ~shared_adaptive_node_pool()
@@ -117,7 +121,7 @@ class shared_adaptive_node_pool
       //-----------------------
       scoped_lock<default_mutex> guard(mutex_);
       //-----------------------
-      return private_node_allocator_t::allocate_node();
+      return private_adaptive_node_pool_t::allocate_node();
    }
 
    //!Deallocates an array pointed by ptr. Never throws
@@ -126,7 +130,7 @@ class shared_adaptive_node_pool
       //-----------------------
       scoped_lock<default_mutex> guard(mutex_);
       //-----------------------
-      private_node_allocator_t::deallocate_node(ptr);
+      private_adaptive_node_pool_t::deallocate_node(ptr);
    }
 
    //!Allocates a singly linked list of n nodes ending in null pointer.
@@ -136,7 +140,7 @@ class shared_adaptive_node_pool
       //-----------------------
       scoped_lock<default_mutex> guard(mutex_);
       //-----------------------
-      return private_node_allocator_t::allocate_nodes(n, chain);
+      return private_adaptive_node_pool_t::allocate_nodes(n, chain);
    }
 
    void deallocate_nodes(multiallocation_chain &chain)
@@ -144,7 +148,7 @@ class shared_adaptive_node_pool
       //-----------------------
       scoped_lock<default_mutex> guard(mutex_);
       //-----------------------
-      private_node_allocator_t::deallocate_nodes(chain);
+      private_adaptive_node_pool_t::deallocate_nodes(chain);
    }
 
    //!Deallocates all the free blocks of memory. Never throws
@@ -153,7 +157,7 @@ class shared_adaptive_node_pool
       //-----------------------
       scoped_lock<default_mutex> guard(mutex_);
       //-----------------------
-      private_node_allocator_t::deallocate_free_blocks();
+      private_adaptive_node_pool_t::deallocate_free_blocks();
    }
 
    private:

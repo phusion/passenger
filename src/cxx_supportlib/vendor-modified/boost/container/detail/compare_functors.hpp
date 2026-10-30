@@ -32,12 +32,12 @@ class equal_to_value
    const value_type &t_;
 
    public:
-   inline explicit equal_to_value(const value_type &t)
+   BOOST_CONTAINER_FORCEINLINE explicit equal_to_value(const value_type &t)
       :  t_(t)
    {}
 
    template <class U>
-   inline bool operator()(const U &t)const
+   BOOST_CONTAINER_FORCEINLINE bool operator()(const U &t)const
    {
       return t_ == t;
    }
@@ -55,7 +55,7 @@ class equal_to_value_first
    {}
 
    template <class U>
-   inline bool operator()(const U &t)const
+   BOOST_CONTAINER_FORCEINLINE bool operator()(const U &t)const
    {
       return t_ == t.first;
    }
@@ -148,6 +148,21 @@ struct key_node_pred
    {  return this->key_pred()(this->key_from(nonkey1), this->key_from(nonkey2));  }
 };
 
+
+template<class Pred>
+class not_pred
+{
+   BOOST_ATTRIBUTE_NO_UNIQUE_ADDRESS Pred m_p;
+
+   public:
+   BOOST_CONTAINER_FORCEINLINE explicit not_pred(const Pred &p)
+      :  m_p(p)
+   {}
+
+   template <class U>
+   BOOST_CONTAINER_FORCEINLINE bool operator()(const U &u) const
+   {  return !m_p(u);  }
+};
 
 }  //namespace container {
 }  //namespace boost {

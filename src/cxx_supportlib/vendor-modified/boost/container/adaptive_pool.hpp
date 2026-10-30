@@ -150,25 +150,30 @@ class adaptive_pool
 
    //!Returns the number of elements that could be allocated.
    //!Never throws
+   BOOST_CONTAINER_NODISCARD
    size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return size_type(-1)/(2u*sizeof(T));   }
 
    //!Allocate memory for an array of count elements.
    //!Throws bad_alloc if there is no enough memory
-   pointer allocate(size_type count, const void * = 0)
+   BOOST_CONTAINER_NODISCARD
+   pointer allocate(size_type count)
    {
-      if(BOOST_UNLIKELY(count > size_type(-1)/(2u*sizeof(T))))
+      if(BOOST_UNLIKELY(count > this->max_size()))
          boost::container::throw_bad_alloc();
 
-      if(Version == 1 && count == 1){
+      BOOST_IF_CONSTEXPR(Version == 1)
+      if(count == 1){
          typedef typename dtl::shared_adaptive_node_pool
-            <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent> shared_pool_t;
+            < sizeof(T), NodesPerBlock, MaxFreeBlocks
+            , OverheadPercent, dtl::alignment_of<T>::value> shared_pool_t;
          typedef dtl::singleton_default<shared_pool_t> singleton_t;
          return pointer(static_cast<T*>(singleton_t::instance().allocate_node()));
       }
-      else{
-         return static_cast<pointer>(dlmalloc_malloc(count*sizeof(T)));
-      }
+      void *ret = dlmalloc_memalign(count*sizeof(T), dtl::alignment_of<T>::value);
+      if(BOOST_UNLIKELY(!ret))
+         boost::container::throw_bad_alloc();
+      return static_cast<pointer>(ret);
    }
 
    //!Deallocate allocated memory.
@@ -176,22 +181,22 @@ class adaptive_pool
    void deallocate(const pointer &ptr, size_type count) BOOST_NOEXCEPT_OR_NOTHROW
    {
       (void)count;
-      if(Version == 1 && count == 1){
+      BOOST_IF_CONSTEXPR(Version == 1)
+      if(count == 1){
          typedef dtl::shared_adaptive_node_pool
-            <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent> shared_pool_t;
+            <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent, dtl::alignment_of<T>::value> shared_pool_t;
          typedef dtl::singleton_default<shared_pool_t> singleton_t;
          singleton_t::instance().deallocate_node(ptr);
+         return;
       }
-      else{
-         dlmalloc_free(ptr);
-      }
+      dlmalloc_free(ptr);
    }
 
-   pointer allocation_command(allocation_type command,
-                         size_type limit_size,
-                         size_type &prefer_in_recvd_out_size,
-                         pointer &reuse)
+   BOOST_CONTAINER_NODISCARD
+   pointer allocation_command
+      (allocation_type command, size_type limit_size, size_type &prefer_in_recvd_out_size, pointer &reuse)
    {
+      BOOST_CONTAINER_STATIC_ASSERT(( Version > 1 ));
       pointer ret = this->priv_allocation_command(command, limit_size, prefer_in_recvd_out_size, reuse);
       if(BOOST_UNLIKELY(!ret && !(command & BOOST_CONTAINER_NOTHROW_ALLOCATION)))
          boost::container::throw_bad_alloc();
@@ -200,16 +205,21 @@ class adaptive_pool
 
    //!Returns maximum the number of objects the previously allocated memory
    //!pointed by p can hold.
+   BOOST_CONTAINER_NODISCARD
    size_type size(pointer p) const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return dlmalloc_size(p);  }
+   {
+      BOOST_CONTAINER_STATIC_ASSERT(( Version > 1 ));
+      return dlmalloc_size(p);
+   }
 
    //!Allocates just one object. Memory allocated with this function
    //!must be deallocated only with deallocate_one().
    //!Throws bad_alloc if there is no enough memory
+   BOOST_CONTAINER_NODISCARD
    pointer allocate_one()
    {
       typedef dtl::shared_adaptive_node_pool
-         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent> shared_pool_t;
+         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent, dtl::alignment_of<T>::value> shared_pool_t;
       typedef dtl::singleton_default<shared_pool_t> singleton_t;
       return (pointer)singleton_t::instance().allocate_node();
    }
@@ -218,8 +228,9 @@ class adaptive_pool
    //!Elements must be individually deallocated with deallocate_one()
    void allocate_individual(std::size_t num_elements, multiallocation_chain &chain)
    {
+      BOOST_CONTAINER_STATIC_ASSERT(( Version > 1 ));
       typedef dtl::shared_adaptive_node_pool
-         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent> shared_pool_t;
+         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent, dtl::alignment_of<T>::value> shared_pool_t;
       typedef dtl::singleton_default<shared_pool_t> singleton_t;
       singleton_t::instance().allocate_nodes(num_elements, static_cast<typename shared_pool_t::multiallocation_chain&>(chain));
       //typename shared_pool_t::multiallocation_chain ch;
@@ -233,16 +244,18 @@ class adaptive_pool
    //!with other functions different from allocate_one(). Never throws
    void deallocate_one(pointer p) BOOST_NOEXCEPT_OR_NOTHROW
    {
+      BOOST_CONTAINER_STATIC_ASSERT(( Version > 1 ));
       typedef dtl::shared_adaptive_node_pool
-         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent> shared_pool_t;
+         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent, dtl::alignment_of<T>::value> shared_pool_t;
       typedef dtl::singleton_default<shared_pool_t> singleton_t;
       singleton_t::instance().deallocate_node(p);
    }
 
    void deallocate_individual(multiallocation_chain &chain) BOOST_NOEXCEPT_OR_NOTHROW
    {
+      BOOST_CONTAINER_STATIC_ASSERT(( Version > 1 ));
       typedef dtl::shared_adaptive_node_pool
-         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent> shared_pool_t;
+         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent, dtl::alignment_of<T>::value> shared_pool_t;
       typedef dtl::singleton_default<shared_pool_t> singleton_t;
       //typename shared_pool_t::multiallocation_chain ch(&*chain.begin(), &*chain.last(), chain.size());
       //singleton_t::instance().deallocate_nodes(ch);
@@ -305,7 +318,7 @@ class adaptive_pool
    static void deallocate_free_blocks() BOOST_NOEXCEPT_OR_NOTHROW
    {
       typedef dtl::shared_adaptive_node_pool
-         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent> shared_pool_t;
+         <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent, dtl::alignment_of<T>::value> shared_pool_t;
       typedef dtl::singleton_default<shared_pool_t> singleton_t;
       singleton_t::instance().deallocate_free_blocks();
    }
@@ -317,11 +330,13 @@ class adaptive_pool
 
    //!An allocator always compares to true, as memory allocated with one
    //!instance can be deallocated by another instance
+   BOOST_CONTAINER_NODISCARD
    friend bool operator==(const adaptive_pool &, const adaptive_pool &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return true;   }
 
    //!An allocator always compares to false, as memory allocated with one
    //!instance can be deallocated by another instance
+   BOOST_CONTAINER_NODISCARD
    friend bool operator!=(const adaptive_pool &, const adaptive_pool &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return false;   }
 
@@ -340,7 +355,8 @@ class adaptive_pool
       std::size_t r_size;
       {
          void* reuse_ptr_void = reuse_ptr;
-         ret = dlmalloc_allocation_command(command, sizeof(T), l_size, p_size, &r_size, reuse_ptr_void);
+         ret = dlmalloc_allocation_command( command, sizeof(T), dtl::alignment_of<T>::value
+                                          , l_size, p_size, &r_size, reuse_ptr_void);
          reuse_ptr = ret.second ? static_cast<T*>(reuse_ptr_void) : 0;
       }
       prefer_in_recvd_out_size = r_size/sizeof(T);
@@ -348,30 +364,11 @@ class adaptive_pool
    }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 template < class T
          , std::size_t NodesPerBlock   = ADP_nodes_per_block
          , std::size_t MaxFreeBlocks   = ADP_max_free_blocks
          , std::size_t OverheadPercent = ADP_overhead_percent
-         , unsigned Version = 2
+         BOOST_CONTAINER_DOCIGN(BOOST_MOVE_I unsigned Version = 2)
          >
 class private_adaptive_pool
 {
@@ -392,7 +389,8 @@ class private_adaptive_pool
    BOOST_CONTAINER_DOCIGN(BOOST_CONTAINER_STATIC_ASSERT((Version <=2)));
 
    typedef dtl::private_adaptive_node_pool
-      <sizeof(T), NodesPerBlock, MaxFreeBlocks, OverheadPercent> pool_t;
+      < sizeof(T), NodesPerBlock, MaxFreeBlocks
+      , OverheadPercent, dtl::alignment_of<T>::value>    pool_t;
    pool_t m_pool;
 
    public:
@@ -466,22 +464,23 @@ class private_adaptive_pool
 
    //!Returns the number of elements that could be allocated.
    //!Never throws
+   BOOST_CONTAINER_NODISCARD
    size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return size_type(-1)/(2u*sizeof(T));   }
 
    //!Allocate memory for an array of count elements.
    //!Throws bad_alloc if there is no enough memory
+   BOOST_CONTAINER_NODISCARD
    pointer allocate(size_type count, const void * = 0)
    {
       if(BOOST_UNLIKELY(count > size_type(-1)/(2u*sizeof(T))))
          boost::container::throw_bad_alloc();
 
-      if(Version == 1 && count == 1){
+      BOOST_IF_CONSTEXPR(Version == 1)
+      if(count == 1){
          return pointer(static_cast<T*>(m_pool.allocate_node()));
       }
-      else{
-         return static_cast<pointer>(dlmalloc_malloc(count*sizeof(T)));
-      }
+      return static_cast<pointer>(dlmalloc_memalign(count*sizeof(T), dtl::alignment_of<T>::value));
    }
 
    //!Deallocate allocated memory.
@@ -489,14 +488,15 @@ class private_adaptive_pool
    void deallocate(const pointer &ptr, size_type count) BOOST_NOEXCEPT_OR_NOTHROW
    {
       (void)count;
-      if(Version == 1 && count == 1){
+      BOOST_IF_CONSTEXPR(Version == 1)
+      if(count == 1){
          m_pool.deallocate_node(ptr);
+         return;
       }
-      else{
-         dlmalloc_free(ptr);
-      }
+      dlmalloc_free(ptr);
    }
 
+   BOOST_CONTAINER_NODISCARD
    pointer allocation_command(allocation_type command,
                          size_type limit_size,
                          size_type &prefer_in_recvd_out_size,
@@ -516,6 +516,7 @@ class private_adaptive_pool
    //!Allocates just one object. Memory allocated with this function
    //!must be deallocated only with deallocate_one().
    //!Throws bad_alloc if there is no enough memory
+   BOOST_CONTAINER_NODISCARD
    pointer allocate_one()
    {
       return (pointer)m_pool.allocate_node();
@@ -583,11 +584,13 @@ class private_adaptive_pool
 
    //!An allocator always compares to true, as memory allocated with one
    //!instance can be deallocated by another instance
+   BOOST_CONTAINER_NODISCARD
    friend bool operator==(const private_adaptive_pool &, const private_adaptive_pool &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return true;   }
 
    //!An allocator always compares to false, as memory allocated with one
    //!instance can be deallocated by another instance
+   BOOST_CONTAINER_NODISCARD
    friend bool operator!=(const private_adaptive_pool &, const private_adaptive_pool &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return false;   }
 
@@ -606,7 +609,8 @@ class private_adaptive_pool
       std::size_t r_size;
       {
          void* reuse_ptr_void = reuse_ptr;
-         ret = dlmalloc_allocation_command(command, sizeof(T), l_size, p_size, &r_size, reuse_ptr_void);
+         ret = dlmalloc_allocation_command( command, sizeof(T), dtl::alignment_of<T>::value
+                                          , l_size, p_size, &r_size, reuse_ptr_void);
          reuse_ptr = ret.second ? static_cast<T*>(reuse_ptr_void) : 0;
       }
       prefer_in_recvd_out_size = r_size/sizeof(T);

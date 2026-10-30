@@ -19,13 +19,16 @@
 #include <boost/thread/detail/delete.hpp>
 #include <boost/core/no_exceptions_support.hpp>
 
-#include <boost/bind/bind.hpp>
 #include <boost/assert.hpp>
-#include <boost/config/abi_prefix.hpp>
-
 #include <boost/cstdint.hpp>
 #include <pthread.h>
 #include <csignal>
+
+#if !defined(BOOST_THREAD_PROVIDES_INVOKE) && !defined(BOOST_THREAD_PROVIDES_INVOKE_RET)
+#include <boost/bind/bind.hpp>
+#endif
+
+#include <boost/config/abi_prefix.hpp>
 
 namespace boost
 {

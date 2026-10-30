@@ -32,8 +32,7 @@ template<template<class...> class L, class... T, template<class...> class P> str
     template<class U> struct _f { using type = mp_if<P<U>, mp_list<>, mp_list<U>>; };
     using type = mp_append<L<>, typename _f<T>::type...>;
 #else
-    template<class U> using _f = mp_if<P<U>, mp_list<>, mp_list<U>>;
-    using type = mp_append<L<>, _f<T>...>;
+    using type = mp_append<L<>, mp_if<P<T>, mp_list<>, mp_list<T>>...>;
 #endif
 };
 

@@ -455,7 +455,11 @@ namespace boost
         std::size_t seed = 0;
 
         hash_combine( seed, v.index() );
-        std::visit( [&seed](auto&& x) { hash_combine(seed, x); }, v );
+
+        if( !v.valueless_by_exception() )
+        {
+            std::visit( [&seed](auto&& x) { hash_combine(seed, x); }, v );
+        }
 
         return seed;
     }

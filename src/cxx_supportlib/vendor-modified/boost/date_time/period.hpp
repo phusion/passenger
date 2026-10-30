@@ -299,9 +299,7 @@ namespace date_time {
   inline BOOST_CXX14_CONSTEXPR
   bool period<point_rep,duration_rep>::intersects(const period<point_rep,duration_rep>& other) const
   { 
-    return ( contains(other.begin_) ||
-             other.contains(begin_) ||
-             ((other.begin_ < begin_) && (other.last_ >= begin_)));
+    return !is_null() && !other.is_null() && (begin_ < other.end()) && (other.begin_ < end());
   }
 
   //! Returns the period of intersection or invalid range no intersection

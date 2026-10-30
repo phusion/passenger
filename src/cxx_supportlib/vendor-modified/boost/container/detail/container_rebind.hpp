@@ -150,7 +150,7 @@ namespace dtl {
       typedef Cont<U, typename void_or_portable_rebind_alloc<V, A, U>::type, P0, P1, P2, P3, P4, P5, P6, P7, P8> type;
    };
 
-#endif   //!defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
+#endif   //   !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
 
    //for small_vector,static_vector
 

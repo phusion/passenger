@@ -34,6 +34,10 @@ const int UNINITIALIZED = 0xcc;
 
 template <class T>
 inline void do_fill_uninitialized_memory(T* data, std::size_t size_in_bytes) BOOST_NOEXCEPT {
+#if defined(__GNUC__) && __GNUC__ < 5
+    // Avoid warning for calling memset with a constant size of zero
+    if( size_in_bytes )
+#endif
     std::memset(static_cast<void*>(data), UNINITIALIZED, size_in_bytes);
 }
 

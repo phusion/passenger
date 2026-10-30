@@ -11,8 +11,8 @@
 #include <boost/thread/pthread/pthread_mutex_scoped_lock.hpp>
 #include <boost/assert.hpp>
 #include <boost/static_assert.hpp>
-#include <boost/atomic.hpp>
 #include <boost/memory_order.hpp>
+#include <boost/atomic/atomic.hpp>
 #include <pthread.h>
 
 namespace boost

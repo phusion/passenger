@@ -1,6 +1,6 @@
 /* Common base for Boost.Unordered open-addressing tables.
  *
- * Copyright 2022-2025 Joaquin M Lopez Munoz.
+ * Copyright 2022-2026 Joaquin M Lopez Munoz.
  * Copyright 2023 Christian Mazakas.
  * Copyright 2024 Braden Ganetsky.
  * Distributed under the Boost Software License, Version 1.0.
@@ -1349,7 +1349,7 @@ template <typename Container, typename K>
 using is_emplace_kv_able = std::integral_constant<bool,
   is_map<Container>::value &&
     (is_similar<K, typename Container::key_type>::value ||
-      is_complete_and_move_constructible<typename Container::key_type>::value)>;
+      std::is_move_constructible<typename Container::key_type>::value)>;
 
 /* table_core. The TypePolicy template parameter is used to generate
  * instantiations suitable for either maps or sets, and introduces non-standard

@@ -12,7 +12,7 @@
 #ifndef BOOST_OPTIONAL_DETAIL_OPTIONAL_HASH_AJK_20MAY2022_HPP
 #define BOOST_OPTIONAL_DETAIL_OPTIONAL_HASH_AJK_20MAY2022_HPP
 
-#include <boost/optional/optional_fwd.hpp>
+//#include <boost/optional/optional_fwd.hpp>
 #include <boost/config.hpp>
 
 #if !defined(BOOST_OPTIONAL_CONFIG_DO_NOT_SPECIALIZE_STD_HASH) && !defined(BOOST_NO_CXX11_HDR_FUNCTIONAL)

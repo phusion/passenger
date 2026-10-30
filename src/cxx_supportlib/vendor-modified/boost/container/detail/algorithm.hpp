@@ -194,7 +194,7 @@ InpIt find(InpIt first, InpIt last, const U& value)
 template<class FwdIt, class U>
 FwdIt remove(FwdIt first, FwdIt last, const U& value)
 {
-    first = find(first, last, value);
+    first = (find)(first, last, value);
     if (first != last)
         for (FwdIt i = first; ++i != last;)
             if (!(*i == value))
@@ -205,7 +205,7 @@ FwdIt remove(FwdIt first, FwdIt last, const U& value)
 template<class FwdIt, class Pred>
 FwdIt remove_if(FwdIt first, FwdIt last, Pred p)
 {
-    first = find_if(first, last, p);
+    first = (find_if)(first, last, p);
     if (first != last)
         for (FwdIt i = first; ++i != last;)
             if (!p(*i))

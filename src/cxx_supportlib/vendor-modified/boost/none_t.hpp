@@ -25,7 +25,7 @@
 
 #elif defined(BOOST_NO_CXX11_REF_QUALIFIERS) || defined(BOOST_NO_CXX11_NOEXCEPT) || defined(BOOST_NO_CXX11_DEFAULTED_MOVES)
 
-BOOST_PRAGMA_MESSAGE("C++03 support is deprecated in Boost.Optional 1.83 and will be removed in Boost.Optional 1.88.")
+BOOST_PRAGMA_MESSAGE("C++03 support is deprecated in Boost.Optional 1.83 and will be removed in Boost.Optional 1.92.")
 
 #endif
 
@@ -46,6 +46,11 @@ struct none_t
 {
   struct init_tag{};
   explicit BOOST_CONSTEXPR none_t(init_tag){} // to disable default constructor
+
+#ifndef BOOST_OPTIONAL_DISABLE_EQUALITY_FOR_NONE
+  friend BOOST_CONSTEXPR bool operator==(none_t, none_t) { return true; }
+  friend BOOST_CONSTEXPR bool operator!=(none_t, none_t) { return false; }
+#endif
 };
 
 #endif // old implementation workarounds

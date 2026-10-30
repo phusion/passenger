@@ -631,7 +631,7 @@ class tree
       :  AllocHolder(BOOST_MOVE_BASE(AllocHolder, x), x.value_comp())
    {}
 
-   inline tree(const tree& x, const allocator_type &a)
+   inline tree(const tree& x, const BOOST_CONTAINER_DOC1ST(allocator_type, typename dtl::type_identity<allocator_type>::type) &a)
       :  AllocHolder(x.value_comp(), a)
    {
       this->icont().clone_from
@@ -639,7 +639,7 @@ class tree
       //AllocHolder clears in case of exception
    }
 
-   tree(BOOST_RV_REF(tree) x, const allocator_type &a)
+   tree(BOOST_RV_REF(tree) x, const BOOST_CONTAINER_DOC1ST(allocator_type, typename dtl::type_identity<allocator_type>::type) &a)
       :  AllocHolder(x.value_comp(), a)
    {
       if(this->node_alloc() == x.node_alloc()){
@@ -705,56 +705,56 @@ class tree
 
    public:
    // accessors:
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       value_compare value_comp() const
    {  return value_compare(this->key_comp()); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       key_compare key_comp() const
    {  return this->icont().key_comp(); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       allocator_type get_allocator() const
    {  return allocator_type(this->node_alloc()); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const stored_allocator_type &get_stored_allocator() const
    {  return this->node_alloc(); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       stored_allocator_type &get_stored_allocator()
    {  return this->node_alloc(); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       iterator begin()
    { return iterator(this->icont().begin()); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_iterator begin() const
    {  return this->cbegin();  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       iterator end()
    {  return iterator(this->icont().end());  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_iterator end() const
    {  return this->cend();  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       reverse_iterator rbegin()
    {  return reverse_iterator(end());  }
 
    
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_reverse_iterator rbegin() const
    {  return this->crbegin();  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       reverse_iterator rend()
    {  return reverse_iterator(begin());   }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_reverse_iterator rend() const
    {  return this->crend();   }
 
@@ -763,7 +763,7 @@ class tree
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_iterator cbegin() const
    { return const_iterator(this->non_const_icont().begin()); }
 
@@ -772,7 +772,7 @@ class tree
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_iterator cend() const
    { return const_iterator(this->non_const_icont().end()); }
 
@@ -782,7 +782,7 @@ class tree
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_reverse_iterator crbegin() const
    { return const_reverse_iterator(cend()); }
 
@@ -792,19 +792,19 @@ class tree
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_reverse_iterator crend() const
    { return const_reverse_iterator(cbegin()); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       bool empty() const
    {  return !this->size();  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       size_type size() const
    {  return this->icont().size();   }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       size_type max_size() const
    {  return AllocHolder::max_size();  }
 
@@ -813,25 +813,27 @@ class tree
                                  && boost::container::dtl::is_nothrow_swappable<Compare>::value )
    {  AllocHolder::swap(x);   }
 
-   public:
+   protected:
 
    typedef typename Icont::insert_commit_data insert_commit_data;
 
    // insert/erase
+   template <class Comparable>
    std::pair<iterator,bool> insert_unique_check
-      (const key_type& key, insert_commit_data &data)
+      (const Comparable& key, insert_commit_data &data)
    {
       std::pair<iiterator, bool> ret =
-         this->icont().insert_unique_check(key, data);
+         this->icont().insert_unique_check(key, KeyNodeCompare(key_comp()), data);
       return std::pair<iterator, bool>(iterator(ret.first), ret.second);
    }
 
+   template <class Comparable>
    std::pair<iterator,bool> insert_unique_check
-      (const_iterator hint, const key_type& key, insert_commit_data &data)
+      (const_iterator hint, const Comparable& key, insert_commit_data &data)
    {
       BOOST_ASSERT((priv_is_linked)(hint));
       std::pair<iiterator, bool> ret =
-         this->icont().insert_unique_check(hint.get(), key, data);
+         this->icont().insert_unique_check(hint.get(), key, KeyNodeCompare(key_comp()), data);
       return std::pair<iterator, bool>(iterator(ret.first), ret.second);
    }
 
@@ -850,8 +852,9 @@ class tree
    std::pair<iterator,bool> insert_unique_convertible(BOOST_FWD_REF(MovableConvertible) v)
    {
       insert_commit_data data;
+      const typename remove_cvref<MovableConvertible>::type & k = v;  //Support emulated rvalue references
       std::pair<iterator,bool> ret =
-         this->insert_unique_check(key_of_value_t()(v), data);
+         this->insert_unique_check(key_of_value_t()(k), data);
       if(ret.second){
          ret.first = this->insert_unique_commit(boost::forward<MovableConvertible>(v), data);
       }
@@ -1004,13 +1007,25 @@ class tree
 
    template <class KeyType, class... Args>
    inline std::pair<iterator, bool> try_emplace
+      (BOOST_FWD_REF(KeyType) key, BOOST_FWD_REF(Args)... args)
+   {
+      insert_commit_data data;
+      const typename remove_cvref<KeyType>::type & k = key;  //Support emulated rvalue references
+      std::pair<iiterator, bool> ret = this->icont().insert_unique_check(            k, KeyNodeCompare(key_comp()), data);
+      if(ret.second){
+         ret.first = this->icont().insert_unique_commit
+            (*AllocHolder::create_node(try_emplace_t(), boost::forward<KeyType>(key), boost::forward<Args>(args)...), data);
+      }
+      return std::pair<iterator, bool>(iterator(ret.first), ret.second);
+   }
+
+   template <class KeyType, class... Args>
+   inline std::pair<iterator, bool> try_emplace
       (const_iterator hint, BOOST_FWD_REF(KeyType) key, BOOST_FWD_REF(Args)... args)
    {
       insert_commit_data data;
-      const key_type & k = key;  //Support emulated rvalue references
-      std::pair<iiterator, bool> ret =
-         hint == const_iterator() ? this->icont().insert_unique_check(            k, data)
-                                  : this->icont().insert_unique_check(hint.get(), k, data);
+      const typename remove_cvref<KeyType>::type & k = key;  //Support emulated rvalue references
+      std::pair<iiterator, bool> ret = this->icont().insert_unique_check(hint.get(), k, KeyNodeCompare(key_comp()), data);
       if(ret.second){
          ret.first = this->icont().insert_unique_commit
             (*AllocHolder::create_node(try_emplace_t(), boost::forward<KeyType>(key), boost::forward<Args>(args)...), data);
@@ -1052,13 +1067,25 @@ class tree
    \
    template <class KeyType BOOST_MOVE_I##N BOOST_MOVE_CLASS##N>\
    inline std::pair<iterator, bool>\
+      try_emplace(BOOST_FWD_REF(KeyType) key BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
+   {\
+      insert_commit_data data;\
+      const typename remove_cvref<KeyType>::type & k = key;\
+      std::pair<iiterator, bool> ret = this->icont().insert_unique_check(            k, KeyNodeCompare(key_comp()), data);\
+      if(ret.second){\
+         ret.first = this->icont().insert_unique_commit\
+            (*AllocHolder::create_node(try_emplace_t(), boost::forward<KeyType>(key) BOOST_MOVE_I##N BOOST_MOVE_FWD##N), data);\
+      }\
+      return std::pair<iterator, bool>(iterator(ret.first), ret.second);\
+   }\
+   \
+   template <class KeyType BOOST_MOVE_I##N BOOST_MOVE_CLASS##N>\
+   inline std::pair<iterator, bool>\
       try_emplace(const_iterator hint, BOOST_FWD_REF(KeyType) key BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
    {\
       insert_commit_data data;\
-      const key_type & k = key;\
-      std::pair<iiterator, bool> ret =\
-         hint == const_iterator() ? this->icont().insert_unique_check(            k, data)\
-                                  : this->icont().insert_unique_check(hint.get(), k, data);\
+      const typename remove_cvref<KeyType>::type & k = key;\
+      std::pair<iiterator, bool> ret = this->icont().insert_unique_check(hint.get(), k, KeyNodeCompare(key_comp()), data);\
       if(ret.second){\
          ret.first = this->icont().insert_unique_commit\
             (*AllocHolder::create_node(try_emplace_t(), boost::forward<KeyType>(key) BOOST_MOVE_I##N BOOST_MOVE_FWD##N), data);\
@@ -1112,13 +1139,26 @@ class tree
    }
 
    template<class KeyType, class M>
+   std::pair<iterator, bool> insert_or_assign(BOOST_FWD_REF(KeyType) key, BOOST_FWD_REF(M) obj)
+   {
+      insert_commit_data data;
+      const typename remove_cvref<KeyType>::type & k = key;  //Support emulated rvalue references
+      std::pair<iiterator, bool> ret = this->icont().insert_unique_check(k, KeyNodeCompare(key_comp()), data);
+      if(ret.second){
+         ret.first = this->priv_insert_or_assign_commit(boost::forward<KeyType>(key), boost::forward<M>(obj), data);
+      }
+      else{
+         ret.first->get_data().second = boost::forward<M>(obj);
+      }
+      return std::pair<iterator, bool>(iterator(ret.first), ret.second);
+   }
+
+   template<class KeyType, class M>
    std::pair<iterator, bool> insert_or_assign(const_iterator hint, BOOST_FWD_REF(KeyType) key, BOOST_FWD_REF(M) obj)
    {
       insert_commit_data data;
       const typename remove_cvref<KeyType>::type & k = key;  //Support emulated rvalue references
-      std::pair<iiterator, bool> ret =
-         hint == const_iterator() ? this->icont().insert_unique_check(k, KeyNodeCompare(key_comp()), data)
-                                  : this->icont().insert_unique_check(hint.get(), k, KeyNodeCompare(key_comp()), data);
+      std::pair<iiterator, bool> ret = this->icont().insert_unique_check(hint.get(), k, KeyNodeCompare(key_comp()), data);
       if(ret.second){
          ret.first = this->priv_insert_or_assign_commit(boost::forward<KeyType>(key), boost::forward<M>(obj), data);
       }
@@ -1182,6 +1222,21 @@ class tree
    }
 
    node_type extract(const key_type& k)
+   {
+      iterator const it = this->find(k);
+      if(this->end() != it){
+         return this->extract(it);
+      }
+      return node_type();
+   }
+
+   template<class K>
+   inline typename dtl::enable_if_c<
+      dtl::is_transparent<key_compare>::value &&      //transparent
+      !dtl::is_convertible<K, iterator>::value &&     //not convertible to iterator
+      !dtl::is_convertible<K, const_iterator>::value  //not convertible to const_iterator
+      , node_type>::type
+      extract(BOOST_FWD_REF(K) k)
    {
       iterator const it = this->find(k);
       if(this->end() != it){
@@ -1260,94 +1315,94 @@ class tree
 
    // search operations. Const and non-const overloads even if no iterator is returned
    // so splay implementations can to their rebalancing when searching in non-const versions
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       iterator find(const key_type& k)
    {  return iterator(this->icont().find(k));  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_iterator find(const key_type& k) const
    {  return const_iterator(this->non_const_icont().find(k));  }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, iterator>::type
          find(const K& k)
    {  return iterator(this->icont().find(k, KeyNodeCompare(key_comp())));  }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, const_iterator>::type
          find(const K& k) const
    {  return const_iterator(this->non_const_icont().find(k, KeyNodeCompare(key_comp())));  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       size_type count(const key_type& k) const
    {  return size_type(this->icont().count(k)); }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, size_type>::type
          count(const K& k) const
    {  return size_type(this->icont().count(k, KeyNodeCompare(key_comp()))); }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       bool contains(const key_type& x) const
    {  return this->find(x) != this->cend();  }
 
    template<typename K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, bool>::type
          contains(const K& x) const
    {  return this->find(x) != this->cend();  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       iterator lower_bound(const key_type& k)
    {  return iterator(this->icont().lower_bound(k));  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_iterator lower_bound(const key_type& k) const
    {  return const_iterator(this->non_const_icont().lower_bound(k));  }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, iterator>::type
          lower_bound(const K& k)
    {  return iterator(this->icont().lower_bound(k, KeyNodeCompare(key_comp())));  }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, const_iterator>::type
          lower_bound(const K& k) const
    {  return const_iterator(this->non_const_icont().lower_bound(k, KeyNodeCompare(key_comp())));  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       iterator upper_bound(const key_type& k)
    {  return iterator(this->icont().upper_bound(k));   }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       const_iterator upper_bound(const key_type& k) const
    {  return const_iterator(this->non_const_icont().upper_bound(k));  }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, iterator>::type
          upper_bound(const K& k)
    {  return iterator(this->icont().upper_bound(k, KeyNodeCompare(key_comp())));   }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, const_iterator>::type
          upper_bound(const K& k) const
    {  return const_iterator(this->non_const_icont().upper_bound(k, KeyNodeCompare(key_comp())));  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       std::pair<iterator,iterator> equal_range(const key_type& k)
    {
       std::pair<iiterator, iiterator> ret = this->icont().equal_range(k);
       return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       std::pair<const_iterator, const_iterator> equal_range(const key_type& k) const
    {
       std::pair<iiterator, iiterator> ret =
@@ -1357,7 +1412,7 @@ class tree
    }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, std::pair<iterator,iterator> >::type
          equal_range(const K& k)
    {
@@ -1367,7 +1422,7 @@ class tree
    }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, std::pair<const_iterator, const_iterator> >::type
          equal_range(const K& k) const
    {
@@ -1377,7 +1432,7 @@ class tree
          (const_iterator(ret.first), const_iterator(ret.second));
    }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       std::pair<iterator,iterator> lower_bound_range(const key_type& k)
    {
       std::pair<iiterator, iiterator> ret =
@@ -1385,7 +1440,7 @@ class tree
       return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       std::pair<const_iterator, const_iterator> lower_bound_range(const key_type& k) const
    {
       std::pair<iiterator, iiterator> ret =
@@ -1395,7 +1450,7 @@ class tree
    }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, std::pair<iterator,iterator> >::type
          lower_bound_range(const K& k)
    {
@@ -1405,7 +1460,7 @@ class tree
    }
 
    template <class K>
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       typename dtl::enable_if_transparent<key_compare, K, std::pair<const_iterator, const_iterator> >::type
          lower_bound_range(const K& k) const
    {
@@ -1418,27 +1473,27 @@ class tree
    inline void rebalance()
    {  intrusive_tree_proxy_t::rebalance(this->icont());   }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       friend bool operator==(const tree& x, const tree& y)
    {  return x.size() == y.size() && ::boost::container::algo_equal(x.begin(), x.end(), y.begin());  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       friend bool operator<(const tree& x, const tree& y)
    {  return ::boost::container::algo_lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       friend bool operator!=(const tree& x, const tree& y)
    {  return !(x == y);  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       friend bool operator>(const tree& x, const tree& y)
    {  return y < x;  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       friend bool operator<=(const tree& x, const tree& y)
    {  return !(y < x);  }
 
-   BOOST_CONTAINER_ATTRIBUTE_NODISCARD inline
+   BOOST_CONTAINER_NODISCARD inline
       friend bool operator>=(const tree& x, const tree& y)
    {  return !(x < y);  }
 

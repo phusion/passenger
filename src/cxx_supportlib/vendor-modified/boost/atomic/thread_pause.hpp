@@ -75,7 +75,11 @@ BOOST_FORCEINLINE void thread_pause() noexcept
 #elif (defined(__ARM_ARCH) && __ARM_ARCH >= 8) || defined(__ARM_ARCH_8A__)
     __asm__ __volatile__("yield" : : : "memory");
 #elif (defined(__POWERPC__) || defined(__PPC__))
+#if defined(__APPLE__)
+    __asm__ __volatile__("or r27,r27,r27" : : : "memory"); // yield pseudo-instruction
+#else
     __asm__ __volatile__("or 27,27,27" : : : "memory"); // yield pseudo-instruction
+#endif
 #elif defined(__riscv) && (__riscv_xlen == 64)
 #if defined(__riscv_zihintpause)
     __asm__ __volatile__("pause" : : : "memory");

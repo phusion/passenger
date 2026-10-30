@@ -153,13 +153,13 @@ template<class Q, class... L> using mp_transform_q = mp_transform<Q::template fn
 namespace detail
 {
 
+template<class V, class T> using mp_transform_impl_f = mp_transform<mp_push_back, V, T>;
+
 template<template<class...> class F, template<class...> class L1, class... T1, template<class...> class L2, class... T2, template<class...> class L3, class... T3, template<class...> class L4, class... T4, class... L> struct mp_transform_impl<F, L1<T1...>, L2<T2...>, L3<T3...>, L4<T4...>, L...>
 {
     using A1 = L1<mp_list<T1, T2, T3, T4>...>;
 
-    template<class V, class T> using _f = mp_transform<mp_push_back, V, T>;
-
-    using A2 = mp_fold<mp_list<L...>, A1, _f>;
+    using A2 = mp_fold<mp_list<L...>, A1, mp_transform_impl_f>;
 
     template<class T> using _g = mp_apply<F, T>;
 
@@ -172,7 +172,7 @@ template<template<class...> class F, template<class...> class L1, class... T1, t
 namespace detail
 {
 
-template<template<class...> class P, template<class...> class F, class... L> struct mp_transform_if_impl
+template<template<class...> class P, template<class...> class F> struct mp_transform_if_impl_f
 {
     // the stupid quote-unquote dance avoids "pack expansion used as argument for non-pack parameter of alias template"
 
@@ -181,16 +181,19 @@ template<template<class...> class P, template<class...> class F, class... L> str
 
 #if BOOST_MP11_WORKAROUND( BOOST_MP11_MSVC, < 1920 )
 
-    template<class... U> struct _f_ { using type = mp_eval_if_q<mp_not<mp_invoke_q<Qp, U...>>, mp_first<mp_list<U...>>, Qf, U...>; };
-    template<class... U> using _f = typename _f_<U...>::type;
+    template<class... U> struct _f { using type = mp_eval_if_q<mp_not<mp_invoke_q<Qp, U...>>, mp_first<mp_list<U...>>, Qf, U...>; };
+    template<class... U> using fn = typename _f<U...>::type;
 
 #else
 
-    template<class... U> using _f = mp_eval_if_q<mp_not<mp_invoke_q<Qp, U...>>, mp_first<mp_list<U...>>, Qf, U...>;
+    template<class... U> using fn = mp_eval_if_q<mp_not<mp_invoke_q<Qp, U...>>, mp_first<mp_list<U...>>, Qf, U...>;
 
 #endif
+};
 
-    using type = mp_transform<_f, L...>;
+template<template<class...> class P, template<class...> class F, class... L> struct mp_transform_if_impl
+{
+    using type = mp_transform_q<mp_transform_if_impl_f<P, F>, L...>;
 };
 
 } // namespace detail
@@ -202,13 +205,16 @@ template<class Qp, class Qf, class... L> using mp_transform_if_q = typename deta
 namespace detail
 {
 
-template<template<class...> class P, class L1, class... L> struct mp_filter_impl
+template<template<class...> class P> struct mp_filter_impl_f
 {
     using Qp = mp_quote<P>;
 
-    template<class T1, class... T> using _f = mp_if< mp_invoke_q<Qp, T1, T...>, mp_list<T1>, mp_list<> >;
+    template<class T1, class... T> using fn = mp_if< mp_invoke_q<Qp, T1, T...>, mp_list<T1>, mp_list<> >;
+};
 
-    using _t1 = mp_transform<_f, L1, L...>;
+template<template<class...> class P, class L1, class... L> struct mp_filter_impl
+{
+    using _t1 = mp_transform_q<mp_filter_impl_f<P>, L1, L...>;
     using _t2 = mp_apply<mp_append, _t1>;
 
     using type = mp_assign<L1, _t2>;
@@ -228,6 +234,8 @@ template<class L, class V> struct mp_fill_impl
 // An error "no type named 'type'" here means that the L argument of mp_fill is not a list
 };
 
+template<class T, class U> using mp_fill_impl_f = T;
+
 template<template<class...> class L, class... T, class V> struct mp_fill_impl<L<T...>, V>
 {
 #if BOOST_MP11_WORKAROUND( BOOST_MP11_MSVC, <= 1900 )
@@ -237,8 +245,7 @@ template<template<class...> class L, class... T, class V> struct mp_fill_impl<L<
 
 #else
 
-    template<class...> using _f = V;
-    using type = L<_f<T>...>;
+    using type = L< mp_fill_impl_f<V, T>... >;
 
 #endif
 };
@@ -329,11 +336,14 @@ namespace detail
 
 template<class L, class L2, class En> struct mp_drop_impl;
 
-template<template<class...> class L, class... T, template<class...> class L2, class... U> struct mp_drop_impl<L<T...>, L2<U...>, mp_true>
+template<template<class...> class L, class... U> struct mp_drop_impl_f
 {
     template<class... W> static mp_identity<L<W...>> f( U*..., mp_identity<W>*... );
+};
 
-    using R = decltype( f( static_cast<mp_identity<T>*>(0) ... ) );
+template<template<class...> class L, class... T, template<class...> class L2, class... U> struct mp_drop_impl<L<T...>, L2<U...>, mp_true>
+{
+    using R = decltype( mp_drop_impl_f<L, U...>::f( static_cast<mp_identity<T>*>(0) ... ) );
 
     using type = typename R::type;
 };
@@ -524,8 +534,7 @@ template<template<class...> class L, class... T, class V, class W> struct mp_rep
     template<class A> struct _f { using type = mp_if<std::is_same<A, V>, W, A>; };
     using type = L<typename _f<T>::type...>;
 #else
-    template<class A> using _f = mp_if<std::is_same<A, V>, W, A>;
-    using type = L<_f<T>...>;
+    using type = L<mp_if<std::is_same<T, V>, W, T>...>;
 #endif
 };
 
@@ -545,8 +554,7 @@ template<template<class...> class L, class... T, template<class...> class P, cla
     template<class U> struct _f { using type = mp_if<P<U>, W, U>; };
     using type = L<typename _f<T>::type...>;
 #else
-    template<class U> using _f = mp_if<P<U>, W, U>;
-    using type = L<_f<T>...>;
+    using type = L<mp_if<P<T>, W, T>...>;
 #endif
 };
 
@@ -570,8 +578,7 @@ template<template<class...> class L, class... T, class V> struct mp_remove_impl<
     template<class U> struct _f { using type = mp_if<std::is_same<U, V>, mp_list<>, mp_list<U>>; };
     using type = mp_append<L<>, typename _f<T>::type...>;
 #else
-    template<class U> using _f = mp_if<std::is_same<U, V>, mp_list<>, mp_list<U>>;
-    using type = mp_append<L<>, _f<T>...>;
+    using type = mp_append<L<>, mp_if<std::is_same<T, V>, mp_list<>, mp_list<T>>...>;
 #endif
 };
 
@@ -639,11 +646,14 @@ template<template<class...> class L, class T1, template<class...> class P> struc
     using type = L<T1>;
 };
 
+template<class T1, template<class...> class P> struct mp_sort_impl_f
+{
+    template<class U> using fn = P<U, T1>;
+};
+
 template<template<class...> class L, class T1, class... T, template<class...> class P> struct mp_sort_impl<L<T1, T...>, P>
 {
-    template<class U> using F = P<U, T1>;
-
-    using part = mp_partition<L<T...>, F>;
+    using part = mp_partition_q<L<T...>, mp_sort_impl_f<T1, P>>;
 
     using S1 = typename mp_sort_impl<mp_first<part>, P>::type;
     using S2 = typename mp_sort_impl<mp_second<part>, P>::type;
@@ -672,9 +682,7 @@ template<template<class...> class L, class T1, class... T, std::size_t I, templa
 {
     static_assert( I < 1 + sizeof...(T), "mp_nth_element index out of range" );
 
-    template<class U> using F = P<U, T1>;
-
-    using part = mp_partition<L<T...>, F>;
+    using part = mp_partition_q<L<T...>, mp_sort_impl_f<T1, P>>;
 
     using L1 = mp_first<part>;
     static std::size_t const N1 = mp_size<L1>::value;
@@ -1030,14 +1038,21 @@ template<class L, class Q> using mp_any_of_q = mp_any_of<L, Q::template fn>;
 namespace detail
 {
 
+template<class I> struct mp_replace_at_impl_p
+{
+    template<class T1, class T2> using fn = std::is_same<T2, I>;
+};
+
+template<class W> struct mp_replace_at_impl_f
+{
+    template<class T1, class T2> using fn = W;
+};
+
 template<class L, class I, class W> struct mp_replace_at_impl
 {
     static_assert( I::value >= 0, "mp_replace_at<L, I, W>: I must not be negative" );
 
-    template<class T1, class T2> using _p = std::is_same<T2, mp_size_t<I::value>>;
-    template<class T1, class T2> using _f = W;
-
-    using type = mp_transform_if<_p, _f, L, mp_iota<mp_size<L> > >;
+    using type = mp_transform_if_q<mp_replace_at_impl_p<mp_size_t<I::value>>, mp_replace_at_impl_f<W>, L, mp_iota<mp_size<L> > >;
 };
 
 } // namespace detail
@@ -1182,13 +1197,16 @@ template<template<class...> class L> struct mp_power_set_impl< L<> >
 
 #endif
 
+template<class T1> struct mp_power_set_impl_f
+{
+    template<class L2> using fn = mp_push_front<L2, T1>;
+};
+
 template<template<class...> class L, class T1, class... T> struct mp_power_set_impl< L<T1, T...> >
 {
     using S1 = mp_power_set< L<T...> >;
 
-    template<class L2> using _f = mp_push_front<L2, T1>;
-
-    using S2 = mp_transform<_f, S1>;
+    using S2 = mp_transform_q<mp_power_set_impl_f<T1>, S1>;
 
     using type = mp_append< S1, S2 >;
 };
@@ -1260,15 +1278,18 @@ template<class L, template<class...> class F> using mp_pairwise_fold = mp_pairwi
 namespace detail
 {
 
+template<class L, std::size_t M> struct mp_sliding_fold_impl_f
+{
+    template<class I> using fn = mp_slice_c<L, I::value, I::value + M>;
+};
+
 template<class C, class L, class Q, class S> struct mp_sliding_fold_impl;
 
 template<class L, class N, class Q> struct mp_sliding_fold_impl<mp_true, L, N, Q>
 {
     static const std::size_t M = mp_size<L>::value - N::value + 1;
 
-    template<class I> using F = mp_slice_c<L, I::value, I::value + M>;
-
-    using J = mp_transform<F, mp_iota<N>>;
+    using J = mp_transform_q<mp_sliding_fold_impl_f<L, M>, mp_iota<N>>;
 
     using type = mp_apply<mp_transform_q, mp_push_front<J, Q>>;
 };

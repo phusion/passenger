@@ -139,9 +139,18 @@ struct is_iterator< volatile T > : public detail::is_iterator_impl< T >::type {}
 template< typename T >
 struct is_iterator< const volatile T > : public detail::is_iterator_impl< T >::type {};
 
+#if !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
+template< typename T >
+BOOST_INLINE_VARIABLE constexpr bool is_iterator_v = iterators::is_iterator< T >::value;
+#endif // !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
+
 } // namespace iterators
 
 using iterators::is_iterator;
+
+#if !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
+using iterators::is_iterator_v;
+#endif // !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
 
 } // namespace boost
 

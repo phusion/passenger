@@ -31,6 +31,8 @@
 namespace boost {
 namespace container {
 
+#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
+
 namespace pmr_dtl {
 
 template<class T>
@@ -52,6 +54,8 @@ struct max_allocator_alignment< std::allocator<T> >
 };
 
 }  //namespace pmr_dtl
+
+#endif   //BOOST_CONTAINER_DOXYGEN_INVOKED
 
 namespace pmr {
 

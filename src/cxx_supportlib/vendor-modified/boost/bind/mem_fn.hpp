@@ -179,7 +179,7 @@ public:
 
 private:
 
-    typedef R (T::*Pm);
+    typedef R T::*Pm;
     Pm pm_;
 
 public:

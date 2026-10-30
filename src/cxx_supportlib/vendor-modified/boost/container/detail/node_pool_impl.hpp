@@ -40,6 +40,149 @@ namespace boost {
 namespace container {
 namespace dtl {
 
+
+// Helper to generate masks (avoids shift overflow when N == bits_per_word)
+template <typename SizeType, std::size_t N, std::size_t BitsPerWord>
+struct packed_3n_mask_helper
+{
+   BOOST_STATIC_CONSTEXPR SizeType low_mask  = (SizeType(1) << N) - 1;
+   BOOST_STATIC_CONSTEXPR SizeType high_mask = low_mask << (BitsPerWord - N);
+};
+
+template <typename SizeType, std::size_t N>
+struct packed_3n_mask_helper<SizeType, N, N>
+{
+   BOOST_STATIC_CONSTEXPR SizeType low_mask  = ~SizeType(0);
+   BOOST_STATIC_CONSTEXPR SizeType high_mask = ~SizeType(0);
+};
+
+// Reference-based packed bits view
+// N = number of bits per segment (total storage = 3*N bits)
+// SizeType must be unsigned
+template <std::size_t N, typename SizeType = std::size_t>
+class packed_3n_bits_ref
+{
+   public:
+   typedef SizeType size_type;
+
+
+   BOOST_STATIC_CONSTEXPR std::size_t bits_per_word    = sizeof(size_type) * CHAR_BIT;
+   BOOST_STATIC_CONSTEXPR std::size_t bits_per_segment = N;
+   BOOST_STATIC_CONSTEXPR std::size_t total_bits       = 3 * N;
+   BOOST_STATIC_CONSTEXPR std::size_t top_shift        = bits_per_word - N;
+
+   BOOST_CONTAINER_STATIC_ASSERT(sizeof(size_type)*CHAR_BIT >= total_bits);
+
+private:
+   typedef packed_3n_mask_helper<size_type, N, bits_per_word> masks;
+   BOOST_CONTAINER_STATIC_ASSERT(N <= bits_per_word);
+
+   size_type& m_low;
+   size_type& m_high1;
+   size_type& m_high2;
+
+public:
+   BOOST_STATIC_CONSTEXPR size_type low_mask  = masks::low_mask;
+   BOOST_STATIC_CONSTEXPR size_type high_mask = masks::high_mask;
+
+   BOOST_STATIC_CONSTEXPR std::size_t remaining_bits_low  = bits_per_word - N;
+   BOOST_STATIC_CONSTEXPR std::size_t remaining_bits_high = bits_per_word - N;
+
+   // Constructor takes references to three existing variables
+   packed_3n_bits_ref(size_type& low, size_type& high1, size_type& high2)
+      : m_low(low), m_high1(high1), m_high2(high2)
+   {}
+
+   void store(size_type value)
+   {
+      // Check that no bits are set outside the 3*N range
+      BOOST_ASSERT((value & ~size_type((1u << 3*N) - 1u)) == 0);
+
+      const size_type segment_mask = (size_type(1) << N) - 1;
+      const size_type seg0 = static_cast<size_type>(value & segment_mask);
+      const size_type seg1 = static_cast<size_type>((value >> N) & segment_mask);
+      const size_type seg2 = static_cast<size_type>((value >> (2 * N)) & segment_mask);
+
+      set_segment0(seg0);
+      set_segment1(seg1);
+      set_segment2(seg2);
+   }
+
+   size_type load() const
+   {
+      return static_cast<size_type>
+            ( (static_cast<size_type>(get_segment0()) << (0u*N))
+            | (static_cast<size_type>(get_segment1()) << (1u*N))
+            | (static_cast<size_type>(get_segment2()) << (2u*N))
+            );
+   }
+
+   void set_segment0(size_type value)
+   {  m_low = (m_low & ~low_mask) | (value & low_mask);  }
+
+   void set_segment1(size_type value)
+   {  m_high1 = (m_high1 & ~high_mask) | ((value & low_mask) << top_shift);  }
+
+   void set_segment2(size_type value)
+   {  m_high2 = (m_high2 & ~high_mask) | ((value & low_mask) << top_shift);   }
+
+   size_type get_segment0() const
+   { return m_low & low_mask;   }
+    
+   size_type get_segment1() const
+   { return (m_high1 & high_mask) >> top_shift;  }
+    
+   size_type get_segment2() const
+   { return (m_high2 & high_mask) >> top_shift;  }
+
+   size_type low_unpacked() const
+   {  return m_low & ~low_mask;  }
+
+   size_type high1_unpacked() const
+   {  return m_high1 & ~high_mask;  }
+
+   size_type high2_unpacked() const
+   {  return m_high2 & ~high_mask;  }
+
+   void set_low_unpacked(size_type value)
+   {
+      BOOST_ASSERT((value & low_mask) == 0);
+      m_low = (m_low & low_mask) | value;
+   }
+
+   void set_high1_unpacked(size_type value)
+   {
+      BOOST_ASSERT((value & high_mask) == 0);
+      m_high1 = (m_high1 & high_mask) | value;
+   }
+
+   void set_high2_unpacked(size_type value)
+   {
+      BOOST_ASSERT((value & high_mask) == 0);
+      m_high2 = (m_high2 & high_mask) | value;
+   }
+
+   size_type& raw_low()        { return m_low; }
+   size_type  raw_low()  const { return m_low; }
+
+   size_type& raw_high1()       { return m_high1; }
+   size_type  raw_high1() const { return m_high1; }
+
+   size_type& raw_high2()       { return m_high2; }
+   size_type  raw_high2() const { return m_high2; }
+
+   packed_3n_bits_ref(const packed_3n_bits_ref& v)
+      : m_low(v.m_low), m_high1(v.m_high1), m_high2(v.m_high2)
+   {}
+private:
+
+   //packed_3n_bits_ref& operator=(const packed_3n_bits_ref&);
+};
+
+//This class uses packed_3n_bits_ref to store overalignment
+//values maintatin the ABI, since ABI-sensitive libraries like Interprocess
+//rely on this type and types without overalignment must continue working
+//as before.
 template<class SegmentManagerBase>
 class private_node_pool_impl
 {
@@ -52,16 +195,25 @@ class private_node_pool_impl
    public:
    typedef typename SegmentManagerBase::void_pointer              void_pointer;
    typedef typename node_slist<void_pointer>::slist_hook_t        slist_hook_t;
-   typedef typename node_slist<void_pointer>::node_t              node_t;
+   typedef typename node_slist<void_pointer>::node_t              list_node_t;
    typedef typename node_slist<void_pointer>::node_slist_t        free_nodes_t;
    typedef typename SegmentManagerBase::multiallocation_chain     multiallocation_chain;
    typedef typename SegmentManagerBase::size_type                 size_type;
 
    private:
+   BOOST_STATIC_CONSTEXPR size_type list_node_align = alignment_of<list_node_t>::value;
+   BOOST_STATIC_CONSTEXPR size_type list_node_align_bits
+      = boost::container::dtl::log2_pow2<list_node_align>::value;
+
+   //Make sure we can use at least the lowest 2 bits for other purposes
+   BOOST_CONTAINER_STATIC_ASSERT(list_node_align_bits >= 2u);
+
    typedef typename bi::make_slist
-      < node_t, bi::base_hook<slist_hook_t>
+      < list_node_t, bi::base_hook<slist_hook_t>
       , bi::linear<true>
       , bi::constant_time_size<false> >::type      blockslist_t;
+
+   typedef packed_3n_bits_ref<list_node_align_bits, size_type> packed_3n_bits_ref_t;
 
    static size_type get_rounded_size(size_type orig_size, size_type round_to)
    {  return ((orig_size-1)/round_to+1)*round_to;  }
@@ -72,23 +224,62 @@ class private_node_pool_impl
    typedef SegmentManagerBase segment_manager_base_type;
 
    //!Constructor from a segment manager. Never throws
-   private_node_pool_impl(segment_manager_base_type *segment_mngr_base, size_type node_size, size_type nodes_per_block)
-   :  m_nodes_per_block(nodes_per_block)
-   ,  m_real_node_size(lcm(node_size, size_type(alignment_of<node_t>::value)))
-      //General purpose allocator
-   ,  mp_segment_mngr_base(segment_mngr_base)
-   ,  m_blocklist()
-   ,  m_freelist()
-      //Debug node count
-   ,  m_allocated(0)
-   {}
+   private_node_pool_impl(segment_manager_base_type *segment_mngr_base, size_type node_size, size_type nodes_per_block, size_type node_alignment)
+      : m_nodes_per_block(0)
+      , m_real_node_size(0)
+      , mp_segment_mngr_base(segment_mngr_base)
+      , m_blocklist()
+      , m_freelist()
+      , m_allocated()
+   {
+      BOOST_ASSERT(0 == (node_alignment & (node_alignment - 1u)));   //node_alignment must be power of two
+      //node_size must be able to hold a list_node_t
+      node_size = node_size < sizeof(list_node_t) ? sizeof(list_node_t) : node_size;
+
+      //node_size must be multiple of list_node_t alignment because each node must be store it in that node address
+      node_size = get_rounded_size(node_size, list_node_align);
+
+      //node_size must be multiple of node_alignment
+      if(node_alignment < list_node_align)
+         node_alignment = list_node_align;
+      else if(node_alignment > list_node_align)
+         node_size = get_rounded_size(node_size, node_alignment);
+
+      //We'll use log2(list_node_align) bits from m_real_node_size, m_nodes_per_block and m_allocated
+      //to store the overaligned state
+      //Thus, the maximum alignment that we support is list_node_align << 2*(list_node_align - 1)
+      // - if list_node_align is 4, we can support up to 4 << 2^(3*2)-1 -> 4 << 63
+      // - if list_node_align is 8, we can support up to 8 << 2^(3*3)-1 -> 8 << 255
+      const size_type aligned_multiplier = node_alignment / list_node_align;
+      const size_type aligned_shift = log2_ceil<size_type>(aligned_multiplier);
+      BOOST_CONSTEXPR_OR_CONST size_type max_aligned_shift = std::size_t((1u << 3u*list_node_align_bits) - 1);
+      if (aligned_shift > max_aligned_shift) {
+         BOOST_ASSERT(aligned_shift <= max_aligned_shift);  //Unsupported alignment
+         mp_segment_mngr_base = segment_mngr_base_ptr_t(); //Will crash on allocation
+      }
+
+      packed_3n_bits_ref_t packer(m_real_node_size, m_nodes_per_block, m_allocated);
+      packer.store(aligned_shift);
+      packer.set_low_unpacked(node_size);
+      packer.set_high1_unpacked(nodes_per_block);
+      packer.set_high2_unpacked(0);
+   }
 
    //!Destructor. Deallocates all allocated blocks. Never throws
    inline ~private_node_pool_impl()
    {  this->purge_blocks();  }
 
    inline size_type get_real_num_node() const
-   {  return m_nodes_per_block; }
+   {
+      packed_3n_bits_ref_t packer(m_real_node_size, m_nodes_per_block, m_allocated);
+      return packer.high1_unpacked();
+   }
+
+   inline size_type get_real_node_size() const
+   {
+      packed_3n_bits_ref_t packer(m_real_node_size, m_nodes_per_block, m_allocated);
+      return packer.low_unpacked();
+   }
 
    //!Returns the segment manager. Never throws
    inline segment_manager_base_type* get_segment_manager_base()const
@@ -104,10 +295,14 @@ class private_node_pool_impl
    //!Allocates a singly linked list of n nodes ending in null pointer.
    void allocate_nodes(const size_type n, multiallocation_chain &chain)
    {
+      packed_3n_bits_ref_t packer(m_real_node_size, m_nodes_per_block, m_allocated);
+      size_type allocated        = packer.high2_unpacked();
+      size_type nodes_per_block  = packer.high1_unpacked();
+
       //Preallocate all needed blocks to fulfill the request
       size_type cur_nodes = m_freelist.size();
       if(cur_nodes < n){
-         this->priv_alloc_block(((n - cur_nodes) - 1)/m_nodes_per_block + 1);
+         this->priv_alloc_block(((n - cur_nodes) - 1)/nodes_per_block + 1);
       }
 
       //We just iterate the needed nodes to get the last we'll erase
@@ -129,7 +324,8 @@ class private_node_pool_impl
       //Now take the last erased node and just splice it in the end
       //of the intrusive list that will be traversed by the multialloc iterator.
       chain.incorporate_after(chain.before_begin(), &*first_node, &*last_node, n);
-      m_allocated += n;
+      allocated += n;
+      packer.set_high2_unpacked(allocated);
    }
 
    void deallocate_nodes(multiallocation_chain &chain)
@@ -154,8 +350,11 @@ class private_node_pool_impl
       nodelist_iterator backup_list_last = backup_list.before_begin();
 
       //Execute the algorithm and get an iterator to the last value
-      size_type blocksize = (get_rounded_size)
-         (m_real_node_size*m_nodes_per_block, (size_type) alignment_of<node_t>::value);
+      packed_3n_bits_ref_t packer(m_real_node_size, m_nodes_per_block, m_allocated);
+      size_type real_node_size   = packer.low_unpacked();
+      size_type nodes_per_block  = packer.high1_unpacked();
+
+      size_type blocksize = real_node_size*nodes_per_block;
 
       while(it != itend){
          //Collect all the nodes from the block pointed by it
@@ -167,9 +366,9 @@ class private_node_pool_impl
          m_freelist.remove_and_dispose_if
             (is_between(addr, blocksize), push_in_list(free_nodes, last_it));
 
-         //If the number of nodes is equal to m_nodes_per_block
+         //If the number of nodes is equal to nodes_per_block
          //this means that the block can be deallocated
-         if(free_nodes.size() == m_nodes_per_block){
+         if(free_nodes.size() == nodes_per_block){
             //Unlink the nodes
             free_nodes.clear();
             it = m_blocklist.erase_after(bit);
@@ -212,10 +411,14 @@ class private_node_pool_impl
    //!already be deallocated. Otherwise, undefined behaviour. Never throws
    void purge_blocks()
    {
+      packed_3n_bits_ref_t packer(m_real_node_size, m_nodes_per_block, m_allocated);
+      size_type real_node_size   = packer.low_unpacked();
+      size_type nodes_per_block  = packer.high1_unpacked();
+      size_type allocated        = packer.high2_unpacked();
+
       //check for memory leaks
-      BOOST_ASSERT(m_allocated==0);
-      size_type blocksize = (get_rounded_size)
-         (m_real_node_size*m_nodes_per_block, (size_type)alignment_of<node_t>::value);
+      BOOST_ASSERT(allocated == 0); (void)allocated;
+      const size_type blocksize = real_node_size * nodes_per_block;
 
       //We iterate though the NodeBlock list to free the memory
       while(!m_blocklist.empty()){
@@ -229,8 +432,8 @@ class private_node_pool_impl
 
    void swap(private_node_pool_impl &other)
    {
-      BOOST_ASSERT(m_nodes_per_block == other.m_nodes_per_block);
-      BOOST_ASSERT(m_real_node_size == other.m_real_node_size);
+      BOOST_ASSERT(this->get_real_node_size() == other.get_real_node_size());
+      BOOST_ASSERT(this->get_real_num_node() == other.get_real_num_node());
       std::swap(mp_segment_mngr_base, other.mp_segment_mngr_base);
       m_blocklist.swap(other.m_blocklist);
       m_freelist.swap(other.m_freelist);
@@ -279,15 +482,19 @@ class private_node_pool_impl
 
    //!Allocates one node, using single segregated storage algorithm.
    //!Never throws
-   node_t *priv_alloc_node()
+   list_node_t *priv_alloc_node()
    {
       //If there are no free nodes we allocate a new block
       if (m_freelist.empty())
          this->priv_alloc_block(1);
       //We take the first free node
-      node_t *n = (node_t*)&m_freelist.front();
+      list_node_t *n = (list_node_t*)&m_freelist.front();
       m_freelist.pop_front();
-      ++m_allocated;
+      packed_3n_bits_ref_t packer(m_real_node_size, m_nodes_per_block, m_allocated);
+      size_type allocated        = packer.high2_unpacked();
+
+      ++allocated;
+      packer.set_high2_unpacked(allocated);
       return n;
    }
 
@@ -296,32 +503,40 @@ class private_node_pool_impl
    void priv_dealloc_node(void *pElem)
    {
       //We put the node at the beginning of the free node list
-      node_t * to_deallocate = static_cast<node_t*>(pElem);
+      list_node_t * to_deallocate = static_cast<list_node_t*>(pElem);
       m_freelist.push_front(*to_deallocate);
-      BOOST_ASSERT(m_allocated>0);
-      --m_allocated;
+      packed_3n_bits_ref_t packer(m_real_node_size, m_nodes_per_block, m_allocated);
+      size_type allocated        = packer.high2_unpacked();
+      BOOST_ASSERT(allocated>0);
+      --allocated;
+      packer.set_high2_unpacked(allocated);
    }
 
    //!Allocates several blocks of nodes. Can throw
    void priv_alloc_block(size_type num_blocks)
    {
       BOOST_ASSERT(num_blocks > 0);
-      size_type blocksize =
-         (get_rounded_size)(m_real_node_size*m_nodes_per_block, (size_type)alignment_of<node_t>::value);
+
+      packed_3n_bits_ref_t packer(m_real_node_size, m_nodes_per_block, m_allocated);
+      size_type real_node_size   = packer.low_unpacked();
+      size_type nodes_per_block  = packer.high1_unpacked();
+      size_type mem_alignment    = list_node_align << packer.load();
+
+      const size_type blocksize = real_node_size * nodes_per_block;
 
       BOOST_CONTAINER_TRY{
          for(size_type i = 0; i != num_blocks; ++i){
             //We allocate a new NodeBlock and put it as first
             //element in the free Node list
             char *pNode = reinterpret_cast<char*>
-               (mp_segment_mngr_base->allocate(blocksize + sizeof(node_t)));
+               (mp_segment_mngr_base->allocate_aligned(blocksize + sizeof(list_node_t), mem_alignment));
             char *pBlock = pNode;
             m_blocklist.push_front(get_block_hook(pBlock, blocksize));
 
             //We initialize all Nodes in Node Block to insert
             //them in the free Node list
-            for(size_type j = 0; j < m_nodes_per_block; ++j, pNode += m_real_node_size){
-               m_freelist.push_front(*new (pNode) node_t);
+            for(size_type j = 0; j < nodes_per_block; ++j, pNode += real_node_size){
+               m_freelist.push_front(*new (pNode) list_node_t);
             }
          }
       }
@@ -342,13 +557,13 @@ class private_node_pool_impl
 
    private:
    //!Returns a reference to the block hook placed in the end of the block
-   static node_t & get_block_hook (void *block, size_type blocksize)
+   static list_node_t & get_block_hook (void *block, size_type blocksize)
    {
-      return *move_detail::force_ptr<node_t*>(reinterpret_cast<char*>(block) + blocksize);
+      return *move_detail::force_ptr<list_node_t*>(reinterpret_cast<char*>(block) + blocksize);
    }
 
    //!Returns the starting address of the block reference to the block hook placed in the end of the block
-   void *get_block_from_hook (node_t *hook, size_type blocksize)
+   void *get_block_from_hook (list_node_t *hook, size_type blocksize)
    {
       return (reinterpret_cast<char*>(hook) - blocksize);
    }
@@ -357,12 +572,12 @@ class private_node_pool_impl
    typedef typename boost::intrusive::pointer_traits
       <void_pointer>::template rebind_pointer<segment_manager_base_type>::type   segment_mngr_base_ptr_t;
 
-   const size_type m_nodes_per_block;
-   const size_type m_real_node_size;
+   mutable size_type m_nodes_per_block;
+   mutable size_type m_real_node_size;
    segment_mngr_base_ptr_t mp_segment_mngr_base;   //Segment manager
    blockslist_t      m_blocklist;      //Intrusive container of blocks
    free_nodes_t      m_freelist;       //Intrusive container of free nods
-   size_type       m_allocated;      //Used nodes for debugging
+   mutable size_type   m_allocated;      //Used nodes for debugging
 };
 
 

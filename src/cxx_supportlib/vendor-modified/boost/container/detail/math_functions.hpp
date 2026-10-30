@@ -167,6 +167,18 @@ struct lcm_ct
    BOOST_STATIC_CONSTEXPR std::size_t value = I1 * I2 / gcd_ct<I1, I2>::value;
 };
 
+template <std::size_t N, std::size_t Count = 0>
+struct log2_pow2
+{
+    BOOST_STATIC_CONSTEXPR std::size_t value = log2_pow2<(N >> 1), Count + 1>::value;
+};
+
+// Base case: we've reached 1
+template <std::size_t Count>
+struct log2_pow2<1, Count> {
+    BOOST_STATIC_CONSTEXPR std::size_t value = Count;
+};
+
 } // namespace dtl
 } // namespace container
 } // namespace boost

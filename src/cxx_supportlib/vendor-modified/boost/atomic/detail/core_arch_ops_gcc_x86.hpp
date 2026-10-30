@@ -942,7 +942,7 @@ struct gcc_dcas_x86_64
 #if defined(__AVX__)
         if (BOOST_LIKELY(order != memory_order_seq_cst && (((uintptr_t)&storage) & 15u) == 0u))
         {
-            // According to SDM Volume 3, 8.1.1 Guaranteed Atomic Operations, processors supporting AVX guarantee
+            // According to SDM rev.88 from June 2025, Volume 3, 10.1.1 Guaranteed Atomic Operations, processors supporting AVX guarantee
             // aligned vector moves to be atomic.
 #if defined(BOOST_HAS_INT128)
             xmm_t value = { static_cast< std::uint64_t >(v), static_cast< std::uint64_t >(v >> 64u) };
@@ -980,7 +980,7 @@ struct gcc_dcas_x86_64
 #if defined(__AVX__)
         if (BOOST_LIKELY((((uintptr_t)&storage) & 15u) == 0u))
         {
-            // According to SDM Volume 3, 8.1.1 Guaranteed Atomic Operations, processors supporting AVX guarantee
+            // According to SDM rev.88 from June 2025, Volume 3, 10.1.1 Guaranteed Atomic Operations, processors supporting AVX guarantee
             // aligned vector moves to be atomic.
             xmm_t v;
             __asm__ __volatile__

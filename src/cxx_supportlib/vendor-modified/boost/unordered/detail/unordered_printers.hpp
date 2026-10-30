@@ -1,8 +1,8 @@
-// Copyright 2024-2025 Braden Ganetsky
+// Copyright 2024-2026 Braden Ganetsky
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
-// Generated on 2025-08-21T03:09:19
+// Generated on 2026-01-24T00:34:53
 
 #ifndef BOOST_UNORDERED_DETAIL_UNORDERED_PRINTERS_HPP
 #define BOOST_UNORDERED_DETAIL_UNORDERED_PRINTERS_HPP
@@ -29,8 +29,14 @@ __asm__(".pushsection \".debug_gdb_scripts\", \"MS\",%progbits,1\n"
         ".ascii \"            return n\\n\"\n"
 
         ".ascii \"    def maybe_unwrap_foa_element(e):\\n\"\n"
-        ".ascii \"        if f\\\"{e.type.strip_typedefs()}\\\".startswith(\\\"boost::unordered::detail::foa::element_type<\\\"):\\n\"\n"
-        ".ascii \"            return e[\\\"p\\\"]\\n\"\n"
+        ".ascii \"        # Sometimes the complex typedefs can't be resolved through a pointer\\n\"\n"
+        ".ascii \"        if e.type.strip_typedefs().code == gdb.TYPE_CODE_PTR:\\n\"\n"
+        ".ascii \"            foa_element = e.dereference()\\n\"\n"
+        ".ascii \"        else:\\n\"\n"
+        ".ascii \"            foa_element = e\\n\"\n"
+
+        ".ascii \"        if f\\\"{foa_element.type.strip_typedefs()}\\\".startswith(\\\"boost::unordered::detail::foa::element_type<\\\"):\\n\"\n"
+        ".ascii \"            return foa_element[\\\"p\\\"]\\n\"\n"
         ".ascii \"        else:\\n\"\n"
         ".ascii \"            return e\\n\"\n"
 

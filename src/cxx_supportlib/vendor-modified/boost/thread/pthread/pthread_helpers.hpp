@@ -9,6 +9,7 @@
 
 #include <boost/thread/detail/config.hpp>
 #include <boost/throw_exception.hpp>
+#include <boost/assert.hpp>
 #include <pthread.h>
 #include <errno.h>
 

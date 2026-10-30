@@ -114,7 +114,7 @@
 
    /* How to yield for a spin lock */
    #define SPINS_PER_YIELD       63
-   #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+   #if !defined(__CYGWIN__) && (defined(_WIN32) || defined(__WIN32__) || defined(WIN32))
       #if !defined( BOOST_USE_WINDOWS_H )
          #if defined (WIN32_PLATFORM_PSPC)
             #define BOOST_CONTAINERWINAPI_IMPORT BOOST_SYMBOL_IMPORT

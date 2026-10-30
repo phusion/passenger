@@ -54,7 +54,7 @@ struct swap_selector<true>
 #endif
 
 #ifndef BOOST_OPTIONAL_DETAIL_NO_RVALUE_REFERENCES
-# define BOOST_OPTIONAL_DETAIL_MOVE(EXPR_) optional_detail::move(EXPR_)
+# define BOOST_OPTIONAL_DETAIL_MOVE(EXPR_) optional_detail::move_(EXPR_)
 #else
 # define BOOST_OPTIONAL_DETAIL_MOVE(EXPR_) EXPR_
 #endif

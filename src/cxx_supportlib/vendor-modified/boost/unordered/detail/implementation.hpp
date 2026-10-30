@@ -1,6 +1,6 @@
 // Copyright (C) 2003-2004 Jeremy B. Maitin-Shepard.
 // Copyright (C) 2005-2016 Daniel James
-// Copyright (C) 2022-2024 Joaquin M Lopez Munoz.
+// Copyright (C) 2022-2026 Joaquin M Lopez Munoz.
 // Copyright (C) 2022-2023 Christian Mazakas
 // Copyright (C) 2024 Braden Ganetsky
 //
@@ -18,12 +18,14 @@
 #include <boost/unordered/detail/allocator_constructed.hpp>
 #include <boost/unordered/detail/fca.hpp>
 #include <boost/unordered/detail/opt_storage.hpp>
+#include <boost/unordered/detail/ranges_support.hpp>
 #include <boost/unordered/detail/serialize_tracked_address.hpp>
 #include <boost/unordered/detail/static_assert.hpp>
 #include <boost/unordered/detail/type_traits.hpp>
 #include <boost/unordered/detail/unordered_printers.hpp>
 
 #include <boost/assert.hpp>
+#include <boost/config/workaround.hpp>
 #include <boost/core/allocator_traits.hpp>
 #include <boost/core/bit.hpp>
 #include <boost/core/invoke_swap.hpp>
@@ -173,6 +175,29 @@ namespace boost {
         return (std::max)(
           boost::unordered::detail::insert_size(i, j), num_buckets);
       }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<std::ranges::input_range R>
+      inline std::size_t insert_size(R&& rg)
+      {
+        if constexpr (std::ranges::sized_range<R>)
+          return std::ranges::size(std::forward<R>(rg));
+        else if constexpr (std::ranges::forward_range<R>)
+          return std::ranges::distance(std::forward<R>(rg));
+        else
+          return 1;
+      }
+
+      template <std::ranges::input_range R>
+      inline std::size_t initial_size(R&& rg,
+        std::size_t num_buckets =
+          boost::unordered::detail::default_bucket_count)
+      {
+        return (std::max)(
+          boost::unordered::detail::insert_size(std::forward<R>(rg)),
+          num_buckets);
+      }
+#endif
 
       //////////////////////////////////////////////////////////////////////////
       // compressed
@@ -954,10 +979,14 @@ namespace boost {
 
       inline std::size_t double_to_size(double f)
       {
-        return f >= static_cast<double>(
-                      (std::numeric_limits<std::size_t>::max)())
-                 ? (std::numeric_limits<std::size_t>::max)()
-                 : static_cast<std::size_t>(f);
+#if BOOST_WORKAROUND(BOOST_CLANG_VERSION, < 30900)
+        // https://github.com/boostorg/unordered/pull/354
+        volatile
+#endif
+        const double double_size_t_max =
+          static_cast<double>((std::numeric_limits<std::size_t>::max)());
+        return f >= double_size_t_max? 
+          (std::numeric_limits<std::size_t>::max)(): static_cast<std::size_t>(f);
       }
 
       //////////////////////////////////////////////////////////////////////////
@@ -1781,7 +1810,7 @@ namespace boost {
 
         static std::size_t min_buckets(std::size_t num_elements, float mlf)
         {
-          std::size_t num_buckets = static_cast<std::size_t>(
+          std::size_t num_buckets = boost::unordered::detail::double_to_size(
             std::ceil(static_cast<float>(num_elements) / mlf));
 
           if (num_buckets == 0 && num_elements > 0) { // mlf == inf
@@ -2150,8 +2179,8 @@ namespace boost {
         // if hash function throws, or inserting > 1 element, basic exception
         // safety strong otherwise
 
-        template <class InputIt>
-        void insert_range_unique(no_key, InputIt i, InputIt j)
+        template <class InputIt, class Sentinel>
+        void insert_range_unique(no_key, InputIt i, Sentinel j)
         {
           hasher const& hf = this->hash_function();
           node_allocator_type alloc = this->node_alloc();
@@ -2538,14 +2567,20 @@ namespace boost {
 
         // if hash function throws, or inserting > 1 element, basic exception
         // safety. Strong otherwise
-        template <class I>
+        template <class I, class S>
         typename boost::unordered::detail::enable_if_forward<I, void>::type
-        insert_range_equiv(I i, I j)
+        insert_range_equiv(I i, S j)
         {
           if (i == j)
             return;
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+          std::size_t distance = static_cast<std::size_t>(
+            std::ranges::distance(i, j));
+#else
           std::size_t distance = static_cast<std::size_t>(std::distance(i, j));
+#endif
+
           if (distance == 1) {
             emplace_equiv(boost::unordered::detail::func::construct_node(
               this->node_alloc(), *i));
@@ -2561,9 +2596,9 @@ namespace boost {
           }
         }
 
-        template <class I>
+        template <class I, class S>
         typename boost::unordered::detail::disable_if_forward<I, void>::type
-        insert_range_equiv(I i, I j)
+        insert_range_equiv(I i, S j)
         {
           for (; i != j; ++i) {
             emplace_equiv(boost::unordered::detail::func::construct_node(
@@ -2712,8 +2747,9 @@ namespace boost {
       inline void table<Types>::reserve_for_insert(std::size_t num_elements)
       {
         if (num_elements > max_load_) {
-          std::size_t const num_buckets = static_cast<std::size_t>(
-            1.0f + std::ceil(static_cast<float>(num_elements) / mlf_));
+          std::size_t const num_buckets = (std::max)(
+            static_cast<std::size_t>(1.0f + std::ceil(static_cast<float>(num_elements) / mlf_)),
+            static_cast<std::size_t>(bucket_count() + 1));
 
           this->rehash_impl(num_buckets);
         }
@@ -2851,10 +2887,10 @@ namespace boost {
           return no_key();
         }
 
-        template <class Arg1, class Arg2>
+        template <class Arg1, class Arg2, class Key = key_type>
         static typename std::conditional<
           (is_similar<Arg1, key_type>::value ||
-            is_complete_and_move_constructible<key_type>::value),
+            std::is_move_constructible<Key>::value),
           converting_key, no_key>::type
         extract(Arg1 const&, Arg2 const&)
         {

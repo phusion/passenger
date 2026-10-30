@@ -104,6 +104,9 @@ class new_allocator<void>
 
 
 //! This class is a reduced STL-compatible allocator that allocates memory using operator new
+//! or compatible calls. This allocator is stateless and can be used with any type. It supports
+//! overaligned types, even if the compiler does not support overaligned operator new.
+//! It is a drop-in replacement for std::allocator
 template<class T>
 class new_allocator
 {
@@ -151,6 +154,7 @@ class new_allocator
 
    //!Allocates memory for an array of count elements.
    //!Throws bad_alloc if there is no enough memory
+   BOOST_CONTAINER_NODISCARD
    pointer allocate(size_type count)
    {
       return dtl::operator_new_allocate<T>(count);
@@ -165,6 +169,7 @@ class new_allocator
 
    //!Returns the maximum number of elements that could be allocated.
    //!Never throws
+   BOOST_CONTAINER_NODISCARD
    inline size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return std::size_t(-1)/(2*sizeof(T));   }
 
@@ -175,11 +180,13 @@ class new_allocator
 
    //!An new_allocator always compares to true, as memory allocated with one
    //!instance can be deallocated by another instance
+   BOOST_CONTAINER_NODISCARD
    inline friend bool operator==(const new_allocator &, const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return true;   }
 
    //!An new_allocator always compares to false, as memory allocated with one
    //!instance can be deallocated by another instance
+   BOOST_CONTAINER_NODISCARD
    inline friend bool operator!=(const new_allocator &, const new_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return false;   }
 };

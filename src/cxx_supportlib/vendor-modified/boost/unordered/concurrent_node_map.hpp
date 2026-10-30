@@ -1,7 +1,8 @@
 /* Fast open-addressing, node-based concurrent hashmap.
  *
  * Copyright 2023 Christian Mazakas.
- * Copyright 2023-2024 Joaquin M Lopez Munoz.
+ * Copyright 2023-2026 Joaquin M Lopez Munoz.
+ * Copyright 2026 Braden Ganetsky
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -18,6 +19,7 @@
 #include <boost/unordered/detail/foa/element_type.hpp>
 #include <boost/unordered/detail/foa/node_map_handle.hpp>
 #include <boost/unordered/detail/foa/node_map_types.hpp>
+#include <boost/unordered/detail/ranges_support.hpp>
 #include <boost/unordered/detail/type_traits.hpp>
 #include <boost/unordered/unordered_node_map_fwd.hpp>
 
@@ -109,6 +111,21 @@ namespace boost {
         this->insert(f, l);
       }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<value_type> R
+      >
+      concurrent_node_map(FromRangeT&&, R&& rg,
+        size_type n = detail::foa::default_bucket_count,
+        const hasher& hf = hasher(), const key_equal& eql = key_equal(),
+        const allocator_type& a = allocator_type())
+          : table_(n, hf, eql, a)
+      {
+        this->insert_range(std::forward<R>(rg));
+      }
+#endif
+
       concurrent_node_map(concurrent_node_map const& rhs)
           : table_(rhs.table_,
               boost::allocator_select_on_container_copy_construction(
@@ -127,6 +144,19 @@ namespace boost {
           : concurrent_node_map(f, l, 0, hasher(), key_equal(), a)
       {
       }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<value_type> R
+      >
+      concurrent_node_map(
+        FromRangeT&& fr, R&& rg, allocator_type const& a)
+          : concurrent_node_map(
+            fr, std::forward<R>(rg), 0, hasher(), key_equal(), a)
+      {
+      }
+#endif
 
       explicit concurrent_node_map(allocator_type const& a)
           : table_(detail::foa::default_bucket_count, hasher(), key_equal(), a)
@@ -178,6 +208,29 @@ namespace boost {
       {
       }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<value_type> R
+      >
+      concurrent_node_map(
+        FromRangeT&& fr, R&& rg, size_type n, const allocator_type& a)
+          : concurrent_node_map(
+            fr, std::forward<R>(rg), n, hasher(), key_equal(), a)
+      {
+      }
+
+      template<
+        detail::convertible_to_from_range_t FromRangeT,
+        detail::container_compatible_range<value_type> R
+      >
+      concurrent_node_map(FromRangeT&& fr, R&& rg, size_type n,
+        const hasher& hf, const allocator_type& a)
+          : concurrent_node_map(fr, std::forward<R>(rg), n, hf, key_equal(), a)
+      {
+      }
+#endif
+
       concurrent_node_map(
         std::initializer_list<value_type> il, const allocator_type& a)
           : concurrent_node_map(
@@ -197,9 +250,10 @@ namespace boost {
       {
       }
 
-      template <bool avoid_explicit_instantiation = true>
+      template <typename Key2,
+        typename std::enable_if<std::is_same<Key, Key2>::value, int>::type = 0>
       concurrent_node_map(
-        unordered_node_map<Key, T, Hash, Pred, Allocator>&& other)
+        unordered_node_map<Key2, T, Hash, Pred, Allocator>&& other)
           : table_(std::move(other.table_))
       {
       }
@@ -430,11 +484,25 @@ namespace boost {
       size_type insert(InputIterator begin, InputIterator end)
       {
         size_type count_elements = 0;
-        for (auto pos = begin; pos != end; ++pos, ++count_elements) {
-          table_.emplace(*pos);
+        for (auto pos = begin; pos != end; ++pos) {
+          if (table_.emplace(*pos)) ++count_elements;
         }
         return count_elements;
       }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<detail::container_compatible_range<value_type> R>
+      size_type insert_range(R&& rg)
+      {
+        size_type count_elements = 0;
+        auto first = std::ranges::begin(rg);
+        auto last = std::ranges::end(rg);
+        while (first != last) {
+          if (table_.emplace(*first++)) ++count_elements;
+        }
+        return count_elements;
+      }
+#endif
 
       size_type insert(std::initializer_list<value_type> ilist)
       {
@@ -510,6 +578,21 @@ namespace boost {
         return count_elements;
       }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<detail::container_compatible_range<value_type> R, class F>
+      size_type insert_range_or_visit(R&& rg, F f)
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F)
+        size_type count_elements = 0;
+        auto first = std::ranges::begin(rg);
+        auto last = std::ranges::end(rg);
+        for (; first != last; ++first, ++count_elements) {
+          table_.emplace_or_visit(*first, f);
+        }
+        return count_elements;
+      }
+#endif
+
       template <class F>
       size_type insert_or_visit(std::initializer_list<value_type> ilist, F f)
       {
@@ -563,6 +646,21 @@ namespace boost {
         }
         return count_elements;
       }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<detail::container_compatible_range<value_type> R, class F>
+      size_type insert_range_or_cvisit(R&& rg, F f)
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_CONST_INVOCABLE(F)
+        size_type count_elements = 0;
+        auto first = std::ranges::begin(rg);
+        auto last = std::ranges::end(rg);
+        for (; first != last; ++first, ++count_elements) {
+          table_.emplace_or_cvisit(*first, f);
+        }
+        return count_elements;
+      }
+#endif
 
       template <class F>
       size_type insert_or_cvisit(std::initializer_list<value_type> ilist, F f)
@@ -621,6 +719,24 @@ namespace boost {
         }
         return count_elements;
       }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<
+        detail::container_compatible_range<value_type> R, class F1, class F2
+      >
+      size_type insert_range_and_visit(R&& rg, F1 f1, F2 f2)
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F1)
+        BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F2)
+        size_type count_elements = 0;
+        auto first = std::ranges::begin(rg);
+        auto last = std::ranges::end(rg);
+        for (; first != last; ++first, ++count_elements) {
+          table_.emplace_and_visit(*first, f1, f2);
+        }
+        return count_elements;
+      }
+#endif
 
       template <class F1, class F2>
       size_type insert_and_visit(
@@ -683,6 +799,24 @@ namespace boost {
         }
         return count_elements;
       }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+      template<
+        detail::container_compatible_range<value_type> R, class F1, class F2
+      >
+      size_type insert_range_and_cvisit(R&& rg, F1 f1, F2 f2)
+      {
+        BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F1)
+        BOOST_UNORDERED_STATIC_ASSERT_INVOCABLE(F2)
+        size_type count_elements = 0;
+        auto first = std::ranges::begin(rg);
+        auto last = std::ranges::end(rg);
+        for (; first != last; ++first, ++count_elements) {
+          table_.emplace_and_cvisit(*first, f1, f2);
+        }
+        return count_elements;
+      }
+#endif
 
       template <class F1, class F2>
       size_type insert_and_cvisit(
@@ -1126,6 +1260,27 @@ namespace boost {
         boost::unordered::detail::iter_val_t<InputIterator>, Hash, Pred,
         Allocator>;
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <
+      boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Hash =
+        boost::hash<boost::unordered::detail::range_key_t<R> >,
+      class Pred =
+        std::equal_to<boost::unordered::detail::range_key_t<R> >,
+      class Allocator = std::allocator<
+        boost::unordered::detail::range_to_alloc_t<R> >,
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_pred_v<Pred> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    concurrent_node_map(FromRangeT&&, R&&,
+      std::size_t = boost::unordered::detail::foa::default_bucket_count,
+      Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+      -> concurrent_node_map<boost::unordered::detail::range_key_t<R>,
+        boost::unordered::detail::range_mapped_t<R>, Hash, Pred,
+        Allocator>;
+#endif
+
     template <class Key, class T,
       class Hash = boost::hash<std::remove_const_t<Key> >,
       class Pred = std::equal_to<std::remove_const_t<Key> >,
@@ -1172,6 +1327,42 @@ namespace boost {
         boost::unordered::detail::iter_val_t<InputIterator>, Hash,
         std::equal_to<boost::unordered::detail::iter_key_t<InputIterator> >,
         Allocator>;
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    template <boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Allocator,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    concurrent_node_map(FromRangeT&&, R&&, std::size_t, Allocator)
+      -> concurrent_node_map<boost::unordered::detail::range_key_t<R>,
+        boost::unordered::detail::range_mapped_t<R>,
+        boost::hash<boost::unordered::detail::range_key_t<R> >,
+        std::equal_to<boost::unordered::detail::range_key_t<R> >,
+        Allocator>;
+
+    template <boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Allocator,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    concurrent_node_map(FromRangeT&&, R&&, Allocator)
+      -> concurrent_node_map<boost::unordered::detail::range_key_t<R>,
+        boost::unordered::detail::range_mapped_t<R>,
+        boost::hash<boost::unordered::detail::range_key_t<R> >,
+        std::equal_to<boost::unordered::detail::range_key_t<R> >,
+        Allocator>;
+
+    template <boost::unordered::detail::convertible_to_from_range_t FromRangeT,
+      std::ranges::input_range R,
+      class Hash, class Allocator,
+      class = std::enable_if_t<detail::is_hash_v<Hash> >,
+      class = std::enable_if_t<detail::is_allocator_v<Allocator> > >
+    concurrent_node_map(
+      FromRangeT&&, R&&, std::size_t, Hash, Allocator)
+      -> concurrent_node_map<boost::unordered::detail::range_key_t<R>,
+        boost::unordered::detail::range_mapped_t<R>, Hash,
+        std::equal_to<boost::unordered::detail::range_key_t<R> >,
+        Allocator>;
+#endif
 
     template <class Key, class T, class Allocator,
       class = std::enable_if_t<detail::is_allocator_v<Allocator> > >

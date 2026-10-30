@@ -392,7 +392,7 @@ namespace boost
                 is_deferred_=false;
                 execute(lk);
               }
-              waiters.wait(lk, boost::bind(&shared_state_base::is_done, boost::ref(*this)));
+              waiters.wait(lk, boost::bind(&shared_state_base::is_done, this));
               if(rethrow && exception)
               {
                   boost::rethrow_exception(exception);
@@ -419,7 +419,7 @@ namespace boost
                     return false;
 
                 do_callback(lock);
-                return waiters.timed_wait(lock, rel_time, boost::bind(&shared_state_base::is_done, boost::ref(*this)));
+                return waiters.timed_wait(lock, rel_time, boost::bind(&shared_state_base::is_done, this));
             }
 
             bool timed_wait_until(boost::system_time const& target_time)
@@ -429,7 +429,7 @@ namespace boost
                     return false;
 
                 do_callback(lock);
-                return waiters.timed_wait(lock, target_time, boost::bind(&shared_state_base::is_done, boost::ref(*this)));
+                return waiters.timed_wait(lock, target_time, boost::bind(&shared_state_base::is_done, this));
             }
 #endif
 #ifdef BOOST_THREAD_USES_CHRONO
@@ -442,7 +442,7 @@ namespace boost
               if (is_deferred_)
                   return future_status::deferred;
               do_callback(lock);
-              if(!waiters.wait_until(lock, abs_time, boost::bind(&shared_state_base::is_done, boost::ref(*this))))
+              if(!waiters.wait_until(lock, abs_time, boost::bind(&shared_state_base::is_done, this)))
               {
                   return future_status::timeout;
               }
@@ -939,7 +939,7 @@ namespace boost
             join();
 #elif defined BOOST_THREAD_ASYNC_FUTURE_WAITS
             unique_lock<boost::mutex> lk(this->mutex);
-            this->waiters.wait(lk, boost::bind(&shared_state_base::is_done, boost::ref(*this)));
+            this->waiters.wait(lk, boost::bind(&shared_state_base::is_done, this));
 #endif
           }
 
@@ -4649,32 +4649,34 @@ namespace detail
     shared_ptr<FutureExecutorContinuationSharedState> that_;
 
 #if ! defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
-      BOOST_THREAD_COPYABLE_AND_MOVABLE(run_it)
-      run_it(run_it const& x) //BOOST_NOEXCEPT
-      : that_(x.that_)
-      {}
-      run_it& operator=(BOOST_THREAD_COPY_ASSIGN_REF(run_it) x) //BOOST_NOEXCEPT
-      {
-        if (this != &x) {
-          that_=x.that_;
-        }
-        return *this;
+    BOOST_THREAD_COPYABLE_AND_MOVABLE(run_it)
+    run_it(run_it const& x) //BOOST_NOEXCEPT
+    : that_(x.that_)
+    {}
+    run_it& operator=(BOOST_THREAD_COPY_ASSIGN_REF(run_it) x) //BOOST_NOEXCEPT
+    {
+      if (this != &x) {
+        that_=x.that_;
       }
-      // move
-      run_it(BOOST_THREAD_RV_REF(run_it) x) BOOST_NOEXCEPT
-      : that_(x.that_)
-      {
-        x.that_.reset();
+      return *this;
+    }
+    // move
+    run_it(BOOST_THREAD_RV_REF(run_it) x) BOOST_NOEXCEPT
+    : that_(boost::move(x.that_))
+    {
+    }
+    run_it& operator=(BOOST_THREAD_RV_REF(run_it) x) BOOST_NOEXCEPT {
+      if (this != &x) {
+        that_ = boost::move(x.that_);
       }
-      run_it& operator=(BOOST_THREAD_RV_REF(run_it) x) BOOST_NOEXCEPT {
-        if (this != &x) {
-          that_=x.that_;
-          x.that_.reset();
-        }
-        return *this;
-      }
+      return *this;
+    }
+    run_it(shared_ptr<FutureExecutorContinuationSharedState> that) : that_(boost::move(that))
+    {}
+#else
+    run_it(shared_ptr<FutureExecutorContinuationSharedState> that) : that_(that)
+    {}
 #endif
-    run_it(shared_ptr<FutureExecutorContinuationSharedState> that) : that_ (that) {}
 
     void operator()()
     {

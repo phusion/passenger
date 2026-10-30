@@ -386,9 +386,11 @@ class unordered_set_impl
 
    friend bool operator==(const unordered_set_impl &x, const unordered_set_impl &y)
    {
-      if(table_type::constant_time_size && x.size() != y.size()){
+      BOOST_IF_CONSTEXPR(table_type::constant_time_size)
+      if(x.size() != y.size()){
          return false;
       }
+
       //Find each element of x in y
       for (const_iterator ix = x.cbegin(), ex = x.cend(), ey = y.cend(); ix != ex; ++ix){
          const_iterator iy = y.find(key_of_value()(*ix));

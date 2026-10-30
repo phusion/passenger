@@ -156,18 +156,15 @@ inline void no_throw_failed_impl(const char* expr, const char* what, const char*
 # pragma GCC diagnostic ignored "-Wsign-conversion"
 #endif
 
-// specialize test output for char pointers to avoid printing as cstring
-template <class T> inline const T& test_output_impl(const T& v) { return v; }
-inline const void* test_output_impl(const char* v) { return v; }
-inline const void* test_output_impl(const unsigned char* v) { return v; }
-inline const void* test_output_impl(const signed char* v) { return v; }
-inline const void* test_output_impl(char* v) { return v; }
-inline const void* test_output_impl(unsigned char* v) { return v; }
-inline const void* test_output_impl(signed char* v) { return v; }
-template<class T> inline const void* test_output_impl(T volatile* v) { return const_cast<T*>(v); }
+// specialize test output for pointers to avoid printing as cstring
+
+template<class T> inline T const& test_output_impl( T const& v ) { return v; }
+
+template<class T> inline void const* test_output_impl( T* const& v ) { return v; }
+template<class T> inline void const* test_output_impl( T volatile* const& v ) { return const_cast<T*>(v); }
 
 #if !defined( BOOST_NO_CXX11_NULLPTR )
-inline const void* test_output_impl(std::nullptr_t) { return nullptr; }
+inline const void* test_output_impl( std::nullptr_t ) { return nullptr; }
 #endif
 
 // print chars as numeric
@@ -209,6 +206,16 @@ inline std::string test_output_impl( char const& v )
         return std::string( buffer, 4u );
     }
 }
+
+#if defined(__cpp_char8_t) && __cpp_char8_t >= 201811L
+
+inline std::string test_output_impl( char8_t const& v )
+{
+    // assume that char is ASCII, compatible with char8_t
+    return test_output_impl( static_cast<char>( v ) );
+}
+
+#endif
 
 // predicates
 

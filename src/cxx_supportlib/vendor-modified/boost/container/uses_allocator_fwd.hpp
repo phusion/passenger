@@ -15,9 +15,7 @@
 #include <boost/container/detail/std_fwd.hpp>
 
 //! \file
-//!   This header forward declares boost::container::constructible_with_allocator_prefix,
-//!   boost::container::constructible_with_allocator_suffix and
-//!   boost::container::uses_allocator. Also defines the following types:
+//!   This header forward declares boost::container::uses_allocator. Also defines the following types:
 
 namespace boost {
 namespace container {

@@ -608,7 +608,35 @@ public:
     //!
     //! @par Complexity
     //!   Constant O(1).
-    void push_back(BOOST_RV_REF(value_type) value);
+    void push_back(value_type &&value);
+
+    //! @pre <tt>size() < capacity()</tt>. Otherwise, the behavior is undefined.
+    //!
+    //! @brief Adds a copy of value at the end.
+    //!
+    //! @param value    The value used to copy construct the new element.
+    //!
+    //! @par Throws
+    //!   @li If T's copy constructor throws.
+    //!   @li If \c throw_on_overflow<true> option is set and the container runs out of capacity.
+    //!
+    //! @par Complexity
+    //!   Constant O(1).
+    void unchecked_push_back(value_type const& value);
+
+    //! @pre <tt>size() < capacity()</tt>. Otherwise, the behavior is undefined.
+    //!
+    //! @brief Moves value to the end.
+    //!
+    //! @param value    The value to move construct the new element.
+    //!
+    //! @par Throws
+    //!   @li If T's move constructor throws.
+    //!   @li If \c throw_on_overflow<true> option is set and the container runs out of capacity.
+    //!
+    //! @par Complexity
+    //!   Constant O(1).
+    void unchecked_push_back(value_type &&value);
 
     //! @pre <tt>!empty()</tt>
     //!
@@ -804,6 +832,23 @@ public:
     //!   Constant O(1).
     template<class ...Args>
     reference emplace_back(Args &&...args);
+
+    //! @pre <tt>size() < capacity()</tt>. Otherwise, the behavior is undefined.
+    //!
+    //! @brief Inserts a T constructed with
+    //!   \c std::forward<Args>(args)... in the end of the container.
+    //!
+    //! @return A reference to the created object.
+    //!
+    //! @param args     The arguments of the constructor of the new element which will be created at the end of the container.
+    //!
+    //! @par Throws
+    //!   @li If in-place constructor throws
+    //!
+    //! @par Complexity
+    //!   Constant O(1).
+    template<class ...Args>
+    reference unchecked_emplace_back(Args &&...args);
 
     //! @pre
     //!  @li \c p must be a valid iterator of \c *this in range <tt>[begin(), end()]</tt>

@@ -1909,7 +1909,19 @@ struct hashdata_internal
    {  return this->priv_size_traits();  }
 
    ~hashdata_internal()
-   {  this->priv_clear_buckets();  }
+   #if defined(BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING)
+      requires (ValueTraits::link_mode != normal_link)
+   #endif
+   {
+      BOOST_IF_CONSTEXPR(safemode_or_autounlink){
+         this->priv_clear_buckets();
+      }
+   }
+
+   #if !defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) && defined(BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING)
+   //Default destructor for normal links (allows conditional triviality)
+   ~hashdata_internal() requires (ValueTraits::link_mode == normal_link) = default;
+   #endif
 
    using split_bucket_hash_equal_t::priv_clear_buckets;
 
@@ -1976,11 +1988,8 @@ struct hashdata_internal
       else {
          BOOST_IF_CONSTEXPR(incremental) {
             BOOST_ASSERT(0 == (std::size_t(bc) & (std::size_t(bc) - 1u)));
-            return bc;
          }
-         else{         
-            return bc;
-         }
+         return bc;
       }
    }
 
@@ -2462,6 +2471,7 @@ class hashtable_impl
    hashtable_impl& operator=(BOOST_RV_REF(hashtable_impl) x)
    {  this->swap(x); return *this;  }
 
+   #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED)
    //! <b>Effects</b>: Detaches all elements from this. The objects in the unordered_set
    //!   are not deleted (i.e. no destructors are called).
    //!
@@ -2469,10 +2479,8 @@ class hashtable_impl
    //!   it's a safe-mode or auto-unlink value. Otherwise constant.
    //!
    //! <b>Throws</b>: Nothing.
-   ~hashtable_impl()
-   {}
+   ~hashtable_impl();
 
-   #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED)
    //! <b>Effects</b>: Returns an iterator pointing to the beginning of the unordered_set.
    //!
    //! <b>Complexity</b>: Amortized constant time.
@@ -2548,7 +2556,7 @@ class hashtable_impl
       BOOST_IF_CONSTEXPR(constant_time_size){
          return !this->size();
       }
-      else if(cache_begin){
+      else BOOST_IF_CONSTEXPR(cache_begin){
          return this->begin() == this->end();
       }
       else{
@@ -3066,7 +3074,7 @@ class hashtable_impl
 
       std::size_t cnt(0);
       if(success){
-         if(optimize_multikey){
+         BOOST_IF_CONSTEXPR(optimize_multikey){
             siterator past_last_in_group = it;
             (priv_go_to_last_in_group)(past_last_in_group, optimize_multikey_t());
             ++past_last_in_group;
@@ -3741,7 +3749,8 @@ class hashtable_impl
    friend bool operator==(const hashtable_impl &x, const hashtable_impl &y)
    {
       //Taken from N3068
-      if(constant_time_size && x.size() != y.size()){
+      BOOST_IF_CONSTEXPR(constant_time_size)
+      if(x.size() != y.size()){
          return false;
       }
 

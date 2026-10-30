@@ -500,27 +500,11 @@ struct is_class_or_union< ::boost::container::dtl::pair<T1, T2> >
    BOOST_STATIC_CONSTEXPR bool value = true;
 };
 
-template <class T1, class T2>
-struct is_class_or_union< std::pair<T1, T2> >
-//This specialization is needed to avoid instantiation of pair in
-//is_class, and allow recursive maps.
-{
-   BOOST_STATIC_CONSTEXPR bool value = true;
-};
-
 template<class T>
 struct is_union;
 
 template <class T1, class T2>
 struct is_union< ::boost::container::dtl::pair<T1, T2> >
-//This specialization is needed to avoid instantiation of pair in
-//is_class, and allow recursive maps.
-{
-   BOOST_STATIC_CONSTEXPR bool value = false;
-};
-
-template <class T1, class T2>
-struct is_union< std::pair<T1, T2> >
 //This specialization is needed to avoid instantiation of pair in
 //is_class, and allow recursive maps.
 {
@@ -538,16 +522,8 @@ struct is_class< ::boost::container::dtl::pair<T1, T2> >
    BOOST_STATIC_CONSTEXPR bool value = true;
 };
 
-template <class T1, class T2>
-struct is_class< std::pair<T1, T2> >
-//This specialization is needed to avoid instantiation of pair in
-//is_class, and allow recursive maps.
-{
-   BOOST_STATIC_CONSTEXPR bool value = true;
-};
-
-
 //Triviality of pair
+// std::pair specializations defined in Boost.Move
 
 //
 // is_trivially_copy_assignable
@@ -563,11 +539,6 @@ struct is_trivially_copy_assignable<boost::container::dtl::pair<A,B> >
                                        boost::move_detail::is_trivially_copy_assignable<B>::value;
 };
 
-template<class A, class B>
-struct is_trivially_copy_assignable<std::pair<A,B> >
-   : is_trivially_copy_assignable<boost::container::dtl::pair<A,B> >
-{};
-
 //
 // is_trivially_move_assignable
 //
@@ -581,12 +552,6 @@ struct is_trivially_move_assignable<boost::container::dtl::pair<A,B> >
    BOOST_STATIC_CONSTEXPR bool value = boost::move_detail::is_trivially_move_assignable<A>::value &&
                                        boost::move_detail::is_trivially_move_assignable<B>::value;
 };
-
-template<class A, class B>
-struct is_trivially_move_assignable<std::pair<A,B> >
-   : is_trivially_move_assignable<boost::container::dtl::pair<A,B> >
-{};
-
 
 //
 // is_trivially_copy_constructible
@@ -602,11 +567,6 @@ struct is_trivially_copy_constructible<boost::container::dtl::pair<A,B> >
                                        boost::move_detail::is_trivially_copy_constructible<B>::value;
 };
 
-template<class A, class B>
-struct is_trivially_copy_constructible<std::pair<A,B> >
-   : is_trivially_copy_constructible<boost::container::dtl::pair<A,B> >
-{};
-
 //
 // is_trivially_move_constructible
 //
@@ -621,11 +581,6 @@ struct is_trivially_move_constructible<boost::container::dtl::pair<A,B> >
                                        boost::move_detail::is_trivially_move_constructible<B>::value;
 };
 
-template<class A, class B>
-struct is_trivially_move_constructible<std::pair<A,B> >
-   : is_trivially_move_constructible<boost::container::dtl::pair<A,B> >
-{};
-
 template<class T>
 struct is_trivially_destructible;
 
@@ -635,11 +590,6 @@ struct is_trivially_destructible<boost::container::dtl::pair<A,B> >
    BOOST_STATIC_CONSTEXPR bool value = boost::move_detail::is_trivially_destructible<A>::value &&
                                        boost::move_detail::is_trivially_destructible<B>::value;
 };
-
-template<class A, class B>
-struct is_trivially_destructible<std::pair<A,B> >
-   : is_trivially_destructible<boost::container::dtl::pair<A,B> >
-{};
 
 }  //namespace move_detail{
 
@@ -652,11 +602,6 @@ struct has_trivial_destructor_after_move<boost::container::dtl::pair<A,B> >
    BOOST_STATIC_CONSTEXPR bool value = boost::has_trivial_destructor_after_move<A>::value &&
                                        boost::has_trivial_destructor_after_move<B>::value;
 };
-
-template<class A, class B>
-struct has_trivial_destructor_after_move<std::pair<A,B> >
-   : has_trivial_destructor_after_move<boost::container::dtl::pair<A,B> >
-{};
 
 }  //namespace boost {
 

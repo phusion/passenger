@@ -902,7 +902,7 @@ BOOST_CXX14_CONSTEXPR void rational<IntType>::normalize()
     num /= g;
     den /= g;
 
-    if (den < -(std::numeric_limits<IntType>::max)()) {
+    if (std::numeric_limits<IntType>::is_bounded && den < -(std::numeric_limits<IntType>::max)()) {
         BOOST_THROW_EXCEPTION(bad_rational("bad rational: non-zero singular denominator"));
     }
 

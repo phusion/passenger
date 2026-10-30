@@ -120,7 +120,7 @@ T generate_uniform_int(
           if(mult * range_type(brange) == range - mult + 1) {
               // The destination range is an integer power of
               // the generator's range.
-              return(result);
+              return static_cast<result_type>(result);
           }
 
           // Postcondition: mult <= range

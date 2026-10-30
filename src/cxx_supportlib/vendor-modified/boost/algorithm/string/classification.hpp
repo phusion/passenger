@@ -85,6 +85,22 @@ namespace boost {
             return detail::is_classifiedF(std::ctype_base::alpha, Loc);
         }
 
+#ifndef BOOST_NO_CXX11
+        //! is_blank predicate
+        /*!
+            Construct the \c is_classified predicate for the \c ctype_base::blank category.
+
+            \param Loc A locale used for classification
+            \return An instance of the \c is_classified predicate
+            \since c++11
+        */
+        inline detail::is_classifiedF
+        is_blank(const std::locale& Loc=std::locale())
+        {
+            return detail::is_classifiedF(std::ctype_base::blank, Loc);
+        }
+#endif
+    
         //! is_cntrl predicate
         /*!
             Construct the \c is_classified predicate for the \c ctype_base::cntrl category.   
@@ -294,6 +310,9 @@ namespace boost {
     // pull names to the boost namespace
     using algorithm::is_classified;
     using algorithm::is_space;
+#ifndef BOOST_NO_CXX11
+    using algorithm::is_blank;
+#endif
     using algorithm::is_alnum;
     using algorithm::is_alpha;
     using algorithm::is_cntrl;

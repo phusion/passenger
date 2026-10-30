@@ -11,7 +11,8 @@
 #include <boost/mp11/utility.hpp>
 #include <boost/mp11/detail/config.hpp>
 
-#if BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, >= 140000 )
+#if (BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, >= 140000 ) && BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, < 140400 )) \
+ || (BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, >= 150000 ) && BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, < 150200 ))
 
 #include <boost/mp11/detail/mp_list.hpp>
 #include <boost/mp11/detail/mp_append.hpp>
@@ -34,20 +35,24 @@ namespace boost
 namespace mp11
 {
 
-#if BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, >= 140000 )
+#if (BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, >= 140000 ) && BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, < 140400 )) \
+ || (BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, >= 150000 ) && BOOST_MP11_WORKAROUND( BOOST_MP11_GCC, < 150200 ))
 
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120161
 
 namespace detail
 {
 
+template<class K, class T> struct mp_map_find_impl_k
+{
+    using type = mp_if<std::is_same<mp_front<T>, K>, mp_list<T>, mp_list<>>;
+};
+
 template<class M, class K> struct mp_map_find_impl;
 
 template<template<class...> class M, class... T, class K> struct mp_map_find_impl<M<T...>, K>
 {
-    template<class U> using _f = mp_if<std::is_same<mp_front<U>, K>, mp_list<U>, mp_list<>>;
-
-    using _l = mp_append<_f<T>..., mp_list<void>>;
+    using _l = mp_append<typename mp_map_find_impl_k<K, T>::type..., mp_list<void>>;
 
     using type = mp_front<_l>;
 };
@@ -99,14 +104,17 @@ template<class T> using mpmf_unwrap = typename mpmf_unwrap_impl<T>::type;
 
 template<class M, class K> struct mp_map_find_impl;
 
+template<class K> struct mp_map_find_impl_f
+{
+    template<template<class...> class L, class... U> static mp_identity<L<K, U...>> f( mp_identity<L<K, U...>>* );
+    static mp_identity<void> f( ... );
+};
+
 template<template<class...> class M, class... T, class K> struct mp_map_find_impl<M<T...>, K>
 {
     using U = mp_inherit<mpmf_wrap<T>...>;
 
-    template<template<class...> class L, class... U> static mp_identity<L<K, U...>> f( mp_identity<L<K, U...>>* );
-    static mp_identity<void> f( ... );
-
-    using type = mpmf_unwrap< decltype( f( static_cast<U*>(0) ) ) >;
+    using type = mpmf_unwrap< decltype( mp_map_find_impl_f<K>::f( static_cast<U*>(0) ) ) >;
 };
 
 } // namespace detail

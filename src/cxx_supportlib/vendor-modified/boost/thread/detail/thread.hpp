@@ -30,7 +30,6 @@
 #include <algorithm>
 #include <boost/core/ref.hpp>
 #include <boost/cstdint.hpp>
-#include <boost/bind/bind.hpp>
 #include <stdlib.h>
 #include <memory>
 #include <boost/core/enable_if.hpp>
@@ -47,6 +46,8 @@
 
 #if defined(BOOST_THREAD_PROVIDES_VARIADIC_THREAD)
 #include <tuple>
+#else
+#include <boost/bind/bind.hpp>
 #endif
 #include <boost/config/abi_prefix.hpp>
 

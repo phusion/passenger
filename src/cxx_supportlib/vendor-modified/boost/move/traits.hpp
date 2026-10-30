@@ -57,6 +57,17 @@ struct has_nothrow_move
                              boost::move_detail::is_nothrow_move_assignable<T>::value;
 };
 
+#ifndef BOOST_MOVE_DOXYGEN_INVOKED
+
+template<class A, class B>
+struct has_trivial_destructor_after_move<std::pair<A,B> >
+{
+   BOOST_STATIC_CONSTEXPR bool value = boost::has_trivial_destructor_after_move<A>::value &&
+                                       boost::has_trivial_destructor_after_move<B>::value;
+};
+
+#endif
+
 namespace move_detail {
 
 template <class T>

@@ -17,25 +17,35 @@
 #define BOOST_OPTIONAL_OPTIONAL_FWD_FLC_19NOV2002_HPP
 
 #include <boost/config.hpp>
+#include <boost/core/invoke_swap.hpp>
+#include <boost/optional/detail/optional_select_implementation.hpp>
+#include <type_traits>
+
 
 namespace boost {
 
 template<class T> class optional ;
 
 // This forward is needed to refer to namespace scope swap from the member swap
-template<class T> void swap ( optional<T>& , optional<T>& ) ;
+#ifdef BOOST_OPTIONAL_USES_UNION_IMPLEMENTATION
+  template<class T> BOOST_OPTIONAL_CXX20_CONSTEXPR void swap ( optional<T>& lhs, optional<T>& rhs )
+    noexcept(::std::is_nothrow_move_constructible<T>::value && noexcept(boost::core::invoke_swap(*lhs, *rhs)));
+#else
+  template<class T> void swap ( optional<T>& , optional<T>& ) ;
+#endif // BOOST_OPTIONAL_USES_UNION_IMPLEMENTATION
+
 
 template<class T> struct optional_swap_should_use_default_constructor ;
 
+
 #ifndef BOOST_OPTIONAL_CONFIG_DONT_SPECIALIZE_OPTIONAL_REFS
 
-template<class T> class optional<T&> ;
+  template<class T> class optional<T&> ;
 
-template<class T> void swap ( optional<T&>& , optional<T&>& ) BOOST_NOEXCEPT;
+  template<class T> BOOST_CXX14_CONSTEXPR void swap ( optional<T&>& , optional<T&>& ) BOOST_NOEXCEPT;
 
 #endif
 
 } // namespace boost
 
 #endif
-

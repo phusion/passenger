@@ -12,6 +12,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include <boost/bind/bind.hpp>
+#include <boost/core/ref.hpp>
 
 #include <boost/thread/detail/config.hpp>
 #include <boost/thread/condition_variable.hpp>
@@ -187,7 +188,7 @@ namespace detail
   template <class ValueType, class Queue>
   bool sync_queue_base<ValueType, Queue>::wait_until_not_empty_or_closed(unique_lock<mutex>& lk)
   {
-    cond_.wait(lk, boost::bind(&sync_queue_base<ValueType, Queue>::not_empty_or_closed, boost::ref(*this), boost::ref(lk)));
+    cond_.wait(lk, boost::bind(&sync_queue_base<ValueType, Queue>::not_empty_or_closed, this, boost::ref(lk)));
     if (! empty(lk)) return false; // success
     return true; // closed
   }
@@ -196,7 +197,7 @@ namespace detail
   template <class WClock, class Duration>
   queue_op_status sync_queue_base<ValueType, Queue>::wait_until_not_empty_or_closed_until(unique_lock<mutex>& lk, chrono::time_point<WClock,Duration> const&tp)
   {
-    if (! cond_.wait_until(lk, tp, boost::bind(&sync_queue_base<ValueType, Queue>::not_empty_or_closed, boost::ref(*this), boost::ref(lk))))
+    if (! cond_.wait_until(lk, tp, boost::bind(&sync_queue_base<ValueType, Queue>::not_empty_or_closed, this, boost::ref(lk))))
       return queue_op_status::timeout;
     if (! empty(lk)) return queue_op_status::success;
     return queue_op_status::closed;

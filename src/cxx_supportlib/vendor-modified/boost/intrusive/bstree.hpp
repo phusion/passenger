@@ -585,8 +585,11 @@ struct bstbase
    //Detach all inserted nodes. This will add exception safety to bstree_impl
    //constructors inserting elements.
    ~bstbase()
+   #if defined(BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING)
+      requires (ValueTraits::link_mode != normal_link)
+   #endif
    {
-      if(is_safe_autounlink<value_traits::link_mode>::value){
+      BOOST_IF_CONSTEXPR(is_safe_autounlink<value_traits::link_mode>::value){
          node_algorithms::clear_and_dispose
             ( this->header_ptr()
             , detail::node_disposer<detail::null_disposer, value_traits, AlgoType>
@@ -594,6 +597,11 @@ struct bstbase
          node_algorithms::init(this->header_ptr());
       }
    }
+
+   #if !defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) && defined(BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING)
+   //Default destructor for normal links (allows conditional triviality)
+   ~bstbase() requires (ValueTraits::link_mode == normal_link) = default;
+   #endif
 };
 
 
@@ -947,7 +955,7 @@ class bstree_impl
    //! <b>Throws</b>: Nothing.
    bool empty() const BOOST_NOEXCEPT
    {
-      if(ConstantTimeSize){
+      BOOST_IF_CONSTEXPR(constant_time_size){
          return !this->data_type::sz_traits().get_size();
       }
       else{
@@ -2073,7 +2081,8 @@ class bstree_impl
 
    friend bool operator==(const bstree_impl &x, const bstree_impl &y)
    {
-      if(constant_time_size && x.size() != y.size()){
+      BOOST_IF_CONSTEXPR(constant_time_size)
+      if(x.size() != y.size()){
          return false;
       }
       return boost::intrusive::algo_equal(x.cbegin(), x.cend(), y.cbegin(), y.cend());

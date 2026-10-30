@@ -275,9 +275,9 @@ namespace boost {
     inline void shared_mutex::lock()
     {
       boost::unique_lock<mutex_t> lk(mut_);
-      gate1_.wait(lk, boost::bind(&shared_mutex::no_writer, boost::ref(*this)));
+      gate1_.wait(lk, boost::bind(&shared_mutex::no_writer, this));
       state_ |= write_entered_;
-      gate2_.wait(lk, boost::bind(&shared_mutex::no_readers, boost::ref(*this)));
+      gate2_.wait(lk, boost::bind(&shared_mutex::no_readers, this));
     }
 
     inline bool shared_mutex::try_lock()
@@ -298,13 +298,13 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.wait_until(lk, abs_time, boost::bind(
-            &shared_mutex::no_writer, boost::ref(*this))))
+            &shared_mutex::no_writer, this)))
       {
         return false;
       }
       state_ |= write_entered_;
       if (!gate2_.wait_until(lk, abs_time, boost::bind(
-            &shared_mutex::no_readers, boost::ref(*this))))
+            &shared_mutex::no_readers, this)))
       {
         state_ &= ~write_entered_;
         return false;
@@ -319,13 +319,13 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.timed_wait(lk, abs_or_rel_time, boost::bind(
-            &shared_mutex::no_writer, boost::ref(*this))))
+            &shared_mutex::no_writer, this)))
       {
         return false;
       }
       state_ |= write_entered_;
       if (!gate2_.timed_wait(lk, abs_or_rel_time, boost::bind(
-            &shared_mutex::no_readers, boost::ref(*this))))
+            &shared_mutex::no_readers, this)))
       {
         state_ &= ~write_entered_;
         return false;
@@ -350,7 +350,7 @@ namespace boost {
     inline void shared_mutex::lock_shared()
     {
       boost::unique_lock<mutex_t> lk(mut_);
-      gate1_.wait(lk, boost::bind(&shared_mutex::no_writer_no_max_readers, boost::ref(*this)));
+      gate1_.wait(lk, boost::bind(&shared_mutex::no_writer_no_max_readers, this));
       count_t num_readers = (state_ & n_readers_) + 1;
       state_ &= ~n_readers_;
       state_ |= num_readers;
@@ -376,7 +376,7 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.wait_until(lk, abs_time, boost::bind(
-            &shared_mutex::no_writer_no_max_readers, boost::ref(*this))))
+            &shared_mutex::no_writer_no_max_readers, this)))
       {
         return false;
       }
@@ -393,7 +393,7 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.timed_wait(lk, abs_or_rel_time, boost::bind(
-            &shared_mutex::no_writer_no_max_readers, boost::ref(*this))))
+            &shared_mutex::no_writer_no_max_readers, this)))
       {
         return false;
       }
@@ -653,9 +653,9 @@ namespace boost {
     inline void upgrade_mutex::lock()
     {
       boost::unique_lock<mutex_t> lk(mut_);
-      gate1_.wait(lk, boost::bind(&upgrade_mutex::no_writer_no_upgrader, boost::ref(*this)));
+      gate1_.wait(lk, boost::bind(&upgrade_mutex::no_writer_no_upgrader, this));
       state_ |= write_entered_;
-      gate2_.wait(lk, boost::bind(&upgrade_mutex::no_readers, boost::ref(*this)));
+      gate2_.wait(lk, boost::bind(&upgrade_mutex::no_readers, this));
     }
 
     inline bool upgrade_mutex::try_lock()
@@ -676,13 +676,13 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.wait_until(lk, abs_time, boost::bind(
-            &upgrade_mutex::no_writer_no_upgrader, boost::ref(*this))))
+            &upgrade_mutex::no_writer_no_upgrader, this)))
       {
         return false;
       }
       state_ |= write_entered_;
       if (!gate2_.wait_until(lk, abs_time, boost::bind(
-            &upgrade_mutex::no_readers, boost::ref(*this))))
+            &upgrade_mutex::no_readers, this)))
       {
         state_ &= ~write_entered_;
         return false;
@@ -697,13 +697,13 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.timed_wait(lk, abs_or_rel_time, boost::bind(
-            &upgrade_mutex::no_writer_no_upgrader, boost::ref(*this))))
+            &upgrade_mutex::no_writer_no_upgrader, this)))
       {
         return false;
       }
       state_ |= write_entered_;
       if (!gate2_.timed_wait(lk, abs_or_rel_time, boost::bind(
-            &upgrade_mutex::no_readers, boost::ref(*this))))
+            &upgrade_mutex::no_readers, this)))
       {
         state_ &= ~write_entered_;
         return false;
@@ -729,7 +729,7 @@ namespace boost {
     inline void upgrade_mutex::lock_shared()
     {
       boost::unique_lock<mutex_t> lk(mut_);
-      gate1_.wait(lk, boost::bind(&upgrade_mutex::no_writer_no_max_readers, boost::ref(*this)));
+      gate1_.wait(lk, boost::bind(&upgrade_mutex::no_writer_no_max_readers, this));
       count_t num_readers = (state_ & n_readers_) + 1;
       state_ &= ~n_readers_;
       state_ |= num_readers;
@@ -755,7 +755,7 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.wait_until(lk, abs_time, boost::bind(
-            &upgrade_mutex::no_writer_no_max_readers, boost::ref(*this))))
+            &upgrade_mutex::no_writer_no_max_readers, this)))
       {
         return false;
       }
@@ -772,7 +772,7 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.timed_wait(lk, abs_or_rel_time, boost::bind(
-            &upgrade_mutex::no_writer_no_max_readers, boost::ref(*this))))
+            &upgrade_mutex::no_writer_no_max_readers, this)))
       {
         return false;
       }
@@ -807,7 +807,7 @@ namespace boost {
     inline void upgrade_mutex::lock_upgrade()
     {
       boost::unique_lock<mutex_t> lk(mut_);
-      gate1_.wait(lk, boost::bind(&upgrade_mutex::no_writer_no_upgrader_no_max_readers, boost::ref(*this)));
+      gate1_.wait(lk, boost::bind(&upgrade_mutex::no_writer_no_upgrader_no_max_readers, this));
       count_t num_readers = (state_ & n_readers_) + 1;
       state_ &= ~n_readers_;
       state_ |= upgradable_entered_ | num_readers;
@@ -833,7 +833,7 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.wait_until(lk, abs_time, boost::bind(
-            &upgrade_mutex::no_writer_no_upgrader_no_max_readers, boost::ref(*this))))
+            &upgrade_mutex::no_writer_no_upgrader_no_max_readers, this)))
       {
         return false;
       }
@@ -850,7 +850,7 @@ namespace boost {
     {
       boost::unique_lock<mutex_t> lk(mut_);
       if (!gate1_.timed_wait(lk, abs_or_rel_time, boost::bind(
-            &upgrade_mutex::no_writer_no_upgrader_no_max_readers, boost::ref(*this))))
+            &upgrade_mutex::no_writer_no_upgrader_no_max_readers, this)))
       {
         return false;
       }
@@ -898,7 +898,7 @@ namespace boost {
       boost::unique_lock<mutex_t> lk(mut_);
       BOOST_ASSERT(one_or_more_readers());
       if (!gate1_.wait_until(lk, abs_time, boost::bind(
-            &upgrade_mutex::no_writer_no_upgrader, boost::ref(*this))))
+            &upgrade_mutex::no_writer_no_upgrader, this)))
       {
         return false;
       }
@@ -906,7 +906,7 @@ namespace boost {
       state_ &= ~n_readers_;
       state_ |= (write_entered_ | num_readers);
       if (!gate2_.wait_until(lk, abs_time, boost::bind(
-            &upgrade_mutex::no_readers, boost::ref(*this))))
+            &upgrade_mutex::no_readers, this)))
       {
         ++num_readers;
         state_ &= ~(write_entered_ | n_readers_);
@@ -953,7 +953,7 @@ namespace boost {
       boost::unique_lock<mutex_t> lk(mut_);
       BOOST_ASSERT(one_or_more_readers());
       if (!gate1_.wait_until(lk, abs_time, boost::bind(
-            &upgrade_mutex::no_writer_no_upgrader, boost::ref(*this))))
+            &upgrade_mutex::no_writer_no_upgrader, this)))
       {
         return false;
       }
@@ -987,7 +987,7 @@ namespace boost {
       count_t num_readers = (state_ & n_readers_) - 1;
       state_ &= ~(upgradable_entered_ | n_readers_);
       state_ |= write_entered_ | num_readers;
-      gate2_.wait(lk, boost::bind(&upgrade_mutex::no_readers, boost::ref(*this)));
+      gate2_.wait(lk, boost::bind(&upgrade_mutex::no_readers, this));
     }
 
     inline bool upgrade_mutex::try_unlock_upgrade_and_lock()
@@ -1017,7 +1017,7 @@ namespace boost {
       state_ &= ~(upgradable_entered_ | n_readers_);
       state_ |= (write_entered_ | num_readers);
       if (!gate2_.wait_until(lk, abs_time, boost::bind(
-            &upgrade_mutex::no_readers, boost::ref(*this))))
+            &upgrade_mutex::no_readers, this)))
       {
         ++num_readers;
         state_ &= ~(write_entered_ | n_readers_);

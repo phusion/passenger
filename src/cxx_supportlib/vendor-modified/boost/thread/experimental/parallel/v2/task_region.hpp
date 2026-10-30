@@ -51,7 +51,7 @@ BOOST_THREAD_INLINE_NAMESPACE(v2)
 
   namespace detail
   {
-    void handle_task_region_exceptions(exception_list& errors)
+    inline void handle_task_region_exceptions(exception_list& errors)
     {
       try {
         throw;

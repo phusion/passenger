@@ -16,8 +16,12 @@
 #include <boost/thread/detail/move.hpp>
 #include <boost/thread/detail/invoke.hpp>
 #include <boost/core/no_exceptions_support.hpp>
+#include <boost/atomic/capabilities.hpp>
+#include <boost/atomic/atomic.hpp>
+
+#if !defined(BOOST_THREAD_PROVIDES_INVOKE) && !defined(BOOST_THREAD_PROVIDES_INVOKE_RET)
 #include <boost/bind/bind.hpp>
-#include <boost/atomic.hpp>
+#endif
 
 #include <boost/config/abi_prefix.hpp>
 

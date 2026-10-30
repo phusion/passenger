@@ -27,10 +27,4 @@ namespace boost_optional_detail
   }
 }
 
-namespace boost
-{
-  class in_place_factory_base ;
-  class typed_in_place_factory_base ;
-}
-
 #endif // header guard

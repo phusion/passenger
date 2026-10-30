@@ -84,8 +84,16 @@ inline void clamp_by_stored_size_type(SizeType &, SizeType)
 template<class SizeType, class SomeStoredSizeType>
 inline void clamp_by_stored_size_type(SizeType &s, SomeStoredSizeType)
 {
-   if (s >= SomeStoredSizeType(-1) ) 
+   if (s > SomeStoredSizeType(-1) ) 
       s = SomeStoredSizeType(-1);
+}
+
+template<class SizeType, class SomeStoredSizeType>
+inline void clamp_by_half_stored_size_type(SizeType &s, SomeStoredSizeType)
+{
+   const SizeType half_max = SizeType(SomeStoredSizeType(-1)) >> 1u;
+   if (s > half_max ) 
+      s = half_max;
 }
 
 }  //namespace container {
