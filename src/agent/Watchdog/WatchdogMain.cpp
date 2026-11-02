@@ -1310,10 +1310,10 @@ watchdogMain(int argc, char *argv[]) {
 		chdirToTmpDir();
 		lowerPrivilege();
 		initializeWorkingObjects(wo, instanceDirToucher, uidBeforeLoweringPrivilege);
+		runHookScriptAndThrowOnError("before_watchdog_initialization");
 		initializeAgentWatchers(wo, watchers);
 		initializeApiServer(wo);
 		UPDATE_TRACE_POINT();
-		runHookScriptAndThrowOnError("before_watchdog_initialization");
 	} catch (const std::exception &e) {
 		if (feedbackFdAvailable()) {
 			writeArrayMessage(FEEDBACK_FD,
