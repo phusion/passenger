@@ -4,6 +4,7 @@ Release 7.0.0 (Not yet released)
  * [Ruby] Increase minimum supported Ruby to 3.0.
  * Fix a Passenger core memory leak: memory grew with every connection that closed before sending complete request headers, including idle keep-alive connections, and with every request rejected for invalid headers.
  * [Enterprise] Rolling restarts can now replace several processes at a time, instead of one at a time for the whole pool. The number in flight is set with `passenger_rolling_restart_concurrency` (Nginx), `PassengerRollingRestartConcurrency` (Apache), `--rolling-restart-concurrency` (Standalone), must be smaller than the pool size, and defaults to 1. Closes GH-2651.
+ * Run before_watchdog_initialization hook before the watchdog is initialized.
  * Change secure header encoding to make it harder to accidentally forget to sanitize a header.
  * 
 
