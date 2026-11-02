@@ -5,6 +5,7 @@ Release 6.2.2 (Not yet released)
  * Harden against secure headers containing header delimiters.
  * Upgrade Boost from 1.90 -> 1.92.
  * Upgrade jsoncpp from 1.8.1 -> 1.9.8.
+ * [Enterprise] Fix the hard memory limit not being enforced on a process that already exceeded the soft memory limit and is still finishing its requests.
  * [Standalone] Fix Passengerfile.json strings that contain \uXXXX escapes for non-ASCII characters being garbled or making Passenger crash.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
    - ccache: 4.14.1 -> 4.14.2
@@ -55,7 +56,7 @@ Release 6.2.0
 -------------
  * Fix some compatibility issues with FreeBSD. Closes GH-2668 & GH-2669.
  * [Nginx] Upgrades preferred Nginx to 1.30.4 from 1.30.3.
- * Fix a vulnerability that left the Passenger Watchdog API unauthenticated. This is a breaking change for some installations and scripts: an "empty watchdog_api_server_authorizations" now means no-auth-is-possible instead of auth-is-skipped. This regression was introduced in 5.2.0. CVE number pending.
+ * Fix a vulnerability that left the Passenger Watchdog API unauthenticated. This is a breaking change for some installations and scripts: an empty "watchdog_api_server_authorizations" now means no-auth-is-possible instead of auth-is-skipped. This regression was introduced in 5.2.0. CVE number pending.
  * Fix a vulnerability that allowed unauthenticated users to use a Passenger Watchdog process to elevate privileges. This regression was introduced in 5.2.0. CVE number pending.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
    - cmake: 4.3.3 -> 4.4.2
@@ -606,8 +607,8 @@ Release 6.0.10
 
 Release 6.0.9
 -------------
- * Upgrades Boost to 1.76. Fixes a regression where some boost headers for comatibility with older distros were missing.
- * Make building on Apple Silcon using homebrew openssl work. Contributed by TheBerg.
+ * Upgrades Boost to 1.76. Fixes a regression where some boost headers for compatibility with older distros were missing.
+ * Make building on Apple Silicon using homebrew openssl work. Contributed by TheBerg.
  * Add Support for Ubuntu Hirsute.
  * Remove prebuilt packages for Ubuntu Groovy.
  * Properly support HTTP 418. Contributed by Thomas Pfister.
@@ -913,7 +914,7 @@ This release contains many security updates. Users are advised to upgrade as soo
     - GeoIP: 1.6.12 (was: 1.6.11)
     - libcurl: 7.60.0 (was: 7.56.1)
  * Fixes Meteor support in non-bundled mode (regression from 5.3.0). Closes GH-2082.
- * Fixes the fact that the error page (which is shown when an app fails to spawn) sometimes contains unsufficient analysis details about the app.
+ * Fixes the fact that the error page (which is shown when an app fails to spawn) sometimes contains insufficient analysis details about the app.
  * [Apache] Fixes PassengerMaxInstancesPerApp not being respected (regression from config refactor in 5.2.0). Closes GH-2059.
  * [Enterprise, Apache] Fixes PassengerMaxInstances not being respected (regression from config refactor in 5.2.0).
  * [Enterprise] Fixes passenger-irb being unable to connect to an app process (regression from 5.3.0). Closes GH-2087.
@@ -1486,7 +1487,7 @@ Release 5.0.8
  * Fixes autodetection of Apache on Gentoo. Closes GH-1510.
  * Fixes compilation problems on Solaris. Closes GH-1508.
  * [Standalone] Adds the `--pool-idle-time` command line parameter.
- * [Standalone] Adds the `--auto` command line parameter for running non-interactively. This supresses prompts. Closes GH-1511.
+ * [Standalone] Adds the `--auto` command line parameter for running non-interactively. This suppresses prompts. Closes GH-1511.
 
 
 Release 5.0.7
@@ -1660,7 +1661,7 @@ Version 5.0.0 beta 1 contains major changes. It's mostly compatible with version
  * Phusion Passenger now supports integrated HTTP caching, which we call turbocaching. If your app sets the right HTTP headers then Phusion Passenger can tremendously accelerate your app. It is enabled by default, but you can disable it with `--disable-turbocaching` (Standalone), `PassengerTurbocaching off` (Apache), or 'passenger_turbocaching off' (Nginx).
  * Touching restart.txt will no longer restart your app immediately. This is because, for performance reasons, the stat throttle rate now defaults to 10. You can still get back the old behavior by setting `PassengerStatThrottleRate 0` (Apache) or `passenger_stat_throttle_rate 0` (Nginx), but this is not encouraged. Instead, we encourage you to use the `passenger-config restart-app` tool to initiate restarts, which has immediate effect.
  * Websockets are now properly disconnected on application restarts.
- * The Phusion Passneger log levels have been completely revamped. If you were setting a log level before (e.g. through `passenger_log_level`), please read the latest documentation to learn about the new log levels.
+ * The Phusion Passenger log levels have been completely revamped. If you were setting a log level before (e.g. through `passenger_log_level`), please read the latest documentation to learn about the new log levels.
  * If you use out-of-band garbage collection, beware that the `X-Passenger-Request-OOB-Work` header has now been renamed to `!~Request-OOB-Work`.
  * When using Rack's full socket hijacking, you must now output an HTTP status line.
  * [Nginx] The `passenger_set_cgi_param` option has been removed and replaced by `passenger_set_header` and `passenger_env_var`.
@@ -2229,7 +2230,7 @@ Release 4.0.28
 --------------
 
  * Introduced a workaround for a GCC 4.6 bug. This bug could cause Phusion
-   Passsenger to crash during startup. Affected operating systems include
+   Passenger to crash during startup. Affected operating systems include
    Ubuntu 12.04 and Amazon Linux 2013.09.01, though not every machine with
    this OS installed exhibits the problem. See issue #902.
  * Improved Node.js support: the Sails framework is now supported.
@@ -2306,7 +2307,7 @@ Release 4.0.23
 Release 4.0.22
 --------------
 
- * [Enterprised] Fixed compilation problems on OS X Mavericks.
+ * [Enterprise] Fixed compilation problems on OS X Mavericks.
 
 
 Release 4.0.21
@@ -2314,7 +2315,7 @@ Release 4.0.21
 
  * [Nginx] Upgraded the preferred Nginx version to 1.4.3.
  * Node.js support has been open sourced.
- * Prelimenary OS X Mavericks support.
+ * Preliminary OS X Mavericks support.
  * Work around an Apache packaging bug in CentOS 5.
  * Various user friendliness improvements in the documentation and the
    installers.
@@ -2436,7 +2437,7 @@ Release 4.0.15
    with chmod, so that permissions are correct on systems with a non-default
    umask. Fixes issue #928.
  * Fix permission problems when running `passenger start` with `--user`.
- * `passenger-config --detect-apache2` now correctly detects the eror log
+ * `passenger-config --detect-apache2` now correctly detects the error log
    filename on Amazon Linux. Fixes issue #933.
  * An environment variable `PASSENGER_THREAD_LOCAL_STORAGE` has been added
    to the build system for forcefully disabling the use of thread-local
@@ -2550,7 +2551,7 @@ Release 4.0.6
    requests by invoking `passenger-status --show=requests`.
  * A new feature called Flying Passenger allows you to decouple the life time
    of Phusion Passenger from the web server, so that both can be restarted
-   indepedently from each other. Please refer to
+   independently from each other. Please refer to
    http://blog.phusion.nl/2013/07/03/technology-preview-introducing-flying-passenger/
    for an introduction.
  * [Apache] Fixed compatibility with Apache pipe logging. Previously this
@@ -2803,10 +2804,10 @@ Release 3.9.2 (4.0.0 beta 2)
 
  * New feature: JRuby and Rubinius support.
  * New feature: Out of Band Work.
- * Sending SIGBART to a Ruby process will now trigger the same behavior
+ * Sending SIGABRT to a Ruby process will now trigger the same behavior
    as SIGQUIT - that is, it will print a backtrace. This is necessary
    for proper JRuby support because JRuby cannot catch SIGQUIT.
- * Rolling restarts and depoyment error resistance are now also available
+ * Rolling restarts and deployment error resistance are now also available
    in Phusion Passenger Standalone in the Enterprise version.
  * System call failure simulation framework.
  * Improved crash reporting.
@@ -3123,7 +3124,7 @@ Release 3.0.2
    The Nginx compilation process was broken due to not correctly reverting
    the working directory of the Nginx configure script. This has been fixed:
    issue #595.
- * [Nginx] Fixed crash if passenger_root refers to a nonexistant directory
+ * [Nginx] Fixed crash if passenger_root refers to a nonexistent directory
    Issue #599.
  * Fixed compilation problems on NetBSD
    There was a typo in a NetBSD-specific fcntl() call. It also turns out that
