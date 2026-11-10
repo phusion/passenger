@@ -77,7 +77,7 @@ def main
     separator
 
     add_code %Q{
-      std::cout << doc.toStyledString() << std::endl;
+      std::cout << Passenger::Json::StyledWriter().write(doc) << std::endl;
       return 0;
     }
   end

@@ -70,7 +70,7 @@ main(int argc, char *argv[]) {
 	doc["Passenger::Watchdog::ApiServer::Schema"] = Passenger::Watchdog::ApiServer::Schema().inspect();
 	doc["Passenger::Watchdog::Schema"] = Passenger::Watchdog::Schema().inspect();
 
-	std::cout << doc.toStyledString() << std::endl;
+	std::cout << Passenger::Json::StyledWriter().write(doc) << std::endl;
 	return 0;
 }
 
