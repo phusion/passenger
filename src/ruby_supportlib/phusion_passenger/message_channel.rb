@@ -201,7 +201,7 @@ module PhusionPassenger
           return nil
         end
         if buffer.size < size
-          tmp = ''
+          tmp = "".b
           while buffer.size < size
             if !@io.read(size - buffer.size, tmp)
               return nil
@@ -342,7 +342,7 @@ module PhusionPassenger
       end
     else
       def new_buffer
-        ""
+        "".b
       end
     end
   end
