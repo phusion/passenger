@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    passenger (7.0.0)
+    passenger (7.0.1)
       logger (>= 1.7.0)
       rack (>= 1.6.13)
       rackup (>= 1.0.1)
