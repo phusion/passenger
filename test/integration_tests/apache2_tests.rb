@@ -39,6 +39,7 @@ describe 'Apache 2 module' do
   after :all do
     begin
       @apache2.stop if @apache2
+      wait_for_passenger_instance_cleanup
       FileUtils.cp(Dir["#{@passenger_temp_dir}/passenger-error-*.html"],
         "#{@log_dir}/")
     ensure
@@ -712,6 +713,20 @@ describe 'Apache 2 module' do
   def start_web_server_if_necessary
     if !@apache2.running?
       @apache2.start
+    end
+  end
+
+  # Apache2Controller#stop returns as soon as Apache has exited, but Passenger's
+  # watchdog removes its instance directory later, from a detached cleanup process
+  # that gives the agents up to 30 seconds to shut down. Wait for that before we
+  # clean up the temp dir ourselves, or the two cleanups race.
+  def wait_for_passenger_instance_cleanup
+    deadline = Time.now + 40
+    while (instance_dirs = Dir["#{@passenger_temp_dir}/passenger.*"]).any?
+      if Time.now >= deadline
+        raise "Passenger instance directories not cleaned up in time: #{instance_dirs.join(', ')}"
+      end
+      sleep 0.1
     end
   end
 end
