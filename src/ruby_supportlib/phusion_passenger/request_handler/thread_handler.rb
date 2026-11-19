@@ -216,15 +216,13 @@ module PhusionPassenger
         end
         headers = Utils::NativeSupportUtils.split_by_null_into_hash(headers_data)
         if @connect_password && headers[PASSENGER_CONNECT_PASSWORD] != @connect_password
-          warn "*** Passenger RequestHandler warning: " <<
-               "someone tried to connect with an invalid connect password."
+          warn "*** Passenger RequestHandler warning: someone tried to connect with an invalid connect password."
           nil
         else
           headers
         end
-      rescue SecurityError => e
-        warn("*** Passenger RequestHandler warning: " <<
-             "HTTP header size exceeded maximum.")
+      rescue SecurityError
+        warn("*** Passenger RequestHandler warning: HTTP header size exceeded maximum.")
         nil
       end
 
@@ -239,8 +237,7 @@ module PhusionPassenger
           data << connection.readpartial(16 * 1024)
         end
         if data.size >= MAX_HEADER_SIZE
-          warn("*** Passenger RequestHandler warning: " <<
-               "HTTP header size exceeded maximum.")
+          warn("*** Passenger RequestHandler warning: HTTP header size exceeded maximum.")
           return
         end
 
@@ -253,8 +250,7 @@ module PhusionPassenger
             request_uri    = $2
             protocol       = $3
             if request_method.nil?
-              warn("*** Passenger RequestHandler warning: " <<
-                   "Invalid HTTP request.")
+              warn("*** Passenger RequestHandler warning: Invalid HTTP request.")
               return
             end
             path_info, query_string    = request_uri.split("?", 2)
@@ -284,8 +280,7 @@ module PhusionPassenger
         end
 
         if @connect_password && headers["HTTP_X_PASSENGER_CONNECT_PASSWORD"] != @connect_password
-          warn "*** Passenger RequestHandler warning: " <<
-               "someone tried to connect with an invalid connect password."
+          warn "*** Passenger RequestHandler warning: someone tried to connect with an invalid connect password."
           nil
         else
           headers

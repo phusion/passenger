@@ -104,7 +104,7 @@ class TeeInput
     @socket = socket
     @bytes_read = 0
     if @len && @len <= @@client_body_buffer_size
-      @tmp = StringIO.new("")
+      @tmp = StringIO.new("".b)
     else
       @tmp = TmpIO.new("PassengerTeeInput")
     end
@@ -126,8 +126,8 @@ class TeeInput
     end
   end
 
-  def read(len = nil, buf = "")
-    buf ||= ""
+  def read(len = nil, buf = "".b)
+    buf ||= "".b
     if len
       if len < 0
         raise ArgumentError, "negative length #{len} given"
@@ -216,7 +216,7 @@ private
 
   # consumes the stream of the socket
   def consume!
-    junk = ""
+    junk = "".b
     nil while read(16 * 1024, junk)
     @socket = nil
   end

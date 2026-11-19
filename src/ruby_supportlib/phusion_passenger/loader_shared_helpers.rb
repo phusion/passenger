@@ -470,7 +470,8 @@ module PhusionPassenger
     def format_exception(e)
       result = "#{e} (#{e.class})"
       if !e.backtrace.empty?
-        result += "\n  " << e.backtrace.join("\n  ")
+        sep = "\n  "
+        result << sep << e.backtrace.join(sep)
       end
       result
     end

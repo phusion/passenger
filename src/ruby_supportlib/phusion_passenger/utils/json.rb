@@ -147,7 +147,7 @@ class JSON
     elsif code.between?(0xDC00, 0xDFFF)
       error
     end
-    [code].pack('U')
+    [ code ].pack('U')
   end
 
   def hex_code
