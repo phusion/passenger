@@ -316,7 +316,6 @@ format_backtrace(const Collection &backtrace_list) {
 	if (backtrace_list.empty()) {
 		return "     (empty)";
 	} else {
-		backtrace_list.rbegin();
 		stringstream result;
 		typename Collection::const_reverse_iterator it;
 
