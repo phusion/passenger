@@ -73,6 +73,11 @@ license you like.
 
 
 
+// Passenger: silence Clang's warning about getDecimalPoint(). Its only caller,
+// the fixNumericLocaleInput() template, is never instantiated.
+#ifdef __clang__
+       #pragma clang diagnostic ignored "-Wunneeded-internal-declaration"
+#endif
 #include <jsoncpp/json.h>
 
 #ifndef JSON_IS_AMALGAMATION
