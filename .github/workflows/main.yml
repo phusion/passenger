@@ -854,7 +854,7 @@ jobs:
           ./packaging/homebrew/verify-oss-formula-uptodate
           -c /opt/homebrew/Library/Taps/homebrew/homebrew-core
           -r origin
-        timeout-minutes: 5
+        timeout-minutes: 6
 
       - name: Modify formula
         run: >
