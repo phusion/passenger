@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Tinco Andringa <tinco@phusion.nl>
+Date: Fri, 20 Nov 2026 16:16:10 +0000
+Subject: [PATCH 2/4] Include the amalgamated header via Passenger's include
+ path
+
+src/cxx_supportlib/vendor-modified is on Passenger's include path, so the
+header is reached as <jsoncpp/json.h> rather than "json/json.h".
+---
+ jsoncpp.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/jsoncpp.cpp b/jsoncpp.cpp
+index 93922a3..8c2caf3 100644
+--- a/jsoncpp.cpp
++++ b/jsoncpp.cpp
+@@ -73,7 +73,7 @@ license you like.
+
+
+
+-#include "json/json.h"
++#include <jsoncpp/json.h>
+
+ #ifndef JSON_IS_AMALGAMATION
+ #error "Compile with -I PATH_TO_JSON_DIRECTORY"

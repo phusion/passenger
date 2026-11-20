@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Tinco Andringa <tinco@phusion.nl>
+Date: Fri, 20 Nov 2026 16:16:10 +0000
+Subject: [PATCH 4/4] Default emitUTF8 to true
+
+Upstream escapes all non-ASCII characters as \uXXXX and garbles strings that
+aren't valid UTF-8. jsoncpp 1.8.1, which Passenger used before, passed such
+bytes through unchanged, and some readers (older Ruby loader JSON parsers)
+can't decode \uXXXX escapes above U+00FF (GH-2445).
+---
+ jsoncpp.cpp | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/jsoncpp.cpp b/jsoncpp.cpp
+index f2a6961..a187be3 100644
+--- a/jsoncpp.cpp
++++ b/jsoncpp.cpp
+@@ -4442,8 +4442,10 @@ static void appendHex(String& result, unsigned ch) {
+   result.append("\\u").append(toHex16Bit(ch));
+ }
+
++// Passenger modification: emitUTF8 defaults to true (upstream: false), for
++// FastWriter/StyledWriter/StyledStreamWriter. See StreamWriterBuilder::setDefaults().
+ static String valueToQuotedStringN(const char* value, size_t length,
+-                                   bool emitUTF8 = false) {
++                                   bool emitUTF8 = true) {
+   if (value == nullptr)
+     return "";
+
+@@ -5410,7 +5412,13 @@ void StreamWriterBuilder::setDefaults(Json::Value* settings) {
+   (*settings)["enableYAMLCompatibility"] = false;
+   (*settings)["dropNullPlaceholders"] = false;
+   (*settings)["useSpecialFloats"] = false;
+-  (*settings)["emitUTF8"] = false;
++  // Passenger modification: upstream defaults to false, which escapes all
++  // non-ASCII characters as \uXXXX and garbles strings that aren't valid UTF-8
++  // (e.g. Latin-1 bytes in app arguments or environment variables). jsoncpp
++  // 1.8.1, which Passenger used before, passed such bytes through unchanged.
++  // Some readers, such as older versions of the Ruby loaders' JSON parser,
++  // can't decode \uXXXX escapes above U+00FF (GH-2445).
++  (*settings)["emitUTF8"] = true;
+   (*settings)["precision"] = 17;
+   (*settings)["precisionType"] = "significant";
+   //! [StreamWriterBuilderDefaults]

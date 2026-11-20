@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Tinco Andringa <tinco@phusion.nl>
+Date: Fri, 20 Nov 2026 16:16:10 +0000
+Subject: [PATCH 3/4] Silence compiler warnings in upstream jsoncpp code
+
+---
+ jsoncpp.cpp | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/jsoncpp.cpp b/jsoncpp.cpp
+index 8c2caf3..f2a6961 100644
+--- a/jsoncpp.cpp
++++ b/jsoncpp.cpp
+@@ -73,6 +73,19 @@ license you like.
+
+
+
++// Passenger: silence GCC warnings in upstream jsoncpp code: intentional switch
++// fallthroughs, and false positives about swapping default-constructed Values.
++// -Wpragmas is ignored first because older GCC versions don't know all of these.
++#if defined(__GNUC__) && !defined(__clang__)
++	#pragma GCC diagnostic ignored "-Wpragmas"
++	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
++	#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
++#endif
++// Passenger: silence Clang's warning about getDecimalPoint(). Its only caller,
++// the fixNumericLocaleInput() template, is never instantiated.
++#ifdef __clang__
++	#pragma clang diagnostic ignored "-Wunneeded-internal-declaration"
++#endif
+ #include <jsoncpp/json.h>
+
+ #ifndef JSON_IS_AMALGAMATION

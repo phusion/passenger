@@ -1,0 +1,310 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Tinco Andringa <tinco@phusion.nl>
+Date: Fri, 20 Nov 2026 16:16:10 +0000
+Subject: [PATCH 1/4] Wrap jsoncpp in the Passenger namespace
+
+On Nginx, Passenger and Google PageSpeed are linked into the same
+executable, and both bundle jsoncpp. Namespacing avoids duplicate symbol
+collisions (see commit cfcf562ef).
+---
+ json-forwards.h |  7 ++++++-
+ json.h          | 24 +++++++++++++++++++-----
+ jsoncpp.cpp     | 14 ++++++++++++++
+ 3 files changed, 39 insertions(+), 6 deletions(-)
+
+diff --git a/json-forwards.h b/json-forwards.h
+index dbad44e..f1defe2 100644
+--- a/json-forwards.h
++++ b/json-forwards.h
+@@ -139,6 +139,7 @@ license you like.
+ #pragma pack(push)
+ #pragma pack()
+
++namespace Passenger {
+ namespace Json {
+ template <typename T> class SecureAllocator {
+ public:
+@@ -220,7 +221,7 @@ bool operator!=(const SecureAllocator<T>&, const SecureAllocator<U>&) {
+ }
+
+ } // namespace Json
+-
++} // namespace Passenger
+ #pragma pack(pop)
+
+ #endif // JSON_ALLOCATOR_H_INCLUDED
+@@ -344,6 +345,7 @@ extern JSON_API int msvc_pre1900_c99_snprintf(char* outBuf, size_t size,
+
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+
++namespace Passenger {
+ namespace Json {
+ JSON_API const char* version();
+ using Int = int;
+@@ -382,6 +384,7 @@ using OStringStream =
+ using IStream = std::istream;
+ using OStream = std::ostream;
+ } // namespace Json
++} // namespace Passenger
+
+ // Legacy names (formerly macros).
+ using JSONCPP_STRING = Json::String;
+@@ -417,6 +420,7 @@ using JSONCPP_OSTREAM = Json::OStream;
+ #include "config.h"
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+
++namespace Passenger {
+ namespace Json {
+
+ // writer.h
+@@ -448,6 +452,7 @@ class ValueMembersView;
+ class ValueConstMembersView;
+
+ } // namespace Json
++} // namespace Passenger
+
+ #endif // JSON_FORWARDS_H_INCLUDED
+
+diff --git a/json.h b/json.h
+index 5075c88..ef733bb 100644
+--- a/json.h
++++ b/json.h
+@@ -138,6 +138,7 @@ license you like.
+ #pragma pack(push)
+ #pragma pack()
+
++namespace Passenger {
+ namespace Json {
+ template <typename T> class SecureAllocator {
+ public:
+@@ -219,6 +220,7 @@ bool operator!=(const SecureAllocator<T>&, const SecureAllocator<U>&) {
+ }
+
+ } // namespace Json
++} // namespace Passenger
+
+ #pragma pack(pop)
+
+@@ -343,6 +345,7 @@ extern JSON_API int msvc_pre1900_c99_snprintf(char* outBuf, size_t size,
+
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+
++namespace Passenger {
+ namespace Json {
+ JSON_API const char* version();
+ using Int = int;
+@@ -381,13 +384,14 @@ using OStringStream =
+ using IStream = std::istream;
+ using OStream = std::ostream;
+ } // namespace Json
++} // namespace Passenger
+
+ // Legacy names (formerly macros).
+-using JSONCPP_STRING = Json::String;
+-using JSONCPP_ISTRINGSTREAM = Json::IStringStream;
+-using JSONCPP_OSTRINGSTREAM = Json::OStringStream;
+-using JSONCPP_ISTREAM = Json::IStream;
+-using JSONCPP_OSTREAM = Json::OStream;
++using JSONCPP_STRING = Passenger::Json::String;
++using JSONCPP_ISTRINGSTREAM = Passenger::Json::IStringStream;
++using JSONCPP_OSTRINGSTREAM = Passenger::Json::OStringStream;
++using JSONCPP_ISTREAM = Passenger::Json::IStream;
++using JSONCPP_OSTREAM = Passenger::Json::OStream;
+
+ #endif // JSON_CONFIG_H_INCLUDED
+
+@@ -416,6 +420,7 @@ using JSONCPP_OSTREAM = Json::OStream;
+ #include "config.h"
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+
++namespace Passenger {
+ namespace Json {
+
+ // writer.h
+@@ -447,6 +452,7 @@ class ValueMembersView;
+ class ValueConstMembersView;
+
+ } // namespace Json
++} // namespace Passenger
+
+ #endif // JSON_FORWARDS_H_INCLUDED
+
+@@ -478,6 +484,7 @@ class ValueConstMembersView;
+ #pragma pack(push)
+ #pragma pack()
+
++namespace Passenger {
+ namespace Json {
+
+ /** \brief Configuration passed to reader and writer.
+@@ -521,6 +528,7 @@ public:
+ };
+
+ } // namespace Json
++} // namespace Passenger
+
+ #pragma pack(pop)
+
+@@ -612,6 +620,7 @@ struct ValueTest;
+
+ /** \brief JSON (JavaScript Object Notation).
+  */
++namespace Passenger {
+ namespace Json {
+
+ #if JSON_USE_EXCEPTION
+@@ -1722,6 +1731,7 @@ inline const Value& Value::back() const { return *(--end()); }
+ inline Value& Value::back() { return *(--end()); }
+
+ } // namespace Json
++} // namespace Passenger
+
+ #pragma pack(pop)
+
+@@ -1772,6 +1782,7 @@ inline Value& Value::back() { return *(--end()); }
+ #pragma pack(push)
+ #pragma pack()
+
++namespace Passenger {
+ namespace Json {
+
+ /** \brief Unserialize a <a HREF="http://www.json.org">JSON</a> document into a
+@@ -2176,6 +2187,7 @@ bool JSON_API parseFromStream(CharReader::Factory const&, IStream&, Value* root,
+ JSON_API IStream& operator>>(IStream&, Value&);
+
+ } // namespace Json
++} // namespace Passenger
+
+ #pragma pack(pop)
+
+@@ -2223,6 +2235,7 @@ JSON_API IStream& operator>>(IStream&, Value&);
+ #pragma pack(push)
+ #pragma pack()
+
++namespace Passenger {
+ namespace Json {
+
+ class Value;
+@@ -2558,6 +2571,7 @@ String JSON_API valueToQuotedString(const char* value, size_t length);
+ JSON_API OStream& operator<<(OStream&, const Value& root);
+
+ } // namespace Json
++} // namespace Passenger
+
+ #pragma pack(pop)
+
+diff --git a/jsoncpp.cpp b/jsoncpp.cpp
+index ceb51ca..93922a3 100644
+--- a/jsoncpp.cpp
++++ b/jsoncpp.cpp
+@@ -111,6 +111,7 @@ license you like.
+  * It is an internal header that must not be exposed.
+  */
+
++namespace Passenger {
+ namespace Json {
+ static inline char getDecimalPoint() {
+ #ifdef JSONCPP_NO_LOCALE_SUPPORT
+@@ -220,6 +221,7 @@ Iter fixZerosInTheEnd(Iter begin, Iter end, unsigned int precision) {
+ }
+
+ } // namespace Json
++} // namespace Passenger
+
+ #endif // LIB_JSONCPP_JSON_TOOL_H_INCLUDED
+
+@@ -283,6 +285,7 @@ Iter fixZerosInTheEnd(Iter begin, Iter end, unsigned int precision) {
+ static size_t const stackLimit_g =
+     JSONCPP_DEPRECATED_STACK_LIMIT; // see readValue()
+
++namespace Passenger {
+ namespace Json {
+
+ using CharReaderPtr = std::unique_ptr<CharReader>;
+@@ -2264,6 +2267,7 @@ IStream& operator>>(IStream& sin, Value& root) {
+ }
+
+ } // namespace Json
++} // namespace Passenger
+
+ // //////////////////////////////////////////////////////////////////////
+ // End of content of file: src/lib_json/json_reader.cpp
+@@ -2285,6 +2289,7 @@ IStream& operator>>(IStream& sin, Value& root) {
+
+ // included by json_value.cpp
+
++namespace Passenger {
+ namespace Json {
+
+ // //////////////////////////////////////////////////////////////////
+@@ -2434,6 +2439,7 @@ ValueIterator& ValueIterator::operator=(const SelfType& other) {
+ }
+
+ } // namespace Json
++} // namespace Passenger
+
+ // //////////////////////////////////////////////////////////////////////
+ // End of content of file: src/lib_json/json_valueiterator.inl
+@@ -2497,6 +2503,7 @@ int JSON_API msvc_pre1900_c99_snprintf(char* outBuf, size_t size,
+
+ #define JSON_ASSERT_UNREACHABLE assert(false)
+
++namespace Passenger {
+ namespace Json {
+ template <typename T>
+ static std::unique_ptr<T> cloneUnique(const std::unique_ptr<T>& p) {
+@@ -2636,6 +2643,7 @@ static inline void releaseStringValue(char* value, unsigned) { free(value); }
+ #endif // JSONCPP_USE_SECURE_MEMORY
+
+ } // namespace Json
++} // namespace Passenger
+
+ // //////////////////////////////////////////////////////////////////
+ // //////////////////////////////////////////////////////////////////
+@@ -2644,6 +2652,7 @@ static inline void releaseStringValue(char* value, unsigned) { free(value); }
+ // //////////////////////////////////////////////////////////////////
+ // //////////////////////////////////////////////////////////////////
+
++namespace Passenger {
+ namespace Json {
+
+ static const char* valueTypeToString(ValueType type) {
+@@ -2669,12 +2678,14 @@ static const char* valueTypeToString(ValueType type) {
+ }
+
+ } // namespace Json
++} // namespace Passenger
+ // //////////////////////////////////////////////////////////////////
+ #if !defined(JSON_IS_AMALGAMATION)
+
+ #include "json_valueiterator.inl"
+ #endif // if !defined(JSON_IS_AMALGAMATION)
+
++namespace Passenger {
+ namespace Json {
+
+ #if JSON_USE_EXCEPTION
+@@ -4190,6 +4201,7 @@ Value& Path::make(Value& root) const {
+ const char* version() { return JSONCPP_VERSION_STRING; }
+
+ } // namespace Json
++} // namespace Passenger
+
+ // //////////////////////////////////////////////////////////////////////
+ // End of content of file: src/lib_json/json_value.cpp
+@@ -4230,6 +4242,7 @@ const char* version() { return JSONCPP_VERSION_STRING; }
+ #pragma warning(disable : 4996)
+ #endif
+
++namespace Passenger {
+ namespace Json {
+
+ using StreamWriterPtr = std::unique_ptr<StreamWriter>;
+@@ -5405,6 +5418,7 @@ OStream& operator<<(OStream& sout, Value const& root) {
+ }
+
+ } // namespace Json
++} // namespace Passenger
+
+ // //////////////////////////////////////////////////////////////////////
+ // End of content of file: src/lib_json/json_writer.cpp
