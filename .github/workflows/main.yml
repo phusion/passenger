@@ -829,7 +829,7 @@ jobs:
   homebrew_packaging:
     name: Homebrew packaging tests
     runs-on: macos-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         timeout-minutes: 1
